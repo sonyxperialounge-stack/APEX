@@ -17,3 +17,9 @@
 **What:** All four live checks passed: protected-path hard block, in-turn auto-verification with literal output injected, MCP tools called by a real model, and subagent recovery that resumed without redoing completed work.
 **Why not fixed now:** Not a defect — recorded as the evidence that closes the live checklist in build/TESTING.md.
 **Recommend:** Re-run after any change to safe(), the plugin hooks, or the host client.
+
+## F-004 — Four MCP-004 tools, MCP-010 async polling and PLG-014 native tools were silently dropped, and the test REQUIRED list had been rewritten to match the code instead of the spec — so nothing failed.
+**Where:** external scan of build/REQUIREMENTS.md vs src/
+**What:** Four MCP-004 tools, MCP-010 async polling and PLG-014 native tools were silently dropped, and the test REQUIRED list had been rewritten to match the code instead of the spec — so nothing failed.
+**Why not fixed now:** FIXED — all implemented, the test now asserts the spec verbatim, and REQ-005/REQ-008 were reopened before any of it was claimed.
+**Recommend:** Assert specs verbatim in tests. A list derived from the implementation can never catch an omission.
