@@ -558,17 +558,77 @@ describe("apex_models — FLT-004 pre-dispatch check", () => {
 })
 
 describe("doc/code agreement — the mirror of the dropped-requirements bug", () => {
-  test("no tool is documented in MCP-SERVER.md that the code does not implement", async () => {
+  // The first version of this test scanned MCP-SERVER.md only. A phantom `apex_fleet`
+  // tool survived that round in OPENCODE-PLUGIN.md, outside the net — F-005's lesson
+  // repeated by the very fix meant to prevent it. It scans EVERY build doc now.
+  const DOCS = ["MCP-SERVER.md", "OPENCODE-PLUGIN.md", "REQUIREMENTS.md", "ARCHITECTURE.md", "ENGINES.md"]
+
+  /** A doc may name an unimplemented tool only inside an explicit deferral section. */
+  function documentedTools(doc: string): string[] {
+    const withoutDeferrals = doc
+      .split(/^#{2,4} .*DEFERRED.*$/im)
+      .map((section, i) =>
+        // Everything after a DEFERRED heading, up to the next heading of the same level,
+        // is allowed to name tools that do not exist.
+        i === 0 ? section : section.slice(section.search(/^#{2,3} /m) === -1 ? section.length : section.search(/^#{2,3} /m)),
+      )
+      .join("\n")
+
+    const names = new Set<string>()
+    // A tool is "documented as shipping" if it appears as a table row, a tool({ block key,
+    // or a backticked name in prose.
+    for (const m of withoutDeferrals.matchAll(/^\s*(apex_[a-z_]+):\s*tool\(\{/gm)) names.add(m[1]!)
+    for (const m of withoutDeferrals.matchAll(/^\|\s*`(apex_[a-z_]+)`/gm)) names.add(m[1]!)
+    for (const m of withoutDeferrals.matchAll(/`(apex_[a-z_]+)`/g)) names.add(m[1]!)
+    return [...names]
+  }
+
+  for (const file of DOCS) {
+    test(`${file} names no tool the code does not implement`, async () => {
+      const fsp2 = await import("node:fs/promises")
+      const docPath = path.resolve(RUNTIME, "..", "build", file)
+      const doc = await fsp2.readFile(docPath, "utf8").catch(() => "")
+      if (!doc) return
+
+      const implemented = new Set(TOOLS.map((t) => t.name))
+      const phantom = documentedTools(doc).filter((n) => !implemented.has(n))
+      assert.deepEqual(
+        phantom,
+        [],
+        `${file} documents tools that do not exist: ${phantom.join(", ")}. ` +
+          `Implement them, or move them under a heading containing "DEFERRED" with the reason.`,
+      )
+    })
+  }
+
+  test("no build doc calls an engine method that does not exist", async () => {
     const fsp2 = await import("node:fs/promises")
-    const docPath = path.resolve(RUNTIME, "..", "build", "MCP-SERVER.md")
-    const doc = await fsp2.readFile(docPath, "utf8")
+    const srcDir = path.resolve(RUNTIME, "src")
+    const readAll = async (dir: string, acc: string[] = []): Promise<string[]> => {
+      for (const e of await fsp2.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) await readAll(full, acc)
+        else if (e.name.endsWith(".ts")) acc.push(await fsp2.readFile(full, "utf8"))
+      }
+      return acc
+    }
+    const source = (await readAll(srcDir)).join("\n")
 
-    // Only the tool table counts; the "Deferred, and why" section names tools on purpose.
-    const table = doc.slice(doc.indexOf("## THE TOOLS"), doc.indexOf("### Deferred"))
-    const documented = [...table.matchAll(/`(apex_[a-z_]+)`/g)].map((m) => m[1]!)
-    const implemented = new Set(TOOLS.map((t) => t.name))
-
-    const phantom = [...new Set(documented)].filter((n) => !implemented.has(n))
-    assert.deepEqual(phantom, [], `documented but not implemented: ${phantom.join(", ")}`)
+    const phantom: string[] = []
+    for (const file of DOCS) {
+      const doc = await fsp2
+        .readFile(path.resolve(RUNTIME, "..", "build", file), "utf8")
+        .catch(() => "")
+      // Calls like `e.warden.runFleet(` or `ledger.setStatus(` in illustrative code.
+      for (const m of doc.matchAll(/\b(?:e|this)\.(warden|ledger|verifier|governor|cortex|recall|council)\.(\w+)\(/g)) {
+        const method = m[2]!
+        if (!new RegExp(`\\b${method}\\s*[(<:]`).test(source)) phantom.push(`${file}: ${m[1]}.${method}()`)
+      }
+    }
+    assert.deepEqual(
+      [...new Set(phantom)],
+      [],
+      `build docs call engine methods that do not exist: ${[...new Set(phantom)].join(", ")}`,
+    )
   })
 })

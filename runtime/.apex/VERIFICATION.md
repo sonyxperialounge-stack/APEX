@@ -25,6 +25,12 @@
 | V-021 | REQ-005, REQ-008 | unit | `` | — | No unit command is configured for this project. | NOT_RUN |
 | V-022 | REQ-005, REQ-008 | suite | `npm test` | exit code 0 | > apex-agent@1.0.0 test | PASS |
 | V-023 | REQ-005, REQ-008 | build | `npm run build` | exit code 0 | > apex-agent@1.0.0 build | PASS |
+| V-024 | REQ-005, REQ-008 | parse | `` | — | No parse command is configured for this project. | NOT_RUN |
+| V-025 | REQ-005, REQ-008 | types | `npx tsc --noEmit` | exit code 0 |  | PASS |
+| V-026 | REQ-005, REQ-008 | lint | `` | — | No lint command is configured for this project. | NOT_RUN |
+| V-027 | REQ-005, REQ-008 | unit | `` | — | No unit command is configured for this project. | NOT_RUN |
+| V-028 | REQ-005, REQ-008 | suite | `npm test` | exit code 0 | > apex-agent@1.0.0 test | PASS |
+| V-029 | REQ-005, REQ-008 | build | `npm run build` | exit code 0 | > apex-agent@1.0.0 build | PASS |
 
 > A log with no FAIL and no NOT_RUN rows over a long project is not excellence — it is
 > evidence that verification was not really happening.
@@ -1965,6 +1971,488 @@ apabilities (20.7031ms)
 - **Exit code:** 0
 - **Duration:** 2318
 - **Timestamp:** 2026-08-16T03:15:01.197Z
+- **Reason:** 
+
+```text
+
+> apex-agent@1.0.0 build
+> tsc -p tsconfig.build.json
+
+
+```
+
+### V-024
+- **Requirements:** REQ-005, REQ-008
+- **Type:** parse
+- **Command:** ``
+- **Expected:** —
+- **Result:** NOT_RUN
+- **Exit code:** null
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:21:56.237Z
+- **Reason:** No parse command is configured for this project.
+
+```text
+
+```
+
+### V-025
+- **Requirements:** REQ-005, REQ-008
+- **Type:** types
+- **Command:** `npx tsc --noEmit`
+- **Expected:** exit code 0
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 3178
+- **Timestamp:** 2026-08-16T03:21:59.437Z
+- **Reason:** 
+
+```text
+
+```
+
+### V-026
+- **Requirements:** REQ-005, REQ-008
+- **Type:** lint
+- **Command:** ``
+- **Expected:** —
+- **Result:** NOT_RUN
+- **Exit code:** null
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:21:59.452Z
+- **Reason:** No lint command is configured for this project.
+
+```text
+
+```
+
+### V-027
+- **Requirements:** REQ-005, REQ-008
+- **Type:** unit
+- **Command:** ``
+- **Expected:** —
+- **Result:** NOT_RUN
+- **Exit code:** null
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:21:59.466Z
+- **Reason:** No unit command is configured for this project.
+
+```text
+
+```
+
+### V-028
+- **Requirements:** REQ-005, REQ-008
+- **Type:** suite
+- **Command:** `npm test`
+- **Expected:** exit code 0
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 17327
+- **Timestamp:** 2026-08-16T03:22:16.811Z
+- **Reason:** 
+
+```text
+
+> apex-agent@1.0.0 test
+> node --test --experimental-strip-types "test/**/*.test.ts"
+
+▶ arg parsing
+  ✔ parses host and project (49.5948ms)
+  ✔ rejects an unknown host with the real list (21.8533ms)
+  ✔ detectProjectRoot walks up to a project marker (45.3124ms)
+✔ arg parsing (119.5564ms)
+▶ INS-003 — attach is non-destructive
+  ✔ a rich pre-existing config survives untouched (498.567ms)
+  ✔ a deliberate user setting is not overridden (489.9982ms)
+  ✔ INS-005 — a backup is written byte-for-byte (377.3863ms)
+  ✔ works when there is no pre-existing config at all (460.2737ms)
+✔ INS-003 — attach is non-destructive (1827.3364ms)
+▶ INS-004 — Windows paths never break the config
+  ✔ every emitted path is JSON-safe and the file re-parses (419.8874ms)
+  ✔ emitted paths use forward slashes (460.4977ms)
+  ✔ the historical failure mode still reproduces, proving the test is live (19.5603ms)
+✔ INS-004 — Windows paths never break the config (900.7495ms)
+▶ INS-006/007 — install record and clean detach
+  ✔ the record lists exactly what changed (417.9549ms)
+  ✔ detach restores the config byte-for-byte (547.2692ms)
+  ✔ detach removes only what attach created (391.2052ms)
+  ✔ detach leaves the project ledger alone (370.1273ms)
+  ✔ detach without an install record is a clean error (11.8979ms)
+✔ INS-006/007 — install record and clean detach (1739.376ms)
+▶ INS-009 — the doctrine payload is installed
+  ✔ payload files land in the host config directory (481.8826ms)
+  ✔ a pointer file tells any agent where the doctrine is (375.1163ms)
+  ✔ the config references the pointer so it loads automatically (452.4927ms)
+✔ INS-009 — the doctrine payload is installed (1310.088ms)
+▶ INS-010 — idempotence
+  ✔ a second attach is a no-op (1876.5836ms)
+✔ INS-010 — idempotence (1876.8122ms)
+▶ INS-013 — attach fails atomically
+  ✔ a mid-attach failure restores everything and explains (158.4792ms)
+✔ INS-013 — attach fails atomically (158.6773ms)
+▶ INS-008 — doctor diagnoses seeded breakage
+  ✔ reports a healthy install (854.7152ms)
+  ✔ state 1 — not attached (677.1393ms)
+  ✔ state 2 — invalid JSON in the host config (850.4182ms)
+  ✔ state 3 — installed files went missing (896.6533ms)
+  ✔ state 4 — no ledger in the project (888.9161ms)
+  ✔ state 5 — no verification commands (804.1517ms)
+✔ INS-008 — doctor diagnoses seeded breakage (4972.6285ms)
+▶ INS-011/012 — no credentials, no network
+  ✔ attach never writes anything credential-shaped (172.1338ms)
+  ✔ attach succeeds with no network available (174.6642ms)
+✔ INS-011/012 — no credentials, no network (347.0048ms)
+▶ PLG-001 — the L2 plugin shim is installed correctly
+  ✔ a shim is written, not a copy of the built plugin (172.7609ms)
+  ✔ the shim imports a file:// URL, never a bare Windows path (178.5644ms)
+  ✔ host companions land in the host's own directories, not inside apex/ (191.2654ms)
+  ✔ an L1-only host gets no plugin shim (164.5129ms)
+✔ PLG-001 — the L2 plugin shim is installed correctly (707.6544ms)
+▶ INS-001 — attach touches ONE host unless told otherwise
+  ✔ attaches only to the deepest host and names the rest (658.4095ms)
+  ✔ the untouched hosts really are untouched (663.0588ms)
+  ✔ --all-hosts opts back in (719.7929ms)
+  ✔ --host targets exactly one, even with several present (172.9261ms)
+✔ INS-001 — attach touches ONE host unless told otherwise (2214.5602ms)
+▶ CORE-001 — the published package must actually run
+  ✔ ships compiled JavaScript, not raw TypeScript (22.3406ms)
+  ✔ a build step exists and prepack runs it (0.4233ms)
+  ✔ the bin entry is plain JavaScript (0.543ms)
+  ✔ the bin entry prefers dist and falls back to src (0.6355ms)
+  ✔ the compiled build exists and imports .js, never .ts (14.9451ms)
+  ✔ the compiled build contains no TypeScript-only syntax (11.2216ms)
+  ✔ the doctrine payload is published (0.7324ms)
+  ✔ CORE-003 — no runtime dependencies (1.3378ms)
+  ✔ the supported Node range is declared (0.3649ms)
+✔ CORE-001 — the published package must actually run (61.9577ms)
+▶ payload integrity
+  ✔ the payload exists and has real content (1.809ms)
+  ✔ nothing references a directory that does not ship (2.8586ms)
+  ✔ every relative markdown link inside the payload resolves (1.8223ms)
+  ✔ the payload is in sync with the doctrine source (131.4548ms)
+  ✔ host companions ship for the L2 install (0.7975ms)
+  ✔ the payload names no machine-specific path (6.2986ms)
+✔ payload integrity (147.7928ms)
+▶ parseJsonLenient
+  ✔ plain JSON (23.6253ms)
+  ✔ strips a BOM (3.7819ms)
+  ✔ strips line comments (2.4437ms)
+  ✔ strips block comments (2.5847ms)
+  ✔ strips trailing commas (2.2104ms)
+  ✔ does NOT strip comment-like text inside strings (27.0463ms)
+  ✔ throws a useful error on real garbage (10.1535ms)
+✔ parseJsonLenient (78.3066ms)
+▶ INS-004 — Windows path regression
+  ✔ serialiseChecked escapes backslashes and round-trips (17.9906ms)
+  ✔ emitted JSON contains no lone backslash escape (23.052ms)
+  ✔ toJsonPath produces forward slashes (15.508ms)
+  ✔ the exact Army-V2 failure is now impossible (32.8306ms)
+  ✔ writeJson re-reads and verifies what landed on disk (19.1395ms)
+✔ INS-004 — Windows path regression (110.0894ms)
+▶ writes are redacted (CORE-005)
+  ✔ writeText redacts (26.3036ms)
+  ✔ writeJson redacts nested values (20.6745ms)
+✔ writes are redacted (CORE-005) (47.8234ms)
+▶ backup
+  ✔ returns null when there is nothing to back up (6.0886ms)
+  ✔ copies byte-for-byte (INS-005) (19.3318ms)
+✔ backup (25.9756ms)
+▶ mergeConfigObjects — INS-003
+  ✔ adds absent keys (3.016ms)
+  ✔ LEAVES an existing scalar alone (1.8926ms)
+  ✔ unions arrays, existing order first (2.0249ms)
+  ✔ does not duplicate an array entry that is already present (18.9201ms)
+  ✔ shallow-merges objects with existing winning (30.6947ms)
+  ✔ preserves every unknown key byte-for-byte (8.6219ms)
+✔ mergeConfigObjects — INS-003 (66.2206ms)
+▶ mergeConfigFile
+  ✔ merges into a rich pre-existing config and backs it up (139.6005ms)
+  ✔ creates the file when absent, with no backup (45.7423ms)
+  ✔ tolerates a config with comments and trailing commas (70.4286ms)
+✔ mergeConfigFile (256.8286ms)
+▶ isUnder
+  ✔ identity (1.5818ms)
+  ✔ direct child (0.5251ms)
+  ✔ deep child (0.3374ms)
+  ✔ sibling is not under (2.5068ms)
+  ✔ parent is not under child (0.3666ms)
+  ✔ traversal that escapes is not under (0.3726ms)
+  ✔ traversal that returns IS under (7.1109ms)
+  ✔ a prefix-sharing sibling directory is not under (0.3968ms)
+✔ isUnder (16.1741ms)
+▶ globMatch
+  ✔ config/prod.yaml vs config/prod.yaml -> true (3.2128ms)
+  ✔ config/prod.yaml vs config/*.yaml -> true (4.0007ms)
+  ✔ config/prod.yaml vs config/ -> true (0.662ms)
+  ✔ config/deep/prod.yaml vs config/ -> true (0.3086ms)
+  ✔ config/deep/prod.yaml vs config/*.yaml -> false (0.2604ms)
+  ✔ config/deep/prod.yaml vs config/**/*.yaml -> true (0.2459ms)
+  ✔ src/a.ts vs **/*.ts -> true (0.1837ms)
+  ✔ a.ts vs **/*.ts -> true (0.2046ms)
+  ✔ migrations/001.sql vs migrations/ -> true (0.1969ms)
+  ✔ src/app.ts vs migrations/ -> false (0.1802ms)
+  ✔ file.txt vs file.??? -> true (0.1593ms)
+  ✔ file.txtx vs file.??? -> false (0.1664ms)
+  ✔ node_modules/x/y.js vs node_modules/ -> true (0.1911ms)
+  ✔ src/node_modules_helper.ts vs node_modules/ -> false (0.1803ms)
+  ✔ backslash separators are normalised (0.1861ms)
+  ✔ dots in the pattern are literal, not wildcards (0.2537ms)
+✔ globMatch (11.6916ms)
+▶ toJsonPath
+  ✔ converts every backslash (0.3425ms)
+  ✔ leaves forward slashes alone (0.1311ms)
+  ✔ handles UNC prefixes (0.1242ms)
+✔ toJsonPath (0.8545ms)
+▶ canonicalCase
+  ✔ matches the platform convention (0.1575ms)
+✔ canonicalCase (0.2814ms)
+▶ resolveFrom
+  ✔ keeps an absolute path absolute (0.3006ms)
+  ✔ resolves a relative path against the root (0.1802ms)
+✔ resolveFrom (0.6681ms)
+▶ isFilesystemRoot
+  ✔ recognises "/" as a root (0.3573ms)
+  ✔ recognises "C:/" as a root (0.1821ms)
+  ✔ recognises "C:\\" as a root (0.3633ms)
+  ✔ recognises "c:\\" as a root (0.2053ms)
+  ✔ recognises "//server/share" as a root (0.125ms)
+  ✔ recognises "\\\\server\\share" as a root (0.11
+
+… [28901 characters omitted from the middle — the tail is preserved] …
+
+ ✔ every required tool is listed (5.4428ms)
+  ✔ every tool has a valid schema and a description that teaches (3.0165ms)
+  ✔ apex_req_status describes the legal path and the evidence rule (2.2541ms)
+  ✔ an unknown tool returns a rejection naming the real tools (18.769ms)
+✔ MCP-004 — the tool surface (30.6119ms)
+▶ MCP-005 — teaching rejections, not exceptions
+  ✔ an illegal transition returns a REJECTED message with the recipe (158.9978ms)
+  ✔ BLOCKED without a reason is rejected with an explanation (220.7742ms)
+  ✔ a rejection is not marked isError — it is a correction (135.4112ms)
+✔ MCP-005 — teaching rejections, not exceptions (515.9207ms)
+▶ MCP-006 — apex_gate
+  ✔ an empty ledger fails the gate with reasons (179.8779ms)
+  ✔ the gate names every unmet requirement individually (221.7198ms)
+  ✔ a LATER failure supersedes an earlier pass — stale evidence cannot pass the gate (342.7681ms)
+  ✔ a claimed VERIFIED_COMPLETE with no evidence is caught by the gate (76.2988ms)
+✔ MCP-006 — apex_gate (821.7157ms)
+▶ MCP-007/008 — resources and prompts
+  ✔ all resources are readable (121.8442ms)
+  ✔ an unknown resource is an error, not a crash (1.9045ms)
+  ✔ all prompts are retrievable (132.6938ms)
+  ✔ apex-review withholds the author's reasoning (2.0246ms)
+✔ MCP-007/008 — resources and prompts (259.1819ms)
+▶ MCP-009 — malformed input never kills the server
+  ✔ survives hostile message 0 (3.4666ms)
+  ✔ survives hostile message 1 (4.154ms)
+  ✔ survives hostile message 2 (4.3723ms)
+  ✔ survives hostile message 3 (4.9938ms)
+  ✔ survives hostile message 4 (9.4178ms)
+  ✔ survives hostile message 5 (5.488ms)
+  ✔ survives hostile message 6 (12.7063ms)
+  ✔ survives hostile message 7 (14.4169ms)
+  ✔ survives hostile message 8 (3.5403ms)
+  ✔ survives hostile message 9 (1.9482ms)
+  ✔ still works after every hostile message (23.3663ms)
+✔ MCP-009 — malformed input never kills the server (89.9542ms)
+▶ MCP-011 — works with no host server present
+  ✔ a full cycle runs on the filesystem alone (139.8498ms)
+  ✔ apex_init on an existing ledger loads rather than overwrites (101.228ms)
+  ✔ apex_check blocks a protected path with an explanation (144.617ms)
+  ✔ apex_check reports bulk violations before the command runs (150.4148ms)
+  ✔ snapshot and rollback round-trip through the tools (77.0778ms)
+  ✔ memory round-trips and dedupes (58.7719ms)
+  ✔ handoff is generated from real state (105.7359ms)
+✔ MCP-011 — works with no host server present (779.6293ms)
+▶ real stdio subprocess round-trip
+  ✔ spawns, initializes, lists tools, and calls one (417.9627ms)
+✔ real stdio subprocess round-trip (418.387ms)
+▶ MCP-004/010 + PLG-014 — restored after an external scan found them missing
+  ✔ the four previously-missing tools exist and are callable (65.4289ms)
+  ✔ apex_delegate records the packet even when the host cannot spawn (133.8953ms)
+  ✔ apex_council DECLINES routine work (157.5234ms)
+  ✔ MCP-010 — a heavy tier returns a task id instead of blocking (135.9607ms)
+  ✔ MCP-010 — apex_task_result polls to completion (378.9004ms)
+  ✔ an unknown task id is a teaching rejection (6.4511ms)
+  ✔ PLG-014 — the plugin registers the same tools natively (29.2531ms)
+✔ MCP-004/010 + PLG-014 — restored after an external scan found them missing (908.7367ms)
+▶ apex_models — FLT-004 pre-dispatch check
+  ✔ returns a catalog and never suggests a substitute (83.2024ms)
+  ✔ is declared in the tool list (2.5229ms)
+✔ apex_models — FLT-004 pre-dispatch check (86.1641ms)
+▶ doc/code agreement — the mirror of the dropped-requirements bug
+  ✔ MCP-SERVER.md names no tool the code does not implement (4.2275ms)
+  ✔ OPENCODE-PLUGIN.md names no tool the code does not implement (4.5302ms)
+  ✔ REQUIREMENTS.md names no tool the code does not implement (2.8742ms)
+  ✔ ARCHITECTURE.md names no tool the code does not implement (2.6228ms)
+  ✔ ENGINES.md names no tool the code does not implement (2.5605ms)
+  ✔ no build doc calls an engine method that does not exist (21.3198ms)
+✔ doc/code agreement — the mirror of the dropped-requirements bug (38.9504ms)
+▶ PLG-001 — the plugin loads and exports every hook
+  ✔ returns a hook for each declared name (140.1316ms)
+  ✔ PLG-015 — writes the level-2 runtime marker (151.4082ms)
+  ✔ prefers the worktree over the directory (237.281ms)
+  ✔ PLG-016 — the hook list is exported for a doctor diff (142.0513ms)
+✔ PLG-001 — the plugin loads and exports every hook (677.3692ms)
+▶ PLG-002 — a throw in any hook never breaks the session
+  ✔ safe() swallows and logs (125.5636ms)
+  ✔ safe() bounds a hanging hook (291.8725ms)
+  ✔ every real hook survives a corrupt ledger (157.1616ms)
+  ✔ a hook returning undefined is a degraded capability, not a crash (116.8989ms)
+✔ PLG-002 — a throw in any hook never breaks the session (698.9932ms)
+▶ PLG-003 — the doctrine is injected into every request
+  ✔ APEX is prepended, and the host prompt is preserved (184.4605ms)
+  ✔ protected paths are stated every turn (103.1407ms)
+  ✔ the active requirement appears once one is in progress (196.8138ms)
+✔ PLG-003 — the doctrine is injected into every request (487.4639ms)
+▶ PLG-004 — protected paths are hard-blocked
+  ✔ a write to a protected path throws with an explanation (127.8942ms)
+  ✔ reading a do_not_read path is blocked (61.3069ms)
+  ✔ an ordinary edit proceeds (129.461ms)
+  ✔ GOV-006 — a bulk command reaching a protected path is blocked before it runs (179.7454ms)
+  ✔ a bulk command confined to safe files proceeds (124.6213ms)
+  ✔ a force push is blocked (64.3435ms)
+  ✔ PLG-005 — a risky edit takes a snapshot first (119.801ms)
+  ✔ the intent is recorded for the after-hook (106.9582ms)
+✔ PLG-004 — protected paths are hard-blocked (915.404ms)
+▶ PLG-006 — verification lands in the SAME turn as the edit
+  ✔ a failing check is appended to the tool output before the model can claim success (1047.1193ms)
+  ✔ a passing check appends nothing (790.089ms)
+  ✔ a non-edit tool is not verified (33.5419ms)
+  ✔ an unknown callID is ignored rather than throwing (33.2166ms)
+  ✔ PLG-007 — the real change is recorded in the ledger (704.7148ms)
+  ✔ REC-002 — a working command is captured into memory automatically (785.2592ms)
+✔ PLG-006 — verification lands in the SAME turn as the edit (3394.5327ms)
+▶ PLG-008 — each autonomy mode answers differently
+  ✔ MANUAL: an ordinary edit -> ask (36.3201ms)
+  ✔ GUARDED: an ordinary edit -> allow (32.3445ms)
+  ✔ AUTO: an ordinary edit -> allow (36.1421ms)
+  ✔ FULL_AUTO: an ordinary edit -> allow (34.3886ms)
+  ✔ a protected path is DENIED in every mode, including FULL_AUTO (37.421ms)
+  ✔ GUARDED asks before a dependency install (32.7688ms)
+  ✔ permissionToOperation maps host permission types (35.9991ms)
+✔ PLG-008 — each autonomy mode answers differently (246.1874ms)
+▶ PLG-009/010 — session lifecycle
+  ✔ session.error triggers recovery (43.5282ms)
+  ✔ a child session is tracked (37.5956ms)
+  ✔ a top-level session is not tracked as a child (36.1769ms)
+  ✔ an edit to a protected path is recorded as a finding (49.459ms)
+  ✔ an ordinary edit event is not a drift (32.0657ms)
+  ✔ an unknown event is ignored (29.9187ms)
+✔ PLG-009/010 — session lifecycle (229.2917ms)
+▶ PLG-011 — constraints survive compaction
+  ✔ the anchor carries protected paths and autonomy into the summary (36.634ms)
+✔ PLG-011 — constraints survive compaction (36.7888ms)
+▶ PLG-012 — long sessions are re-anchored
+  ✔ a short conversation is left alone (36.676ms)
+  ✔ a long conversation gets one anchor inserted before the last message (34.9776ms)
+✔ PLG-012 — long sessions are re-anchored (71.866ms)
+▶ PLG-013 — temperature by task class
+  ✔ planning is warm when nothing is active (39.5598ms)
+  ✔ editing is cold once a requirement is in progress (39.7814ms)
+  ✔ two failures switch to debugging (61.9782ms)
+  ✔ the four classes have distinct temperatures (35.9698ms)
+✔ PLG-013 — temperature by task class (177.6549ms)
+▶ tool classification
+  ✔ edit -> write (30.7854ms)
+  ✔ write -> write (30.7528ms)
+  ✔ patch -> write (28.2967ms)
+  ✔ read -> read (35.6107ms)
+  ✔ bash -> bash (29.8431ms)
+  ✔ webfetch -> network (32.0726ms)
+  ✔ edit tools are recognised case-insensitively (31.7261ms)
+✔ tool classification (219.6924ms)
+▶ companion files
+  ✔ agents, commands and skills are all enumerated (32.8667ms)
+✔ companion files (33.0302ms)
+▶ PLG-017 — hook overhead
+  ✔ system.transform stays well under the budget (116.4485ms)
+  ✔ tool.execute.before stays fast for an ordinary edit (158.6274ms)
+✔ PLG-017 — hook overhead (275.3232ms)
+▶ PLG-002/PLG-004 — a deliberate block propagates, a failure does not
+  ✔ safe() re-throws a BlockedError (34.9068ms)
+  ✔ safe() re-throws a block that lost its prototype across a module boundary (32.4245ms)
+  ✔ safe() still swallows a genuine bug (29.0802ms)
+  ✔ safe() still swallows a timeout (171.4045ms)
+  ✔ isDeliberateBlock discriminates correctly (40.6109ms)
+  ✔ END TO END: the wrapped hook actually blocks a protected write (36.2493ms)
+  ✔ END TO END: the wrapped hook still allows an ordinary edit (48.1951ms)
+✔ PLG-002/PLG-004 — a deliberate block propagates, a failure does not (393.5259ms)
+✔ the scan actually found source files (4.7687ms)
+▶ CORE-005 — every disk write goes through the chokepoint
+  ✔ no direct file writes outside json.ts and log.ts (3.2308ms)
+✔ CORE-005 — every disk write goes through the chokepoint (4.1475ms)
+▶ CORE-009 / INS-011 — no credential handling
+  ✔ does not reference ANTHROPIC_API_KEY (1.2307ms)
+  ✔ does not reference OPENAI_API_KEY (0.6629ms)
+  ✔ does not reference GOOGLE_API_KEY (0.8067ms)
+  ✔ does not reference AWS_SECRET_ACCESS_KEY (0.9169ms)
+  ✔ does not reference process.env.API_KEY (1.7363ms)
+  ✔ never calls an auth endpoint (1.8567ms)
+  ✔ no credential prompt (8.2428ms)
+✔ CORE-009 / INS-011 — no credential handling (17.5319ms)
+▶ GOV-010 — no destructive git commands anywhere
+  ✔ source never emits "reset --hard" (1.5936ms)
+  ✔ source never emits "clean -fd" (0.4778ms)
+  ✔ source never emits "clean -f -d" (0.3424ms)
+  ✔ source never emits "push --force" (0.3062ms)
+  ✔ source never emits "checkout ." (0.4438ms)
+  ✔ governor mentions them only inside its blocklist (0.4705ms)
+✔ GOV-010 — no destructive git commands anywhere (4.3375ms)
+▶ CNC-001 — no hardcoded model or provider identifiers
+  ✔ no model name literals (1.0621ms)
+  ✔ the model-id pattern still catches a real violation (0.2103ms)
+  ✔ no price tables (1.3497ms)
+✔ CNC-001 — no hardcoded model or provider identifiers (3.7623ms)
+▶ X-004 — no telemetry, no external network
+  ✔ no external hostnames (0.9912ms)
+  ✔ no analytics identifiers (1.6753ms)
+✔ X-004 — no telemetry, no external network (3.1628ms)
+▶ VER-012 — the verifier cannot modify tests
+  ✔ verifier.ts has no write path (0.6619ms)
+✔ VER-012 — the verifier cannot modify tests (0.8731ms)
+▶ CNC-006 — no path from a vote to a requirement status
+  ✔ council.ts never sets a status (0.4787ms)
+✔ CNC-006 — no path from a vote to a requirement status (0.6436ms)
+▶ FLT-004 — no code path substitutes a user-named model
+  ✔ warden.ts has no automatic model picker (0.5213ms)
+✔ FLT-004 — no code path substitutes a user-named model (0.6744ms)
+▶ erasable-syntax discipline
+  ✔ no TypeScript enums (not erasable — breaks native type stripping) (1.8777ms)
+  ✔ no constructor parameter properties (0.8391ms)
+  ✔ no namespaces (1.7486ms)
+✔ erasable-syntax discipline (5.298ms)
+▶ CORE-003 — dependency discipline
+  ✔ package.json declares no runtime dependencies (3.0353ms)
+  ✔ source imports only node: builtins and relative paths (0.9607ms)
+✔ CORE-003 — dependency discipline (5.2063ms)
+▶ MCP-001 — stdout is reserved for the protocol
+  ✔ only the MCP server writes to stdout (1.1179ms)
+✔ MCP-001 — stdout is reserved for the protocol (1.3745ms)
+✔ no leftover TODO/FIXME/stub markers in shipped source (1.3307ms)
+✔ the exempt detector mentions markers ONLY inside its detection code (1.3209ms)
+✔ CORPUS sanity: the scan reads real content (0.2295ms)
+ℹ tests 658
+ℹ suites 145
+ℹ pass 658
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16631.3679
+
+```
+
+### V-029
+- **Requirements:** REQ-005, REQ-008
+- **Type:** build
+- **Command:** `npm run build`
+- **Expected:** exit code 0
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 2289
+- **Timestamp:** 2026-08-16T03:22:19.119Z
 - **Reason:** 
 
 ```text

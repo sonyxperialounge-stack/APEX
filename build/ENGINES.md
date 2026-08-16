@@ -594,7 +594,7 @@ Seven checks from `core/06-DELEGATION.md`, all of them, before any status change
 
 ```ts
 async verifyResult(id) {
-  const s = await this.ledger.getSubagent(id)
+  const s = (await this.ledger.listSubagents()).find((x) => x.id === id)!
   const diff = await this.host.sessionDiff(s.sessionId)      // real diff, not its claim
   return {
     diffRead:        diff !== null,

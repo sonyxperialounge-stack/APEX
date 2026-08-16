@@ -70,7 +70,7 @@ const systemTransform = (e: Engines) => async (input: { system: string[], sessio
   const apex = await e.cortex.assemble({
     sessionId: input.sessionID ?? "unknown",
     activeReq: await e.ledger.activeRequirement(),
-    files: await e.ledger.recentlyTouchedFiles(),
+    files: await recentFiles(e)   // local helper; reads IN_PROGRESS requirement files,
     budget: e.cfg.cortexBudgetTokens ?? 2000,
   })
   // PREPEND: APEX must not be buried under the host's own prompt, and must not
@@ -122,7 +122,7 @@ const toolBefore = (e: Engines) => async (
   }
 
   // 4 — record the intent, so a crash mid-operation is still legible
-  await e.ledger.recordIntent({ tool: input.tool, op, callID: input.callID })
+  e.intents.set(input.callID, { op, tool: input.tool, reqId })   // in-memory; survives only the turn
 }
 ```
 
@@ -144,11 +144,12 @@ const toolAfter = (e: Engines) => async (
   input: { tool: string; sessionID: string; callID: string },
   output: { title: string; output: string; metadata: any },
 ) => {
-  const intent = await e.ledger.takeIntent(input.callID)
+  const intent = e.intents.get(input.callID)
+  e.intents.delete(input.callID)
   if (!intent) return
 
   // Record what ACTUALLY happened — not what the model will later say happened
-  await e.ledger.recordToolResult({ ...intent, output: redact(output.output) })
+  await e.ledger.appendProgress({ reqId: intent.reqId ?? "", what: `${intent.tool} ${intent.op.path}`, filesChanged: [intent.op.path] })
 
   if (!isEdit(input.tool)) return
 
@@ -173,7 +174,7 @@ const toolAfter = (e: Engines) => async (
     ].join("\n")
   }
 
-  await e.recall.captureFromToolResult(intent, records)     // REC-002
+  await e.recall.captureFromEvent({ kind: "command_succeeded", command: passed.command })     // REC-002
 }
 ```
 
@@ -201,7 +202,7 @@ const permissionAsk = (e: Engines) => async (
               : e.cfg.autonomy === "MANUAL" ? "ask"
               : e.cfg.autonomy === "GUARDED" ? (isRoutine(input) ? "allow" : "ask")
               : "allow"                                   // AUTO / FULL_AUTO
-  await e.ledger.logPermission(input, output.status, decision.rule)   // GOV-012
+  event("plugin.permission", { type: input.type, status, rule: decision.rule })   // GOV-012
 }
 ```
 
@@ -216,23 +217,22 @@ value that reorders this.
 const onEvent = (e: Engines) => async ({ event }: { event: any }) => {
   switch (event.type) {
     case "session.error":
-      await e.warden.handleFailure(event.properties?.sessionID, "crash", event)
+      return { action: "recover", detail: String(props.sessionID ?? "") }   // caller drives warden.recover()
       break
 
     case "session.idle": {
       const id = event.properties?.sessionID
-      if (await e.warden.isSupervised(id) && !(await e.warden.acceptanceMet(id)))
-        await e.warden.handleFailure(id, "idle-unfinished", event)   // WAR-004
+      // warden.classifyEvent() decides: idle with unmet criteria is a FAILURE (WAR-004)
       break
     }
 
     case "session.created":
-      if (event.properties?.parentID) await e.warden.trackChild(event.properties)  // PLG-010
+      if (props.parentID) return { action: "track_child", detail: String(props.sessionID) }  // PLG-010
       break
 
     case "file.edited":
-      await e.warden.checkScopeDrift(event.properties)               // WAR-005
-      await e.ledger.noteFileChange(event.properties)
+      // governor.isProtectedWrite() on the edited path — WAR-005
+      await e.ledger.addFinding({ where: file, what: "protected path reported as edited", whyNotFixed: "detected after the fact", recommend: "review and revert if unintended" })
       break
 
     case "session.compacted":
@@ -253,7 +253,7 @@ Compaction is where long sessions lose their constraints. This hook is the fix.
 
 ```ts
 const onCompacting = (e: Engines) => async (input: any, output: { prompt?: string }) => {
-  const preserved = await e.cortex.assembleCompactionAnchor()
+  const anchor = await e.cortex.assembleCompactionAnchor()
   output.prompt = [
     input.prompt ?? "",
     ``,
@@ -275,7 +275,7 @@ A lighter, per-turn re-anchor. Use sparingly; every insertion costs tokens on ev
 ```ts
 const messagesTransform = (e: Engines) => async (input: { messages: any[] }) => {
   if (input.messages.length < e.cfg.reanchorAfterTurns) return
-  const anchor = await e.cortex.assembleAnchor()          // ~200 tokens, constraints only
+  const anchor = await e.cortex.assembleCompactionAnchor()   // ~200 tokens, constraints only
   const msgs = [...input.messages]
   msgs.splice(-1, 0, { role: "user", content: [{ type: "text", text: anchor }] })
   return { messages: msgs }
@@ -353,34 +353,26 @@ const apexTools = (e: Engines) => ({
     },
   }),
 
-  apex_fleet: tool({
-    description:
-      "Run a fleet of subagents. If the user named models, pass them in `models` — they are " +
-      "used EXACTLY. This tool never substitutes an unavailable model; it returns " +
-      "USER_DECISION_REQUIRED with the real alternatives. Relay that and wait. " +
-      "`logicalWorkers` is honoured exactly; physical concurrency is bounded separately.",
-    args: {
-      task:           tool.schema.string(),
-      logicalWorkers: tool.schema.number().default(1),
-      models: tool.schema.object({
-        commander: tool.schema.string().optional(),
-        workers:   tool.schema.array(tool.schema.string()).default([]),
-        reviewer:  tool.schema.string().optional(),
-      }).optional(),
-      trigger: tool.schema.enum(["DIRECTED", "AUTONOMOUS"]),
-    },
-    async execute(a) {
-      try { return JSON.stringify(await e.warden.runFleet(a as any), null, 2) }
-      catch (err) {
-        if (err instanceof UserDecisionRequired) return `USER_DECISION_REQUIRED: ${err.message}`
-        throw err
-      }
-    },
-  }),
-
-  // apex_delegate, apex_council, apex_handoff, apex_memory_*, apex_models — same shape
+  // Every other apex_* tool has the same shape. In the built plugin they are not written
+  // out by hand at all — `apexTools()` generates the whole registry from the single TOOLS
+  // list in `mcp/tools.ts`, so the L1 and L2 surfaces cannot drift apart.
 })
 ```
+
+### `apex_fleet` is DEFERRED — not shipped at either level
+
+An earlier draft of this file carried a full `apex_fleet: tool({...})` block calling
+`warden.runFleet()`. **That method does not exist**, and neither does the tool — at L1 or L2.
+
+It is deferred for the reason in `MCP-SERVER.md` (DEC-004, DEC-005): a fleet needs a host
+that can spawn child sessions and stream events, and neither surface carries a real host
+client yet. The fleet *engine* is built and tested (`engines/warden.ts`, FLT-001..017);
+what is missing is the wiring, and `apex_delegate` covers single-subagent dispatch today.
+
+This block survived a round of fixing precisely because the test that catches phantom tools
+only scanned `MCP-SERVER.md`. It now scans this file too. The lesson is F-005's, repeated:
+**a fix claim needs a check covering the whole surface, not the file that happened to be
+open.**
 
 Note the pattern in `apex_req_status` and `apex_gate`: **the failure path returns a useful
 message rather than throwing.** The tool's job is to make the model do the right thing next,

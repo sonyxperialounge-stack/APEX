@@ -41,3 +41,9 @@
 **What:** The ledger stopped at V-012 (640 tests) while the code had moved on to 650. Verification was run and not recorded — by this project's own doctrine, unrecorded verification is indistinguishable from none, and the gate was passing on evidence for code that no longer existed.
 **Why not fixed now:** FIXED — this session recorded V-013..V-023 through apex_verify itself, including an async task poll, so the evidence describes the current tree.
 **Recommend:** Record evidence through the tools, in the same action that produces it. Running a check and writing it down later is two chances to skip the second half.
+
+## F-008 — A phantom apex_fleet tool block calling warden.runFleet() survived the round that was meant to fix exactly this, because the new doc/code test scanned only MCP-SERVER.md. Widening it found 13 more calls to engine methods that do not exist.
+**Where:** build/OPENCODE-PLUGIN.md + build/ENGINES.md
+**What:** A phantom apex_fleet tool block calling warden.runFleet() survived the round that was meant to fix exactly this, because the new doc/code test scanned only MCP-SERVER.md. Widening it found 13 more calls to engine methods that do not exist.
+**Why not fixed now:** FIXED — the fleet block is marked DEFERRED with its reason, all 13 illustrative calls now name the real API, and the test scans every build doc plus every engine method call.
+**Recommend:** When you build a net for a class of defect, run it over the WHOLE surface in the same action. A net that covers one file certifies one file — F-005 said this, and it repeated anyway.
