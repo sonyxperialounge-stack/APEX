@@ -35,3 +35,9 @@
 **What:** attach wrote into EVERY detected host directory. On this machine that put files and config entries into Claude Code, Cursor and Gemini CLI as well as OpenCode. Three were never asked for and had to be cleaned up by hand. Two of them I did not notice until a third scan prompted a full sweep.
 **Why not fixed now:** FIXED — attach now installs into ONE host (the deepest available) and reports the rest as untouched. --all-hosts opts back in. Four tests assert the other host directories stay empty.
 **Recommend:** Touching a config the user did not name is a surprise they have to clean up, not a convenience. Default to the narrowest action.
+
+## F-007 — The ledger stopped at V-012 (640 tests) while the code had moved on to 650. Verification was run and not recorded — by this project's own doctrine, unrecorded verification is indistinguishable from none, and the gate was passing on evidence for code that no longer existed.
+**Where:** runtime/.apex/VERIFICATION.md
+**What:** The ledger stopped at V-012 (640 tests) while the code had moved on to 650. Verification was run and not recorded — by this project's own doctrine, unrecorded verification is indistinguishable from none, and the gate was passing on evidence for code that no longer existed.
+**Why not fixed now:** FIXED — this session recorded V-013..V-023 through apex_verify itself, including an async task poll, so the evidence describes the current tree.
+**Recommend:** Record evidence through the tools, in the same action that produces it. Running a check and writing it down later is two chances to skip the second half.

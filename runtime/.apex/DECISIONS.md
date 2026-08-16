@@ -35,3 +35,12 @@
 - **Why this does not violate the plan:** The ledger still records exact counts per run, which is what evidence means. Prose that restates them is a second source of truth that drifts.
 - **Affects:** README.md, build/ROADMAP.md, runtime/README.md
 - **Reversible:** yes
+
+## DEC-005 — 2026-08-16T03:15:19.154Z
+- **Context:** build/MCP-SERVER.md documented apex_fleet, apex_fleet_status and apex_models; none existed in code
+- **Problem:** Doc ahead of code — the mirror image of the earlier code-ahead-of-spec drift, caught by an external scan.
+- **Options:** implement all three · defer the two that need a host, implement apex_models · delete the doc rows quietly
+- **Chose:** implemented apex_models; marked apex_fleet and apex_fleet_status DEFERRED with the reason in the doc
+- **Why this does not violate the plan:** A fleet needs a host that can spawn; the stdio server is filesystem-only by design (MCP-011). Deleting the rows quietly would have hidden the drift instead of recording it.
+- **Affects:** build/MCP-SERVER.md, build/REQUIREMENTS.md, src/mcp/tools.ts, test/mcp/server.test.ts
+- **Reversible:** yes

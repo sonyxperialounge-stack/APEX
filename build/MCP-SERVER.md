@@ -76,15 +76,36 @@ capability fails in confusing ways.
 | `apex_rollback` | `snapshotRef` | Restored files, preserved files, unexpected changes |
 | `apex_delegate` | `packet` | Subagent handle + the recorded packet |
 | `apex_subagent_status` | `id?` | State, checkpoint, attempt count |
-| `apex_fleet` | `order` (count, roles, models, task) | Runs a directed or autonomous fleet; returns the fleet report |
-| `apex_fleet_status` | `fleetId?` | Wave progress, packet tally, models actually called |
 | `apex_models` | — | Live model catalog. Used to check a user-named model **before** dispatch |
 | `apex_council` | `reqId`, `diff`, `testOutput` | Findings as hypotheses, with the reviewing model named |
 | `apex_gate` | — | `passed` + every unmet check |
 | `apex_handoff` | — | Generated handoff text |
+| `apex_resume` | `nextAction`, `doNotRedo?`, `verifyFirst?` | Updated resume point |
+| `apex_decision` | `context`, `problem`, `chose`, `whyNotAViolation` | Recorded decision |
+| `apex_check` | `kind`, `path?`, `command?` | Allow/deny with the rule that decided |
+| `apex_task_result` | `taskId` | Poll a long verification started asynchronously |
 | `apex_memory_read` | `context?` | Relevant memory facts |
 | `apex_memory_write` | `section`, `fact` | Confirmation, after dedupe and redaction |
-| `apex_findings` | `where`, `what`, `recommend` | Recorded finding |
+| `apex_finding` | `where`, `what`, `recommend` | Records one finding |
+| `apex_findings` | — | Lists every finding, so none is quietly forgotten |
+
+### Deferred, and why
+
+`apex_fleet` and `apex_fleet_status` are **specified but not implemented**, and that is a
+decision rather than an omission (DEC-004):
+
+- A fleet needs a host that can spawn child sessions and stream events. The stdio MCP
+  server is filesystem-only by design (MCP-011), so `apex_fleet` there would have to either
+  lie about what it did or refuse every call.
+- `apex_subagent_status` already returns every field `apex_fleet_status` would.
+
+The fleet engine itself is built and tested in `engines/warden.ts` (FLT-001..017), and is
+reachable at **L2**, where the plugin runs inside a host that can actually spawn. Exposing it
+over stdio waits until the MCP server carries a real host client.
+
+Naming a tool here that does not exist in the code is the same defect as shipping code the
+contract does not name — the mirror image of what an external scan caught earlier. It is
+recorded rather than quietly deleted.
 
 ### Schemas teach
 
@@ -112,14 +133,14 @@ them so the correct behaviour is obvious from the schema alone.
 }
 ```
 
-`apex_fleet`'s description must carry the substitution law, because it is the rule a model is
-most likely to "helpfully" break:
+`apex_delegate`'s description must carry the substitution law, because it is the rule a model
+is most likely to "helpfully" break:
 
 ```
-"Run a fleet of subagents. If the user named specific models, pass them in `models` and
- they will be used exactly — this tool NEVER substitutes an unavailable model. If a named
- model is unreachable it returns USER_DECISION_REQUIRED with the available alternatives;
- relay that to the user and wait. Do not pick a replacement yourself."
+"Spawn a supervised subagent from a packet. If the user named specific models they are used
+ EXACTLY — this tool NEVER substitutes an unavailable model. If a named model is unreachable
+ it returns USER_DECISION_REQUIRED with the real alternatives; relay that and wait. Do not
+ pick a replacement yourself."
 ```
 
 ### Rejections are the product — MCP-005

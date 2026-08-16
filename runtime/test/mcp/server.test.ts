@@ -541,3 +541,34 @@ describe("MCP-004/010 + PLG-014 — restored after an external scan found them m
     assert.match(out, /totals/)
   })
 })
+
+describe("apex_models — FLT-004 pre-dispatch check", () => {
+  test("returns a catalog and never suggests a substitute", async () => {
+    await call("apex_init", { projectRoot: dir })
+    const out = await callJson<{ models: unknown[]; count: number; note: string }>("apex_models")
+    assert.ok(Array.isArray(out.models))
+    assert.equal(typeof out.count, "number")
+    // With no host reachable the answer must be "you cannot delegate", never "use another".
+    assert.match(out.note, /never substitutes|not that any model may be used instead/)
+  })
+
+  test("is declared in the tool list", () => {
+    assert.ok(TOOLS.some((t) => t.name === "apex_models"))
+  })
+})
+
+describe("doc/code agreement — the mirror of the dropped-requirements bug", () => {
+  test("no tool is documented in MCP-SERVER.md that the code does not implement", async () => {
+    const fsp2 = await import("node:fs/promises")
+    const docPath = path.resolve(RUNTIME, "..", "build", "MCP-SERVER.md")
+    const doc = await fsp2.readFile(docPath, "utf8")
+
+    // Only the tool table counts; the "Deferred, and why" section names tools on purpose.
+    const table = doc.slice(doc.indexOf("## THE TOOLS"), doc.indexOf("### Deferred"))
+    const documented = [...table.matchAll(/`(apex_[a-z_]+)`/g)].map((m) => m[1]!)
+    const implemented = new Set(TOOLS.map((t) => t.name))
+
+    const phantom = [...new Set(documented)].filter((n) => !implemented.has(n))
+    assert.deepEqual(phantom, [], `documented but not implemented: ${phantom.join(", ")}`)
+  })
+})

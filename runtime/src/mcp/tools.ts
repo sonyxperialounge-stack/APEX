@@ -316,6 +316,15 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "apex_models",
+    description:
+      "The host's LIVE model catalog. Use it to check that a model the user named actually " +
+      "exists BEFORE dispatching work to it — discovering it mid-run wastes the run, and " +
+      "APEX will never substitute a different one. Returns an empty list when no host is " +
+      "reachable, which means you cannot delegate, not that any model will do.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
     name: "apex_task_result",
     description:
       "Poll a long-running operation started by apex_verify with a full tier. Returns the " +
@@ -509,6 +518,19 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
             ? "PASSED — this evidence can now support VERIFIED_COMPLETE."
             : "NOTHING RAN — every tier was NOT_RUN. You cannot claim this is verified.",
         notRun: notRun.map((r) => ({ type: r.type, reason: r.reason })),
+      })
+    }
+
+    case "apex_models": {
+      const host = new NullHostClient()
+      const models = await host.listModels()
+      return json({
+        models,
+        count: models.length,
+        note: models.length
+          ? "Check a user-named model against this list before dispatching. APEX never substitutes."
+          : "No host is reachable from the MCP server, so no catalog is available. This means " +
+            "delegation is not possible here — not that any model may be used instead.",
       })
     }
 
