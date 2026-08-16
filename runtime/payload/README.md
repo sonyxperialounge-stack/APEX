@@ -49,13 +49,19 @@ of.
 
 Same brain, three depths of binding. Each works alone; each lower one enforces the one above.
 
-| Level | Binding | Discipline is | Works with |
-|---|---|---|---|
-| **L0 — Doctrine** | The AI reads these files | *self-enforced* | Literally any model, anywhere |
-| **L1 — MCP** | An APEX MCP server is connected | *assisted* — real state, real verification records | Claude Code, Cursor, Windsurf, OpenCode, Zed, Goose |
-| **L2 — Native** | The APEX plugin runs inside the host | *mechanical* — the host blocks violations | OpenCode |
+| Level | Binding | Discipline is | Works with | Status |
+|---|---|---|---|---|
+| **L0 — Doctrine** | The AI reads these files | *self-enforced* | Literally any model, anywhere | ✅ works now |
+| **L1 — MCP** | An APEX MCP server is connected | *assisted* — real state, enforced transitions, recorded evidence | Claude Code, Cursor, Windsurf, OpenCode, Zed, Goose | ✅ **built** |
+| **L2 — Native** | The APEX plugin runs inside the host | *mechanical* — the host blocks violations | OpenCode | ✅ **built** |
 
-**L0 works right now.** Nothing to install. The rest is built from the project repository.
+**L0 works right now**, with nothing installed. **L1 is built** — see the runtime package:
+
+```bash
+npx apex-agent attach
+```
+
+All three levels are built. `attach` installs the deepest binding your host supports.
 
 ---
 
@@ -139,19 +145,31 @@ install/           How to attach at each level
 
 ---
 
-## Building the runtime (L1 + L2)
+## The runtime
 
-The doctrine works today. The enforced layers are specified but not yet written.
+**All 11 phases are built and verified** in the runtime package — 640 tests passing,
+typecheck clean, packaged tarball installs, and both the CLI and the L2 plugin load and run
+from it. Its own construction is recorded in the runtime package's own ledger, built under APEX itself, gate
+PASSED.
 
-Everything needed is in the project repository: architecture, a full requirement inventory with
+What you get from `npx apex-agent attach` today: requirement tracking with mechanically
+enforced status transitions, grounded verification that records literal command output,
+snapshots with surgical rollback that never touches your unrelated work, protected paths
+with evasion-resistant matching, and a completion gate that refuses to pass while anything
+is unverified or regressed.
+
+## The build plan
+
+Everything is specified in the project repository: architecture, a full requirement inventory with
 acceptance criteria, seven engine specifications with code, both host bindings, the installer,
 the test strategy, and a phase-by-phase roadmap.
 
 Hand the build plan in the project repository to any capable coding
-agent. It builds under APEX itself — if it cannot follow this discipline while building the
-thing that teaches it, that is worth finding out immediately.
+agent to rebuild, extend, or audit it. It builds under APEX itself — if an agent cannot follow
+this discipline while building the thing that teaches it, that is worth finding out immediately.
 
-Phases 0–5 are the MVP: one command, real value, on every MCP host.
+**Not yet done:** the live manual checklist in the test plan in the project repository, run
+against a real OpenCode installation. Mock-green is not shipped-green.
 
 ---
 

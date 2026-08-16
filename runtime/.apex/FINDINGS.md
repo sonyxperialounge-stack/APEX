@@ -23,3 +23,9 @@
 **What:** Four MCP-004 tools, MCP-010 async polling and PLG-014 native tools were silently dropped, and the test REQUIRED list had been rewritten to match the code instead of the spec — so nothing failed.
 **Why not fixed now:** FIXED — all implemented, the test now asserts the spec verbatim, and REQ-005/REQ-008 were reopened before any of it was claimed.
 **Recommend:** Assert specs verbatim in tests. A list derived from the implementation can never catch an omission.
+
+## F-005 — A claim that payload dead links were fixed was HALF TRUE: only START-HERE.md and README.md were corrected. Five adapter files still pointed at install/ATTACH.md, which does not ship. Caught by a second external scan.
+**Where:** runtime/payload/adapters/*.md (5 files)
+**What:** A claim that payload dead links were fixed was HALF TRUE: only START-HERE.md and README.md were corrected. Five adapter files still pointed at install/ATTACH.md, which does not ship. Caught by a second external scan.
+**Why not fixed now:** FIXED at the source, not the copy — plus scripts/sync-payload.mjs now rewrites repo-only links when building the payload, and test/cli/payload.test.ts fails on any unshipped reference, broken relative link, source drift or machine-specific path.
+**Recommend:** A fix claim needs a check covering the WHOLE surface. Grep the whole tree, do not fix the files that happen to be open.

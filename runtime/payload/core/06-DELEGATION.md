@@ -270,7 +270,7 @@ If your host lets you watch (event stream, session status, child-session listing
 If you cannot watch, set an expectation up front ("checkpoint every 10 minutes") and treat a
 missed checkpoint as a failure signal.
 
-At L1/L2, this supervision is automatic — the Warden engine does it (`../build/ENGINES.md`).
+At L1/L2, this supervision is automatic — the Warden engine does it (the build plan in the project repository).
 At L0, it is your job, and you must actually do it rather than firing and forgetting.
 
 ---

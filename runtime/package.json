@@ -1,7 +1,7 @@
 {
   "name": "apex-agent",
   "version": "1.0.0",
-  "description": "APEX \u2014 an operating doctrine that makes any AI coding agent work like a disciplined senior engineer",
+  "description": "APEX — an operating doctrine that makes any AI coding agent work like a disciplined senior engineer",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -15,7 +15,8 @@
     "dist/",
     "payload/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "scripts/"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -24,8 +25,9 @@
     "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
     "test:unit": "node --test --experimental-strip-types \"test/core/*.test.ts\" \"test/engines/*.test.ts\"",
     "test:integration": "node --test --experimental-strip-types \"test/mcp/*.test.ts\" \"test/cli/*.test.ts\"",
-    "prepack": "npm run clean && npm run build",
-    "verify": "npm run typecheck && npm test && npm run build"
+    "prepack": "npm run sync:payload && npm run clean && npm run build",
+    "verify": "npm run sync:payload && npm run typecheck && npm test && npm run build",
+    "sync:payload": "node scripts/sync-payload.mjs"
   },
   "dependencies": {},
   "devDependencies": {

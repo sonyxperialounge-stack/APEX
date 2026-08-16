@@ -132,8 +132,8 @@ tools over doing the same work by hand, because their state survives you.
 Check for L2: does `.apex/runtime.json` exist in the project and report `"level": 2`? If yes,
 the host is enforcing the rules; you can move faster and trust the guardrails.
 
-If you are at L0 and the user wants more, tell them to run `npx apex-agent attach`. Do not
-block on it — L0 alone is a large improvement.
+If you are at L0 and the user wants more, point them at `npx apex-agent attach`. Do not block on
+it — L0 alone is a large improvement.
 
 ---
 
@@ -279,7 +279,7 @@ write "100% complete" unless the evidence in front of you actually says so.
 You do not need to do anything. Give any AI model the link to this file — or to the folder it
 sits in — and it will configure itself.
 
-- Deeper integration, one command: `npx apex-agent attach`
-- Check what is installed: `npx apex-agent doctor`
+- Deeper integration (one command): `npx apex-agent attach`
 - What this is and why it works: `README.md`
 - Worked end-to-end examples: `EXAMPLES.md`
+

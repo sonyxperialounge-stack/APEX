@@ -187,4 +187,5 @@ If the host supports MCP:
 npx -y apex-agent@latest mcp        # stdio server; register per your host's config
 ```
 
-Full detail: `../install/ATTACH.md`.
+One command, any level: `npx apex-agent attach`.
+In the project repository, see `npx apex-agent attach` for the full breakdown.

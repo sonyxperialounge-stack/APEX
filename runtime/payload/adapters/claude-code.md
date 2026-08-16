@@ -181,4 +181,5 @@ starts cold and re-derives context you already hold. Most tasks are cheaper inli
 claude mcp add apex -- npx -y apex-agent@latest mcp
 ```
 
-Full detail: `../install/ATTACH.md`.
+One command, any level: `npx apex-agent attach`.
+In the project repository, see `npx apex-agent attach` for the full breakdown.

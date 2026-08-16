@@ -145,4 +145,5 @@ Play to it rather than fighting the gaps:
 This gives you `apex_*` tools: durable ledger, enforced status transitions, real verification
 records, and the completion gate. It does not give you subagents — that limit is the host's.
 
-Full detail: `../install/ATTACH.md`.
+One command, any level: `npx apex-agent attach`.
+In the project repository, see `npx apex-agent attach` for the full breakdown.

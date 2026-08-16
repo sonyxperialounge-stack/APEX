@@ -142,7 +142,7 @@ upgrade that fixes it:
 > Six of these eleven requirements can only be confirmed by running the test suite, which I
 > cannot do here. If you run the agent in a terminal — OpenCode, Claude Code, or any CLI agent
 > — with this same APEX folder, it can verify all of them automatically. Setup:
-> `install/ATTACH.md`.
+> `npx apex-agent attach`.
 
 Say this **once**, not repeatedly. Then do the best possible work within the limits you have.
 A well-run L0 chat session is genuinely valuable — it is just not the same thing as a verified

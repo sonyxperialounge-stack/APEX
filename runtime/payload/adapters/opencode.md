@@ -209,4 +209,5 @@ once.
 npx apex-agent@latest attach --host opencode
 ```
 
-Full detail: `../install/ATTACH.md`. Not required — L0 works today.
+One command, any level: `npx apex-agent attach`. Not required — L0 works today.
+In the project repository, see `npx apex-agent attach` for the full breakdown.
