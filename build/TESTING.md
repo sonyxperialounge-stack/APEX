@@ -239,7 +239,23 @@ say so, not to invent a plausible command.
 
 ## END-TO-END SCENARIOS
 
-Each is a full APEX cycle against the mock host, asserting the *behaviour a user would notice*.
+Each is a full APEX cycle asserting the *behaviour a user would notice*. They are not a
+separate suite — each lives in the behaviour test that owns the requirement, so a scenario
+cannot pass while its requirement fails:
+
+| Scenario | Lives in | Asserts |
+|---|---|---|
+| E2E-1 happy path | `test/mcp/server.test.ts` (MCP-011) | init → requirements → verify → gate |
+| E2E-2 verification failure | `test/plugin/hooks.test.ts` (PLG-006) | failure injected in the same turn |
+| E2E-3 protected path | `test/plugin/hooks.test.ts` (PLG-004) | blocked, and blocked again via bash |
+| E2E-4 subagent crash | `test/engines/warden.test.ts` (WAR-006/007) | partial work preserved, resumed not restarted |
+| E2E-5 anti-loop | `test/engines/warden.test.ts` (WAR-008) | ceiling escalates, requirement stays visible |
+| E2E-6 context handoff | `test/engines/ledger.test.ts` (LED-012) | blockers and resume point survive |
+| E2E-7 gate failure | `test/mcp/server.test.ts` (MCP-006) | names every unmet check |
+| E2E-8 rollback preserves user work | `test/engines/governor.test.ts` (GOV-008/009) | unrelated dirty files untouched |
+| E2E-9 directed fleet, model unavailable | `test/engines/warden.test.ts` (FLT-004) | stops and asks; never substitutes |
+| E2E-10 worker class exhaustion | `test/engines/warden.test.ts` (FLT-012/013) | asks; independent packets continue |
+| E2E-11 autonomous delegation | `test/engines/warden.test.ts` (FLT-006) | announces first; refuses on shared files |
 
 ```
 E2E-1  Happy path
@@ -319,6 +335,20 @@ Manual checklist, on a real machine:
 - [ ] `apex-agent detach`; confirm `opencode.json` is byte-identical to the pre-install backup
 - [ ] Repeat the L1 path on Claude Code and on Cursor
 
+### Live status as of 2026-08-16
+
+| Check | Status |
+|---|---|
+| OpenCode L2 on Windows — plugin loads, protected path blocked, in-turn verification, subagent recovery | ✅ done, real OpenCode 1.18.18 + `opencode-zen/deepseek-v4-flash-free` (F-003) |
+| MCP server connects to real OpenCode | ✅ `{"apex":{"status":"connected"}}` |
+| Packaged tarball installs and runs | ✅ CLI, MCP server and L2 plugin all run from it |
+| Claude Code L1 | ⬜ not installed on the verification machine |
+| Cursor L1 | ⬜ Cursor present but not launchable headlessly |
+| macOS / Linux attach | ⬜ CI covers the platforms; a real attach has not been run there |
+
+The unticked rows are unverified, not assumed working. CI proving the suite passes on Linux
+and macOS is not the same as proving `attach` writes a correct config there.
+
 **Do not publish a release until every box is ticked on real hardware.** Record the results, and
 if the environment prevented a check, say which one and why — do not silently mark it done.
 
@@ -327,18 +357,24 @@ if the environment prevented a check, say which one and why — do not silently 
 ## CI
 
 ```yaml
+# .github/workflows/verify.yml — the real file. Keep this block in step with it.
 strategy:
+  fail-fast: false
   matrix:
     os: [windows-latest, ubuntu-latest, macos-latest]
-    node: [20, 22]
+    node: [20, 22, 24]
 steps:
   - npm ci
   - npx tsc --noEmit
-  - npm run lint
-  - npm test -- --coverage
-  - npm run test:integration
-  - npm run test:e2e
+  - npm test
+  - npm run build
+  - npm pack, install the tarball into a clean directory, run the CLI from it
 ```
+
+The pack-and-install step is not ceremony. Node refuses to strip TypeScript types under
+`node_modules`, so a package shipping raw `.ts` installs cleanly and throws on first run —
+green unit tests say nothing about it. Only a real install proves the published artifact
+works.
 
 Windows is first in the matrix deliberately. It is the primary target and the platform where
 the previous system's fatal bug lived.

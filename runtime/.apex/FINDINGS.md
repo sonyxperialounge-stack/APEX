@@ -29,3 +29,9 @@
 **What:** A claim that payload dead links were fixed was HALF TRUE: only START-HERE.md and README.md were corrected. Five adapter files still pointed at install/ATTACH.md, which does not ship. Caught by a second external scan.
 **Why not fixed now:** FIXED at the source, not the copy — plus scripts/sync-payload.mjs now rewrites repo-only links when building the payload, and test/cli/payload.test.ts fails on any unshipped reference, broken relative link, source drift or machine-specific path.
 **Recommend:** A fix claim needs a check covering the WHOLE surface. Grep the whole tree, do not fix the files that happen to be open.
+
+## F-006 — attach wrote into EVERY detected host directory. On this machine that put files and config entries into Claude Code, Cursor and Gemini CLI as well as OpenCode. Three were never asked for and had to be cleaned up by hand. Two of them I did not notice until a third scan prompted a full sweep.
+**Where:** src/cli/attach.ts — attach with no --host
+**What:** attach wrote into EVERY detected host directory. On this machine that put files and config entries into Claude Code, Cursor and Gemini CLI as well as OpenCode. Three were never asked for and had to be cleaned up by hand. Two of them I did not notice until a third scan prompted a full sweep.
+**Why not fixed now:** FIXED — attach now installs into ONE host (the deepest available) and reports the rest as untouched. --all-hosts opts back in. Four tests assert the other host directories stay empty.
+**Recommend:** Touching a config the user did not name is a surprise they have to clean up, not a convenience. Default to the narrowest action.

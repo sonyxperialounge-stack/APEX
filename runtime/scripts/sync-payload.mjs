@@ -5,7 +5,7 @@
  * The payload ships inside the npm package, so it must be a faithful copy of the source
  * doctrine — and it must not reference anything that does not travel with it. Copying by
  * hand let five dead links survive a "fixed" claim; this makes the copy reproducible and
- * `npm run check:payload` makes the link integrity checkable.
+ * `test/cli/payload.test.ts` makes the link integrity checkable, and runs with the suite.
  */
 
 import fs from "node:fs"

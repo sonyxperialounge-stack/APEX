@@ -1,7 +1,7 @@
 # ROADMAP
 
 > **STATUS: ALL 11 PHASES BUILT AND VERIFIED.** The runtime lives in `../runtime/`.
-> Evidence: `npx tsc --noEmit` clean · **609 tests pass** · `npm run build` succeeds ·
+> Evidence: `npm run verify` — typecheck clean, full suite green, build succeeds ·
 > packaged tarball installs, and both the CLI and the L2 plugin load and run from it.
 > Its own ledger is at `../runtime/.apex/` — gate PASSED, 11/11 verified.
 >

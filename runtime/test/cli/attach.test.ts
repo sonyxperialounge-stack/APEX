@@ -361,3 +361,50 @@ describe("PLG-001 — the L2 plugin shim is installed correctly", () => {
     assert.ok(!existsSync(path.join(fakeHome, ".claude", "plugins", "apex.js")))
   })
 })
+
+// ── the multi-host leak ─────────────────────────────────────────────────────
+//
+// `attach` with no --host wrote into EVERY detected host directory. On a machine with
+// OpenCode, Claude Code, Cursor and Gemini CLI installed, one command left files and
+// config entries in all four — three of which the user never asked for, and had to be
+// cleaned up by hand afterwards.
+
+describe("INS-001 — attach touches ONE host unless told otherwise", () => {
+  beforeEach(async () => {
+    // A machine with several hosts present.
+    for (const d of [".claude", ".cursor", ".gemini"]) {
+      await fsp.mkdir(path.join(fakeHome, d), { recursive: true })
+    }
+  })
+
+  test("attaches only to the deepest host and names the rest", async () => {
+    const result = await attach({ projectRoot, payloadRoot })
+    assert.equal(result.hosts.length, 1, "exactly one host may be written to by default")
+    assert.equal(result.hosts[0]!.name, "opencode", "the deepest binding wins")
+    assert.ok(
+      result.messages.some((m) => m.includes("Left untouched")),
+      "the other hosts must be reported, not silently skipped",
+    )
+  })
+
+  test("the untouched hosts really are untouched", async () => {
+    await attach({ projectRoot, payloadRoot })
+    for (const d of [".claude", ".cursor", ".gemini"]) {
+      const dir = path.join(fakeHome, d)
+      const entries = await fsp.readdir(dir)
+      assert.deepEqual(entries, [], `${d} was modified without being asked for`)
+    }
+  })
+
+  test("--all-hosts opts back in", async () => {
+    const result = await attach({ projectRoot, payloadRoot, allHosts: true })
+    assert.ok(result.hosts.length > 1, "explicit opt-in attaches to every detected host")
+  })
+
+  test("--host targets exactly one, even with several present", async () => {
+    const result = await attach({ host: "claude-code", projectRoot, payloadRoot })
+    assert.equal(result.hosts.length, 1)
+    assert.equal(result.hosts[0]!.name, "claude-code")
+    assert.deepEqual(await fsp.readdir(path.join(fakeHome, ".cursor")), [], "cursor untouched")
+  })
+})

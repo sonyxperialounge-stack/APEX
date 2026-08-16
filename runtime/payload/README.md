@@ -147,9 +147,9 @@ install/           How to attach at each level
 
 ## The runtime
 
-**All 11 phases are built and verified** in the runtime package — 640 tests passing,
-typecheck clean, packaged tarball installs, and both the CLI and the L2 plugin load and run
-from it. Its own construction is recorded in the runtime package's own ledger, built under APEX itself, gate
+**All 11 phases are built and verified** in the runtime package — `npm run verify` is
+green (typecheck, full suite, build), the packaged tarball installs, and both the CLI and
+the L2 plugin load and run from it. Its own construction is recorded in the runtime package's own ledger, built under APEX itself, gate
 PASSED.
 
 What you get from `npx apex-agent attach` today: requirement tracking with mechanically

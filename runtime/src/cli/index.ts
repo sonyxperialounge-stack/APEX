@@ -18,7 +18,7 @@ import { say } from "../core/log.ts"
 const USAGE = `
 APEX ${VERSION} — an operating doctrine for AI coding agents
 
-  apex-agent attach [--host <name>] [--project <path>]   detect the host and install the deepest binding
+  apex-agent attach [--host <name>] [--all-hosts]        install into ONE host (the deepest available)
   apex-agent detach [--host <name>]                      remove cleanly, restoring your original config
   apex-agent doctor [--project <path>]                   what is installed, what is broken, how to fix it
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
@@ -35,15 +35,17 @@ interface Args {
   host?: HostName
   project?: string
   json: boolean
+  allHosts: boolean
 }
 
 export function parseArgs(argv: string[]): Args {
-  const out: Args = { command: argv[0] ?? "help", json: false }
+  const out: Args = { command: argv[0] ?? "help", json: false, allHosts: false }
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--host") out.host = argv[++i] as HostName
     else if (arg === "--project" || arg === "-p") out.project = argv[++i]
     else if (arg === "--json") out.json = true
+    else if (arg === "--all-hosts") out.allHosts = true
   }
   if (out.host && !KNOWN_HOSTS.includes(out.host)) {
     throw new Error(`Unknown host "${out.host}". Known: ${KNOWN_HOSTS.join(", ")}`)
@@ -62,7 +64,7 @@ export async function main(argv: string[]): Promise<void> {
 
     case "attach": {
       say(`\nAPEX ${VERSION}\n`)
-      const result = await attach({ host: args.host, projectRoot })
+      const result = await attach({ host: args.host, projectRoot, allHosts: args.allHosts })
       if (args.json) {
         process.stderr.write(JSON.stringify(result, null, 2) + "\n")
         return

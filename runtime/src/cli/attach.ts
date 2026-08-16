@@ -60,6 +60,16 @@ export interface AttachOptions {
   projectRoot: string
   /** Override the package payload location. Tests point this at a fixture. */
   payloadRoot?: string
+  /**
+   * Attach to EVERY detected host rather than just the deepest one.
+   *
+   * Off by default. Without `--host`, attach previously wrote into every host directory
+   * it could find — so running it once put files and config entries into Claude Code,
+   * Cursor and Gemini CLI as well, none of which the user had asked for. Touching a
+   * config the user did not name is not a convenience; it is a surprise they have to
+   * clean up.
+   */
+  allHosts?: boolean
 }
 
 export interface AttachResult {
@@ -75,8 +85,21 @@ export async function attach(options: AttachOptions): Promise<AttachResult> {
   const messages: string[] = []
   const payloadRoot = options.payloadRoot ?? path.join(PACKAGE_ROOT, "payload")
 
-  const hosts = options.host ? [await detectHost(options.host)] : await detectHosts()
-  const usable = hosts.filter((h) => h.configDir)
+  const detected = options.host ? [await detectHost(options.host)] : await detectHosts()
+  const available = detected.filter((h) => h.configDir)
+
+  // Attach to ONE host unless told otherwise: the deepest binding available. Every other
+  // detected host is reported, not written to. `--all-hosts` opts into the old behaviour.
+  let usable = available
+  if (!options.host && !options.allHosts && available.length > 1) {
+    const best = available.reduce((a, b) => (b.level > a.level ? b : a))
+    usable = [best]
+    const skipped = available.filter((h) => h.name !== best.name).map((h) => h.name)
+    messages.push(
+      `Also detected: ${skipped.join(", ")}. Left untouched — pass --host <name> for one of ` +
+        `them, or --all-hosts to attach to every detected host.`,
+    )
+  }
 
   // INS-010 — idempotence, per host. A host that is already attached at this version
   // with its files intact is skipped; a newly-installed host is still picked up.

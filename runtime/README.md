@@ -52,11 +52,13 @@ instead, which converts a doctrine rule into a mechanism it cannot forget.
 plugin (L2), and the installer.
 
 ```
-npx tsc --noEmit     clean
-npm test             640 passing, 143 suites
-npm run build        succeeds
-npm pack + install   verified — CLI, MCP server and L2 plugin all run from the tarball
+npm run verify       typecheck + full suite + build, all green
+npm pack + install   CLI, MCP server and L2 plugin all run from the tarball
 ```
+
+Exact counts live in [`.apex/VERIFICATION.md`](.apex/VERIFICATION.md), where they are dated
+evidence of a specific run. Prose that hardcodes a number goes stale the moment someone adds
+a test — which this project did to itself twice.
 
 Not yet done: the live manual checklist in `../build/TESTING.md`, against a real OpenCode
 installation. Mock-green is not shipped-green.

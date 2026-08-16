@@ -26,3 +26,12 @@
 - **Why this does not violate the plan:** Both were silently dropped. Reopening Phase 4 and Phase 7 restores the truth.
 - **Affects:** src/mcp/server.ts, src/mcp/tools.ts, src/plugin/index.ts
 - **Reversible:** n/a
+
+## DEC-004 — 2026-08-16T03:07:09.645Z
+- **Context:** External rating deducted 0.5 for stale numbers, doc drift, spec drift and a phantom script reference
+- **Problem:** Hardcoded test counts in prose go stale the moment a test is added — this project did it to itself twice.
+- **Options:** update the numbers again · remove hardcoded counts from prose and keep them only in dated ledger evidence
+- **Chose:** remove them from prose; point at npm run verify instead
+- **Why this does not violate the plan:** The ledger still records exact counts per run, which is what evidence means. Prose that restates them is a second source of truth that drifts.
+- **Affects:** README.md, build/ROADMAP.md, runtime/README.md
+- **Reversible:** yes
