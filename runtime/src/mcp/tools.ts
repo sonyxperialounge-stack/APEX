@@ -443,8 +443,17 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
       })
     }
 
-    case "apex_status":
-      return json(await ledger.status())
+    case "apex_status": {
+      const status = await ledger.status()
+      await ledger.loadConfig() // populates configIssues
+      return json({
+        ...status,
+        configIssues: ledger.configIssues.length ? ledger.configIssues : undefined,
+        configNote: ledger.configIssues.length
+          ? "config.json contains keys APEX does not recognise. They are listed above rather than ignored — tell the user, because a dropped protected path is invisible until something is overwritten."
+          : undefined,
+      })
+    }
 
     case "apex_req_add": {
       const req = await ledger.addRequirement({

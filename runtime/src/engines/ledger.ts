@@ -146,8 +146,109 @@ export class Ledger {
     return { created: true, config: merged }
   }
 
+  /**
+   * Keys a hand-written config might use that APEX does not recognise.
+   *
+   * A shipped template once used snake_case while the code read camelCase, so a user who
+   * filled in `do_not_touch` had their protected paths dropped in silence — the write went
+   * through. Silently ignoring a key the user deliberately set is the single worst thing
+   * this system can do, so unknown keys are migrated where the intent is unambiguous and
+   * REPORTED either way.
+   */
+  private static readonly LEGACY_KEYS: Record<string, string> = {
+    project_root: "projectRoot",
+    allowed_paths: "allowedPaths",
+    do_not_read: "doNotRead",
+    do_not_touch: "doNotTouch",
+    sources_of_truth: "sourcesOfTruth",
+    verify_commands: "verifyCommands",
+    max_same_strategy_failures: "maxSameStrategyFailures",
+    max_subagent_retries: "maxSubagentRetries",
+    handoff_at_context_pct: "handoffAtContextPct",
+    reviewer_model: "reviewerModel",
+    convene_on: "conveneOn",
+    max_concurrent_calls: "maxConcurrentCalls",
+    max_logical_packets: "maxLogicalPackets",
+    writers_per_wave: "writersPerWave",
+    allow_substitution: "allowSubstitution",
+    on_class_exhausted: "onClassExhausted",
+    announce_autonomous: "announceAutonomous",
+  }
+
+  /** Verify tiers a user might reasonably write that are not tier names. */
+  private static readonly LEGACY_TIERS: Record<string, string> = { test: "suite", run: "runtime" }
+
+  /** Problems found in the last loadConfig. Surfaced by status and by doctor. */
+  configIssues: string[] = []
+
+  private normalise(raw: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    const issues: string[] = []
+    const known = new Set(Object.keys(DEFAULT_CONFIG))
+
+    for (const [key, value] of Object.entries(raw)) {
+      if (key.startsWith("_")) continue // documentation keys in the template
+      const migrated = Ledger.LEGACY_KEYS[key]
+      if (migrated) {
+        out[migrated] = value
+        issues.push(`"${key}" is not a config key — read as "${migrated}". Rename it.`)
+      } else if (known.has(key)) {
+        out[key] = value
+      } else {
+        issues.push(`"${key}" is not a recognised config key and was IGNORED. Check the spelling.`)
+      }
+    }
+
+    // Nested renames.
+    for (const [outer, inner] of [["limits", null], ["council", null], ["delegation", "models"]] as const) {
+      const section = out[outer]
+      if (!section || typeof section !== "object") continue
+      const fixed: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(section as Record<string, unknown>)) {
+        const migrated = Ledger.LEGACY_KEYS[k]
+        if (migrated) {
+          fixed[migrated] = v
+          issues.push(`"${outer}.${k}" is not a config key — read as "${outer}.${migrated}". Rename it.`)
+        } else fixed[k] = v
+      }
+      if (inner && fixed[inner] && typeof fixed[inner] === "object") {
+        const nested: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(fixed[inner] as Record<string, unknown>)) {
+          const migrated = Ledger.LEGACY_KEYS[k]
+          if (migrated) {
+            nested[migrated] = v
+            issues.push(`"${outer}.${inner}.${k}" is not a config key — read as "${migrated}". Rename it.`)
+          } else nested[k] = v
+        }
+        fixed[inner] = nested
+      }
+      out[outer] = fixed
+    }
+
+    // Verify-tier renames: "test" and "run" are not tiers.
+    const commands = out.verifyCommands
+    if (commands && typeof commands === "object") {
+      const fixed: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(commands as Record<string, unknown>)) {
+        const migrated = Ledger.LEGACY_TIERS[k]
+        if (migrated) {
+          if (v !== null && v !== undefined) {
+            fixed[migrated] = v
+            issues.push(`verifyCommands."${k}" is not a tier — read as "${migrated}". Rename it.`)
+          }
+        } else fixed[k] = v
+      }
+      out.verifyCommands = fixed
+    }
+
+    this.configIssues = issues
+    for (const issue of issues) log.warn(`config: ${issue}`)
+    return out
+  }
+
   async loadConfig(): Promise<ApexConfig> {
-    const raw = await readJson<Partial<ApexConfig>>(this.file("config.json"), {})
+    const stored = await readJson<Record<string, unknown>>(this.file("config.json"), {})
+    const raw = this.normalise(stored) as Partial<ApexConfig>
     return {
       ...DEFAULT_CONFIG,
       ...raw,

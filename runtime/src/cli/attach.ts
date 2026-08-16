@@ -465,6 +465,9 @@ export async function doctor(projectRoot: string): Promise<{ lines: DoctorLine[]
         `Ledger present — ${status.totalRequirements} requirement(s), ` +
           `${status.totals.VERIFIED_COMPLETE} verified, ${status.blocked.length} blocked`,
       )
+      for (const issue of ledger.configIssues) {
+        add("warn", "PROJECT", `config.json: ${issue}`, "Rename the key so APEX reads it as you intended.")
+      }
       const cmds = Object.entries(config.verifyCommands).filter(([, v]) => v)
       if (cmds.length) add("ok", "PROJECT", `Verify commands: ${cmds.map(([k, v]) => `${k}=${v}`).join("  ")}`)
       else

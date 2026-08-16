@@ -47,3 +47,21 @@
 **What:** A phantom apex_fleet tool block calling warden.runFleet() survived the round that was meant to fix exactly this, because the new doc/code test scanned only MCP-SERVER.md. Widening it found 13 more calls to engine methods that do not exist.
 **Why not fixed now:** FIXED — the fleet block is marked DEFERRED with its reason, all 13 illustrative calls now name the real API, and the test scans every build doc plus every engine method call.
 **Recommend:** When you build a net for a class of defect, run it over the WHOLE surface in the same action. A net that covers one file certifies one file — F-005 said this, and it repeated anyway.
+
+## F-009 — Phantom types in doc code blocks: SubagentEventVerdict, RecoveryPlan, ParentVerification, ResolvedModels, Subtask, Models, FleetReportInput, Packet, Memory, FileSystem; Recall/Council interfaces drifted from the real constructors. Every earlier net parsed method shapes, so type names escaped.
+**Where:** build/ENGINES.md (sections 5-7) + runtime/test/mcp/server.test.ts
+**What:** Phantom types in doc code blocks: SubagentEventVerdict, RecoveryPlan, ParentVerification, ResolvedModels, Subtask, Models, FleetReportInput, Packet, Memory, FileSystem; Recall/Council interfaces drifted from the real constructors. Every earlier net parsed method shapes, so type names escaped.
+**Why not fixed now:** None — all ten phantom types and both interfaces were realigned to warden.ts/recall.ts/council.ts this session, and the type-name net now covers the class.
+**Recommend:** Keep ENGINES.md interfaces byte-faithful to src; the type-name net flags any new phantom identifier in a ```ts block.
+
+## F-010 — The net truncated the document at the 'There is no runFleet()' note, so everything after it (FLT-007..014 and WAR-004..010 samples) escaped — onWorkerFailure and six more pseudo-methods were declarations the net could not see.
+**Where:** runtime/test/mcp/server.test.ts — declaration net
+**What:** The net truncated the document at the 'There is no runFleet()' note, so everything after it (FLT-007..014 and WAR-004..010 samples) escaped — onWorkerFailure and six more pseudo-methods were declarations the net could not see.
+**Why not fixed now:** None — the split was replaced with a regex that removes only the note itself; the whole document is now scanned.
+**Recommend:** A net must remove the exemption, not the document after it.
+
+## F-011 — The shipped template used snake_case (do_not_touch, allowed_paths, verify_commands{test,run}) while ApexConfig is camelCase with tiers unit/suite/runtime. A user who filled in do_not_touch had protected paths dropped in SILENCE — config/prod.yaml became writable, .env readable, no warning anywhere. Verified empirically in AUTO mode before the fix.
+**Where:** templates/config.json vs runtime/src/engines/ledger.ts loadConfig()
+**What:** The shipped template used snake_case (do_not_touch, allowed_paths, verify_commands{test,run}) while ApexConfig is camelCase with tiers unit/suite/runtime. A user who filled in do_not_touch had protected paths dropped in SILENCE — config/prod.yaml became writable, .env readable, no warning anywhere. Verified empirically in AUTO mode before the fix.
+**Why not fixed now:** None — template is camelCase now, loadConfig() migrates known legacy keys with a warning, reports unknown keys via configIssues, and doctor/apex_status surface them.
+**Recommend:** Never silently ignore a config key; template<->ApexConfig schema agreement is a shipped test.

@@ -601,6 +601,101 @@ describe("doc/code agreement — the mirror of the dropped-requirements bug", ()
     })
   }
 
+  // A method can appear in a doc as a CALL (`e.warden.runFleet(`) or as a DECLARATION
+  // (`async runFleet(order): Promise<...>`). The first version of this net parsed calls
+  // only, so `runFleet` survived in ENGINES.md in declaration form. Both shapes now count.
+  test("no build doc declares an engine method that does not exist", async () => {
+    const fsp2 = await import("node:fs/promises")
+    const srcDir = path.resolve(RUNTIME, "src")
+    const readAll = async (dir: string, acc: string[] = []): Promise<string[]> => {
+      for (const e of await fsp2.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) await readAll(full, acc)
+        else if (e.name.endsWith(".ts")) acc.push(await fsp2.readFile(full, "utf8"))
+      }
+      return acc
+    }
+    const source = (await readAll(srcDir)).join("\n")
+
+    const phantom: string[] = []
+    for (const file of DOCS) {
+      const doc = await fsp2.readFile(path.resolve(RUNTIME, "..", "build", file), "utf8").catch(() => "")
+      if (!doc) continue
+      // A deferral section may declare what is deliberately not built. The runFleet
+      // blockquote itself declares nothing, so remove ONLY that note — an earlier version
+      // truncated the whole document at it, which is how `onWorkerFailure` and friends
+      // survived this net in declaration form.
+      const scanned = doc.replace(/^> \*\*There is no `\w+\(\)`[^\n]*(?:\n> [^\n]*)*/m, "")
+
+      for (const m of scanned.matchAll(/^\s{2}(?:async\s+)?([a-z][A-Za-z0-9]*)\s*(?:\([^)]*\)|<)/gm)) {
+        const method = m[1]!
+        if (["constructor", "if", "for", "while", "return", "catch", "switch"].includes(method)) continue
+        if (!new RegExp(`\\b${method}\\s*[(<:]`).test(source)) phantom.push(`${file}: ${method}()`)
+      }
+    }
+    assert.deepEqual(
+      [...new Set(phantom)],
+      [],
+      `build docs declare methods that do not exist: ${[...new Set(phantom)].join(", ")}`,
+    )
+  })
+
+  // A doc can also name a TYPE that does not exist — an interface's return type, a
+  // constructor's field type. `SubagentEventVerdict`, `RecoveryPlan` and `FleetReportInput`
+  // in ENGINES.md survived every earlier net because they all parsed method shapes, not
+  // identifiers. Any uppercase identifier in a ```ts block must be a type or constant the
+  // source actually declares.
+  test("no build doc names a type the source does not declare", async () => {
+    const fsp2 = await import("node:fs/promises")
+    const srcDir = path.resolve(RUNTIME, "src")
+    const readAll = async (dir: string, acc: string[] = []): Promise<string[]> => {
+      for (const e of await fsp2.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) await readAll(full, acc)
+        else if (e.name.endsWith(".ts")) acc.push(await fsp2.readFile(full, "utf8"))
+      }
+      return acc
+    }
+    const source = (await readAll(srcDir)).join("\n")
+
+    const declared = new Set<string>()
+    for (const m of source.matchAll(/\b(?:export\s+)?(?:interface|type|class|enum)\s+([A-Z][A-Za-z0-9_]*)\b/g)) declared.add(m[1]!)
+    for (const m of source.matchAll(/\b(?:export\s+)?const\s+([A-Z][A-Za-z0-9_]*)\b/g)) declared.add(m[1]!)
+    for (const m of source.matchAll(/\b(?:export\s+)?function\s+([A-Z][A-Za-z0-9_]*)\b/g)) declared.add(m[1]!)
+
+    // Standard library and TypeScript utility types — real, but not declared in src.
+    const builtins = new Set([
+      "Promise", "Map", "Set", "WeakMap", "WeakSet", "Record", "Array", "Partial", "Pick",
+      "Omit", "Readonly", "Exclude", "Extract", "NonNullable", "ReturnType", "Parameters",
+      "Awaited", "Error", "Date", "RegExp", "JSON", "String", "Number", "Boolean", "Object",
+      "Function", "Symbol", "BigInt", "Math", "Buffer", "NodeJS", "AsyncIterable", "Iterable",
+      "AsyncIterator", "Iterator", "URL",
+    ])
+
+    const phantom: string[] = []
+    for (const file of DOCS) {
+      const doc = await fsp2.readFile(path.resolve(RUNTIME, "..", "build", file), "utf8").catch(() => "")
+      if (!doc) continue
+      for (const block of doc.matchAll(/```ts\n([\s\S]*?)```/g)) {
+        // strip comments and string literals so filenames like "AGENTS.md" stay silent
+        const code = block[1]!
+          .split("\n")
+          .map((l) => l.replace(/\/\/.*$/, "").replace(/"[^"]*"/g, "").replace(/'[^']*'/g, "").replace(/`[^`]*`/g, ""))
+          .join("\n")
+        for (const m of code.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)) {
+          const name = m[1]!
+          if (builtins.has(name) || declared.has(name)) continue
+          phantom.push(`${file}: ${name}`)
+        }
+      }
+    }
+    assert.deepEqual(
+      [...new Set(phantom)],
+      [],
+      `build docs name types the source does not declare: ${[...new Set(phantom)].join(", ")}`,
+    )
+  })
+
   test("no build doc calls an engine method that does not exist", async () => {
     const fsp2 = await import("node:fs/promises")
     const srcDir = path.resolve(RUNTIME, "src")

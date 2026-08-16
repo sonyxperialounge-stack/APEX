@@ -31,6 +31,9 @@
 | V-027 | REQ-005, REQ-008 | unit | `` | — | No unit command is configured for this project. | NOT_RUN |
 | V-028 | REQ-005, REQ-008 | suite | `npm test` | exit code 0 | > apex-agent@1.0.0 test | PASS |
 | V-029 | REQ-005, REQ-008 | build | `npm run build` | exit code 0 | > apex-agent@1.0.0 build | PASS |
+| V-030 | REQ-002, REQ-005, REQ-006 | unit | `node --test test/engines/config-schema.test.ts` | every template key loads into ApexConfig; snake_case keys are migrated with a warning, never silently dropped | config-schema suite: template<->ApexConfig both directions, verify tiers valid, nested sections match, copy-template-binds (doNotTouch/doNotRead survive with ze | PASS |
+| V-031 | REQ-005, REQ-009, REQ-010, REQ-011 | unit | `node --test test/mcp/server.test.ts` | declaration net scans the whole doc (no truncation at the runFleet note); type-name net flags uppercase identifiers not declared in src | doc/code agreement green: tool nets x5 docs, declaration net (onWorkerFailure class now covered), type-name net (SubagentEventVerdict/RecoveryPlan/ParentVerific | PASS |
+| V-032 | REQ-005, REQ-009, REQ-010, REQ-011 | suite | `npm test && npx tsc --noEmit` | 671 tests / 147 suites pass; tsc clean | tests 671, suites 147, pass 671, fail 0, skipped 0; npx tsc --noEmit exit 0 | PASS |
 
 > A log with no FAIL and no NOT_RUN rows over a long project is not excellence — it is
 > evidence that verification was not really happening.
@@ -2461,4 +2464,49 @@ apabilities (20.7031ms)
 > tsc -p tsconfig.build.json
 
 
+```
+
+### V-030
+- **Requirements:** REQ-002, REQ-005, REQ-006
+- **Type:** unit
+- **Command:** `node --test test/engines/config-schema.test.ts`
+- **Expected:** every template key loads into ApexConfig; snake_case keys are migrated with a warning, never silently dropped
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:53:04.708Z
+- **Reason:** 
+
+```text
+config-schema suite: template<->ApexConfig both directions, verify tiers valid, nested sections match, copy-template-binds (doNotTouch/doNotRead survive with zero warnings) — all pass. Targeted run: 67 tests / 13 suites / 0 fail.
+```
+
+### V-031
+- **Requirements:** REQ-005, REQ-009, REQ-010, REQ-011
+- **Type:** unit
+- **Command:** `node --test test/mcp/server.test.ts`
+- **Expected:** declaration net scans the whole doc (no truncation at the runFleet note); type-name net flags uppercase identifiers not declared in src
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:53:04.728Z
+- **Reason:** 
+
+```text
+doc/code agreement green: tool nets x5 docs, declaration net (onWorkerFailure class now covered), type-name net (SubagentEventVerdict/RecoveryPlan/ParentVerification/ResolvedModels/Subtask/Models/FleetReportInput/Packet/Memory/FileSystem retired), call net. ENGINES.md Warden/Recall/Council interfaces now match warden.ts/recall.ts/council.ts exactly.
+```
+
+### V-032
+- **Requirements:** REQ-005, REQ-009, REQ-010, REQ-011
+- **Type:** suite
+- **Command:** `npm test && npx tsc --noEmit`
+- **Expected:** 671 tests / 147 suites pass; tsc clean
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 0
+- **Timestamp:** 2026-08-16T03:53:04.744Z
+- **Reason:** 
+
+```text
+tests 671, suites 147, pass 671, fail 0, skipped 0; npx tsc --noEmit exit 0
 ```

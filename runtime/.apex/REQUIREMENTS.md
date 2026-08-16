@@ -1,7 +1,7 @@
 # Requirements
 
 **Totals:** 11 total · 11 verified · 0 implemented-unverified · 0 in-progress · 0 not-started · 0 blocked · 0 n/a
-**Last updated:** 2026-08-16T03:22:19.129Z
+**Last updated:** 2026-08-16T03:53:04.754Z
 
 > Invariants: no row is ever deleted · no ID is ever reused · every row has exactly one
 > status · the totals line is regenerated from the detail blocks below, so it cannot disagree.
@@ -9,16 +9,16 @@
 | ID | Summary | Status | Evidence |
 |---|---|---|---|
 | REQ-001 | Core: redaction chokepoint, safe JSON/paths/exec/logging (CORE-001..009) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
-| REQ-002 | LEDGER: enforced transitions, mandatory evidence, handoff from state (LED-001..016) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
+| REQ-002 | LEDGER: enforced transitions, mandatory evidence, handoff from state (LED-001..016) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-030 |
 | REQ-003 | VERIFIER: command detection, evidence cascade, regression attribution (VER-001..012) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
 | REQ-004 | GOVERNOR: four modes, hard blocklist, path protection, surgical rollback (GOV-001..013) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
-| REQ-005 | MCP server (L1): 16 apex_* tools with teaching rejections (MCP-001..011) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-007, V-008, V-009, V-010, V-011, V-012, V-013, V-014, V-015, V-016, V-017, V-018, V-019, V-020, V-021, V-022, V-023, V-024, V-025, V-026, V-027, V-028, V-029 |
-| REQ-006 | CLI + installer: attach/detach/doctor, non-destructive merge (INS-001..013) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
+| REQ-005 | MCP server (L1): 16 apex_* tools with teaching rejections (MCP-001..011) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-007, V-008, V-009, V-010, V-011, V-012, V-013, V-014, V-015, V-016, V-017, V-018, V-019, V-020, V-021, V-022, V-023, V-024, V-025, V-026, V-027, V-028, V-029, V-030, V-031, V-032 |
+| REQ-006 | CLI + installer: attach/detach/doctor, non-destructive merge (INS-001..013) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-030 |
 | REQ-007 | CORTEX: system-prompt assembly, budgeting, priority degradation (COR-001..007) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
 | REQ-008 | OpenCode plugin (L2): 8 hooks, safe wrapper, companions, loader shim (PLG-001..017) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-007, V-008, V-009, V-010, V-011, V-012, V-013, V-014, V-015, V-016, V-017, V-018, V-019, V-020, V-021, V-022, V-023, V-024, V-025, V-026, V-027, V-028, V-029 |
-| REQ-009 | WARDEN + FLEET: packets, supervision, recovery, model substitution law (WAR-001..012, FLT-001..017) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
-| REQ-010 | RECALL: project memory, automatic capture, staleness, host mirroring (REC-001..007) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
-| REQ-011 | COUNCIL: convening gate, blind review, findings as hypotheses (CNC-001..008) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006 |
+| REQ-009 | WARDEN + FLEET: packets, supervision, recovery, model substitution law (WAR-001..012, FLT-001..017) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032 |
+| REQ-010 | RECALL: project memory, automatic capture, staleness, host mirroring (REC-001..007) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032 |
+| REQ-011 | COUNCIL: convening gate, blind review, findings as hypotheses (CNC-001..008) | VERIFIED_COMPLETE | V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032 |
 
 ---
 
@@ -44,7 +44,7 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-030
 - **Notes:** 
 - **Reason:** 
 
@@ -83,7 +83,7 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-007, V-008, V-009, V-010, V-011, V-012, V-013, V-014, V-015, V-016, V-017, V-018, V-019, V-020, V-021, V-022, V-023, V-024, V-025, V-026, V-027, V-028, V-029
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-007, V-008, V-009, V-010, V-011, V-012, V-013, V-014, V-015, V-016, V-017, V-018, V-019, V-020, V-021, V-022, V-023, V-024, V-025, V-026, V-027, V-028, V-029, V-030, V-031, V-032
 - **Notes:** 
 - **Reason:** 
 
@@ -96,7 +96,7 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-030
 - **Notes:** 
 - **Reason:** 
 
@@ -135,7 +135,7 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032
 - **Notes:** 
 - **Reason:** 
 
@@ -148,7 +148,7 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032
 - **Notes:** 
 - **Reason:** 
 
@@ -161,6 +161,6 @@
 - **Verify by:** `npm run verify`
 - **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006
+- **Evidence:** V-001, V-002, V-003, V-004, V-005, V-006, V-031, V-032
 - **Notes:** 
 - **Reason:** 

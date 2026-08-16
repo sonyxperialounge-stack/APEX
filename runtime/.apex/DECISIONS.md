@@ -44,3 +44,12 @@
 - **Why this does not violate the plan:** A fleet needs a host that can spawn; the stdio server is filesystem-only by design (MCP-011). Deleting the rows quietly would have hidden the drift instead of recording it.
 - **Affects:** build/MCP-SERVER.md, build/REQUIREMENTS.md, src/mcp/tools.ts, test/mcp/server.test.ts
 - **Reversible:** yes
+
+## DEC-006 — 2026-08-16T03:53:04.768Z
+- **Context:** Find B — silent-ignore config keys; Find A — phantom doc types
+- **Problem:** A config key the code does not read is dropped without a trace, and a doc type that does not exist passes every net that parses method shapes only.
+- **Options:** silently ignore unknown keys (status quo) · migrate known legacy keys + warn, report unknown keys · reject configs with unknown keys
+- **Chose:** Migrate known legacy snake_case keys with a warning; report every unknown key via configIssues surfaced by doctor and apex_status. Rejection was too brittle for hand-edited configs; silence was the actual bug.
+- **Why this does not violate the plan:** No doctrine rule forbids lenient parsing; the rules forbid SILENT loss, which is now impossible — every dropped or renamed key is logged and surfaced.
+- **Affects:** REQ-002, REQ-005, REQ-006
+- **Reversible:** Fully reversible: the normalise() mapping is a pure function; removing it restores strict camelCase reading.

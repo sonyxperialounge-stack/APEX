@@ -172,12 +172,15 @@ export class Verifier {
   constructor(private cfg: ApexConfig, private exec: CommandRunner, private ledger: Ledger) {}
 
   async detectCommands(root: string): Promise<Partial<Record<VerifyType, string>>>
-  async captureBaseline(): Promise<Baseline>          // run the suite BEFORE changes
+  async ensureCommands(): Promise<Partial<Record<VerifyType, string | null>>>
+  async captureBaseline(): Promise<SuiteBaseline | null>   // run the suite BEFORE changes
+  setBaseline(baseline: SuiteBaseline | null): void
+  getBaseline(): SuiteBaseline | null
+  async targetedTest(file: string): Promise<string | null>
+  classifyFailures(output: string): { regressions: string[]; preExisting: string[] }  // VER-009
   async cascade(changedFiles: string[], reqIds: string[], opts?: {
     stopAtFirstFailure?: boolean; maxTier?: VerifyType
   }): Promise<VerificationRecord[]>
-  async targetedTest(file: string): Promise<string | null>
-  async compareToBaseline(current: SuiteResult): Promise<Regression[]>
 }
 ```
 
@@ -428,20 +431,36 @@ byte-identical prompt.
 
 ```ts
 export class Warden {
-  constructor(private host: HostClient, private ledger: Ledger, private gov: Governor) {}
-
-  async delegate(packet: SubagentPacket): Promise<SubagentHandle>
-  async supervise(h: SubagentHandle): Promise<SubagentOutcome>
-  async recover(id: string): Promise<RecoveryPlan>
-  async verifyResult(id: string): Promise<ParentVerification>   // WAR-010, mandatory
-  async abortAll(reason: string): Promise<void>
+  constructor(host: HostClient, ledger: Ledger, governor: Governor, cfg: ApexConfig) {}
 
   // ── Fleet control (core/13-FLEET.md, FLT-001..017) ──
-  parseOrder(text: string): FleetOrder | null                   // FLT-002
-  shouldDelegateAutonomously(ctx: FleetContext): { yes: boolean; criteria: string[] }  // FLT-006
-  async runFleet(order: FleetOrder): Promise<FleetReport>       // FLT-007..015
+  parseOrder(text: string, task = ""): FleetOrder | null                                   // FLT-002
+  restate(order: FleetOrder): string                                                       // FLT-002
+  reconcileOrderWithMode(order: FleetOrder): { proceed: boolean; question: string }        // FLT-003
+  shouldDelegateAutonomously(ctx: FleetContext): { yes: boolean; criteria: string[]; announcement: string }  // FLT-006
+  async resolveModels(order: FleetOrder): Promise<{ commander: string; workers: string[]; reviewer: string | null }>  // FLT-004/005
+  decompose(order: FleetOrder, subtasks: Array<{ title: string; objective: string; role: SubagentPacket["role"]; dependsOn: string[] }>): SubagentPacket[]  // FLT-007
+  buildWaves(packets: SubagentPacket[], dependencies?: Map<string, string[]>): SubagentPacket[][]  // FLT-008
+  assign(wave: SubagentPacket[], models: { workers: string[]; reviewer: string | null }, fleetId: string): SubagentPacket[]  // FLT-010
+  checkWriteSafety(wave: SubagentPacket[]): { safe: boolean; conflict: string }            // WAR-011
+  async dispatch(packet: SubagentPacket, parentSessionId?: string): Promise<SubagentRecord>
+
+  // ── Supervision (WAR-004..011) ──
+  classifyEvent(ev: { type: string; path?: string }, packet: SubagentPacket, acceptanceMet: boolean): FailureClass | "checkpoint" | "done" | null  // WAR-004/005
+  async recordCheckpoint(id: string, checkpoint: string, files?: string[]): Promise<void>
+  async recover(id: string, failure: FailureClass, survived: string[]): Promise<{ packet: SubagentPacket | null; escalate: boolean; reason: string }>  // WAR-006..009
+  async redistribute(packet: SubagentPacket, failedModel: string, idleWorkersOfSameModel: string[], allClassesDown: boolean): Promise<{ action: "requeue" | "ask_user" | "stop"; message: string }>  // FLT-011..013
+  async verifyResult(id: string, input: { diff: string | null; changedFiles: string[]; criteriaMet: boolean[]; rerunPassed: boolean; integrationPassed: boolean }): Promise<{ accepted: boolean; checks: Record<string, boolean>; defects: string[] }>  // WAR-010, mandatory
+  buildReport(input: { fleetId: string; trigger: "DIRECTED" | "AUTONOMOUS"; logicalPackets: number; waves: number; modelsCalled: Record<string, number>; modelsUnavailable: string[]; tally: Partial<Record<PacketOutcome, number>>; sequentialFallback?: boolean }): FleetReport  // FLT-014/015
+  renderReport(report: FleetReport): string
 }
 ```
+
+> **There is no `runFleet()` orchestrator.** The pieces above are built and tested
+> individually (FLT-001..017); what is deferred is the method that drives them end to end,
+> because it needs a host that can spawn child sessions — see `MCP-SERVER.md` → Deferred,
+> and DEC-004/DEC-005. An earlier draft of this file declared `runFleet` as though it
+> existed, which is the same defect as documenting a tool that does not ship.
 
 ### The model substitution law — FLT-004, the single most important rule here
 
@@ -475,56 +494,49 @@ and a helpful substitution destroys the thing they were doing.
 
 ### Logical vs physical — FLT-007, FLT-009
 
+The count the user asked for is honoured exactly; concurrency is bounded separately. These
+are the real methods — the orchestrator that chains them is deferred (above).
+
 ```ts
-async runFleet(order: FleetOrder): Promise<FleetReport> {
-  const packets = this.decompose(order.task, order.logicalWorkers)   // honour the count EXACTLY
-  const waves = this.scheduler.buildWaves(packets)                   // topological, cycle-rejecting
-  const cap = this.cfg.delegation.max_concurrent_calls               // bound the PHYSICAL calls
-  const tally = new Tally(packets.length)
+// 1 — honour the logical count EXACTLY (FLT-007)
+const packets = warden.decompose(order, subtasks)
 
-  for (const wave of waves) {
-    const runnable = wave.packets.filter(p => {
-      if (this.deps(p).some(d => tally.failed.has(d))) {
-        tally.mark(p.id, "SKIPPED_DEPENDENCY")                       // FLT-008: skipped, not silent
-        return false
-      }
-      return true
-    })
-    if (!runnable.length) continue
+// 2 — topological waves; unknown deps and cycles are REJECTED so a broken graph
+//     never executes (FLT-008)
+const waves = warden.buildWaves(packets, dependencies)
 
-    // FLT-010: exactly one writer per wave while isolation is "none"
-    const assignments = this.assign(runnable, order.models, this.cfg.delegation.writers_per_wave)
+// 3 — per wave: bind models and grant exactly `writersPerWave` write access (FLT-010)
+for (const wave of waves) {
+  const assigned = warden.assign(wave, models, fleetId)
+  const safety = warden.checkWriteSafety(assigned)      // WAR-011
+  if (!safety.safe) throw new ApexError(safety.conflict)
 
-    // FLT-009: genuinely concurrent within the wave, bounded by `cap` — never a queue of 1
-    for (const outcome of await pool(assignments, cap, a => this.runPacket(a)))
-      tally.mark(outcome.packetId, await this.classify(outcome))     // may redistribute (FLT-011)
-  }
-
-  tally.assertReconciles()      // FLT-014: dispatched === terminal, or the run is corrupted
-  return tally.report(await this.callLog())   // FLT-015: only models actually called
+  // 4 — genuinely concurrent within the wave, bounded by maxConcurrentCalls — never a
+  //     queue of one (FLT-009). A packet whose dependency failed is marked
+  //     SKIPPED_DEPENDENCY, never silently dropped.
+  await pool(assigned, cfg.delegation.maxConcurrentCalls, (p) => warden.dispatch(p))
 }
+
+// 5 — the tally must reconcile: dispatched === terminal, or the run reports itself
+//     corrupted rather than smoothing it over (FLT-014)
+const report = warden.buildReport({ ...counts })
 ```
 
 ### Redistribution — FLT-011, FLT-012, FLT-013
 
 ```ts
-async onWorkerFailure(packet: Packet, worker: ModelRef, cls: FailureClass) {
-  if (cls === "rate_limit") return this.backoffAndRequeue(packet, worker)   // FLT-016: same model
+// The caller watches its pool and reports the real inputs; Warden never reaches for
+// another model class and never guesses the pool's state:
+const outcome = await warden.redistribute(packet, failedModel, idleWorkersOfSameModel, allClassesDown)
 
-  const sameClass = this.idleWorkersOfModel(worker)                          // FLT-011: SAME model
-  if (sameClass.length) {
-    const replacement = await this.buildReplacementPacket(packet)            // states what survives
-    return this.dispatch(replacement, sameClass[0])
-  }
-
-  // FLT-012: the class is exhausted. Do not reach for another model.
-  await this.ledger.appendProgress({
-    note: `Model class ${worker.key} exhausted. ${this.stranded(worker).length} packets stranded. ` +
-          `Not substituted. Continuing independent packets.`,
-  })
-  if (this.everyClassDown())                                                 // FLT-013
-    return this.stopAndAsk("All worker classes are unavailable. State persisted.")
-  return this.askUserAboutClass(worker)                                      // and keep going elsewhere
+switch (outcome.action) {
+  case "requeue":   // FLT-011 — SAME model class; the replacement packet states what survives
+    await warden.dispatch(replacementPacket)
+    break
+  case "stop":      // FLT-013 — every class down: state persisted, nothing substituted
+    return outcome.message
+  case "ask_user":  // FLT-012 — class exhausted: strand it, continue elsewhere, ask
+    await this.ledger.appendProgress({ note: outcome.message })
 }
 ```
 
@@ -536,35 +548,38 @@ hour loses nothing.
 Subscribe to the host event stream and watch for four conditions:
 
 ```ts
-async supervise(h) {
-  const deadline = Date.now() + h.packet.timeoutMs
-  let lastCheckpoint = Date.now()
+// The event loop belongs to the CALLER — Warden owns the verdict, not the subscription,
+// because only the host knows how to stream its own events. Each event is classified
+// the moment it arrives, so scope drift aborts NOW rather than at the end of the run.
+for await (const ev of host.events(rec.sessionId)) {
+  const verdict = warden.classifyEvent(ev, packet, acceptanceMet)   // WAR-004, WAR-005
 
-  for await (const ev of this.host.events(h.sessionId)) {
-    switch (ev.type) {
-      case "session.error":
-        return this.fail(h, "crash", ev)                       // recover immediately
-
-      case "file.edited":
-        if (!h.packet.allowedPaths.some(a => isUnder(ev.path, a)))
-          return this.fail(h, "scope-drift", ev)               // WAR-005: abort NOW, not at the end
-        break
-
-      case "message.updated":
-        lastCheckpoint = Date.now()
-        await this.ledger.upsertSubagent(checkpointFrom(ev))
-        break
-
-      case "session.idle":
-        // The most dangerous state: it stopped, but did it finish?
-        return (await this.acceptanceMet(h))
-          ? this.done(h)
-          : this.fail(h, "idle-unfinished", ev)
+  switch (verdict) {
+    case "crash":            // session.error
+    case "scope_drift":      // file.edited outside packet.allowedPaths
+    case "stalled":
+    case "timeout": {        // recover immediately — the replacement states what survives
+      const { packet: replacement, escalate } = await warden.recover(rec.id, verdict, survivedFiles)
+      if (!escalate) await warden.dispatch(replacement!)
+      break
     }
 
-    if (Date.now() > deadline) return this.fail(h, "timeout", null)
-    if (Date.now() - lastCheckpoint > h.packet.checkpointIntervalMs * 2)
-      return this.fail(h, "stalled", null)
+    case "checkpoint":       // message.updated / message.part.updated
+      await warden.recordCheckpoint(rec.id, ev.path ?? "message.updated")
+      break
+
+    case "done":
+      // The most dangerous state: it stopped, but did it finish? Never assume.
+      // WAR-010 — the PARENT verifies; a subagent's own claim is not evidence.
+      await warden.verifyResult(rec.id, parentInput)
+      break
+
+    case "idle_unfinished":
+      await warden.recover(rec.id, "idle_unfinished", survivedFiles)
+      break
+
+    default:                 // null — not one of the conditions Warden acts on
+      break
   }
 }
 ```
@@ -593,19 +608,17 @@ async supervise(h) {
 Seven checks from `core/06-DELEGATION.md`, all of them, before any status change:
 
 ```ts
-async verifyResult(id) {
-  const s = (await this.ledger.listSubagents()).find((x) => x.id === id)!
-  const diff = await this.host.sessionDiff(s.sessionId)      // real diff, not its claim
-  return {
-    diffRead:        diff !== null,
-    scopeRespected:  changedFiles(diff).every(f => isUnder(f, s.packet.allowedPaths)),
-    protectedClean:  !changedFiles(diff).some(f => this.gov.isProtectedWrite(f)),
-    criteriaMet:     await this.checkEachCriterion(s),        // individually, not overall
-    verificationRerun: await this.verifier.cascade(changedFiles(diff), s.packet.reqIds),
-    integrationOk:   await this.verifier.cascade([], s.packet.reqIds, { maxTier: "suite" }),
-    evasions:        await this.scanForEvasions(diff),        // skipped tests, weakened asserts, stubs
-  }
-}
+// WAR-010 — the PARENT assembles the evidence; a subagent's own claim is never an input.
+// All seven checks run inside, and any false check rejects the result.
+const s = (await this.ledger.listSubagents()).find((x) => x.id === id)!
+const result = await warden.verifyResult(id, {
+  diff: await this.host.sessionDiff(s.sessionId),       // the real diff, not its claim
+  changedFiles: parsedChangedFiles(diff),               // files touched, from the diff
+  criteriaMet: criterionEvidence,                       // one boolean per acceptance criterion
+  rerunPassed: true,                                    // every required check re-ran and passed
+  integrationPassed: true,                              // the suite still passes
+})
+// result: { accepted, checks: Record<string, boolean>, defects: string[] } — any false → REJECTED
 ```
 
 Any false → `REJECTED`. The subagent's own report is never an input to this function.
@@ -616,12 +629,12 @@ Any false → `REJECTED`. The subagent's own report is never an input to this fu
 
 ```ts
 export class Recall {
-  constructor(private root: string, private fs: FileSystem) {}
-  async read(): Promise<Memory>
-  async capture(fact: MemoryFact): Promise<void>              // deduped, redacted, dated
-  async relevant(ctx: { files: string[]; task: string }, limit?: number): Promise<MemoryFact[]>
+  constructor(root: string, ledger: Ledger) {}
+  async read(): Promise<MemoryFact[]>                                        // deduped, redacted, dated
+  async capture(section: MemorySection, text: string): Promise<{ written: boolean; reason: string }>
+  async relevant(files: string[] = [], limit = 5): Promise<string[]>
   async detectStale(): Promise<StaleEntry[]>
-  async mirrorToHost(target: "AGENTS.md" | "CLAUDE.md"): Promise<void>
+  async mirrorToHost(target = "AGENTS.md"): Promise<{ written: boolean; preservedBytes: number }>
 }
 ```
 
@@ -650,10 +663,10 @@ flagged, not silently trusted. Stale memory is worse than none, because it is be
 
 ```ts
 export class Council {
-  constructor(private host: HostClient, private ledger: Ledger) {}
+  constructor(host: HostClient, ledger: Ledger, cfg: ApexConfig) {}
   async available(): Promise<ModelRef[]>                       // live catalog, never hardcoded
-  shouldConvene(ctx: ConveneContext): { yes: boolean; reason: string }
-  async review(input: ReviewInput): Promise<Finding[]>         // hypotheses, not verdicts
+  shouldConvene(ctx: ConveneContext): { yes: boolean; reason: string; trigger: ConveneReason | null }
+  async review(input: ReviewInput): Promise<ReviewResult>      // hypotheses, not verdicts
 }
 ```
 
