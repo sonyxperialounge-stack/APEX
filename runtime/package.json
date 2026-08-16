@@ -1,0 +1,44 @@
+{
+  "name": "apex-agent",
+  "version": "1.0.0",
+  "description": "APEX \u2014 an operating doctrine that makes any AI coding agent work like a disciplined senior engineer",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "apex-agent": "./bin/apex-agent.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "payload/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
+    "test:unit": "node --test --experimental-strip-types \"test/core/*.test.ts\" \"test/engines/*.test.ts\"",
+    "test:integration": "node --test --experimental-strip-types \"test/mcp/*.test.ts\" \"test/cli/*.test.ts\"",
+    "prepack": "npm run clean && npm run build",
+    "verify": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "mcp",
+    "opencode",
+    "claude-code",
+    "verification",
+    "apex"
+  ]
+}

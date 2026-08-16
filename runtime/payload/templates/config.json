@@ -1,0 +1,53 @@
+{
+  "_comment": "APEX ledger config. Copy to <PROJECT_ROOT>/.apex/config.json and fill in.",
+
+  "project_root": "REPLACE/WITH/ABSOLUTE/PATH",
+  "autonomy": "GUARDED",
+
+  "allowed_paths": ["."],
+  "do_not_read": [],
+  "do_not_touch": [],
+  "ignore": ["node_modules/", ".git/", "dist/", "build/", "__pycache__/", ".venv/", "vendor/"],
+
+  "sources_of_truth": [],
+
+  "verify_commands": {
+    "parse": null,
+    "types": null,
+    "lint": null,
+    "test": null,
+    "build": null,
+    "run": null
+  },
+
+  "limits": {
+    "max_same_strategy_failures": 3,
+    "max_subagent_retries": 2,
+    "handoff_at_context_pct": 80,
+    "max_session_budget_note": "stop and report if one requirement exceeds ~20% of the session"
+  },
+
+  "council": {
+    "enabled": false,
+    "reviewer_model": null,
+    "convene_on": ["security", "irreversible", "architecture", "third_failure"]
+  },
+
+  "_delegation_note": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",
+  "delegation": {
+    "mode": "AUTO",
+    "max_concurrent_calls": 6,
+    "max_logical_packets": 200,
+    "writers_per_wave": 1,
+    "isolation": "none",
+    "models": {
+      "commander": null,
+      "workers": [],
+      "reviewer": null,
+      "allow_substitution": false,
+      "fallback": {}
+    },
+    "on_class_exhausted": "ask_user",
+    "announce_autonomous": true
+  }
+}

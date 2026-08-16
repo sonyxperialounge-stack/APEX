@@ -1,0 +1,58 @@
+name: verify
+
+# X-003 / CORE-007 — cross-platform is a claim until CI proves it. Windows is listed
+# first because it is the primary target and the platform where this project's two worst
+# bugs lived (an unescaped path in JSON, and a shell child that survived its timeout).
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: runtime
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        node: [20, 22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: runtime/package-lock.json
+
+      - run: npm ci
+
+      - name: typecheck
+        run: npx tsc --noEmit
+
+      - name: test
+        run: npm test
+
+      - name: build
+        run: npm run build
+
+      - name: pack and install from the tarball
+        shell: bash
+        run: |
+          # The failure this catches: Node refuses to strip TypeScript types under
+          # node_modules, so a package shipping raw .ts installs cleanly and then throws
+          # on first run. Only a real install proves the published artifact works.
+          npm pack
+          mkdir -p "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          npm install "$GITHUB_WORKSPACE/runtime/apex-agent-1.0.0.tgz"
+          npx apex-agent --version
+          npx apex-agent init
+          npx apex-agent gate || true   # an empty ledger must FAIL the gate

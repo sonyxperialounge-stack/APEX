@@ -1,0 +1,59 @@
+{
+  "projectRoot": "D:\\multiworker opencode\\Army-V3\\runtime",
+  "autonomy": "GUARDED",
+  "allowedPaths": [
+    "."
+  ],
+  "doNotRead": [],
+  "doNotTouch": [
+    "../core/",
+    "../adapters/",
+    "../templates/",
+    "../START-HERE.md"
+  ],
+  "ignore": [
+    "node_modules/",
+    ".git/",
+    "dist/",
+    "build/",
+    "__pycache__/",
+    ".venv/",
+    "vendor/"
+  ],
+  "sourcesOfTruth": [
+    "../build/REQUIREMENTS.md",
+    "../build/ROADMAP.md",
+    "../build/ENGINES.md"
+  ],
+  "verifyCommands": {
+    "types": "npx tsc --noEmit",
+    "suite": "npm test",
+    "build": "npm run build"
+  },
+  "limits": {
+    "maxSameStrategyFailures": 3,
+    "maxSubagentRetries": 2,
+    "handoffAtContextPct": 80
+  },
+  "council": {
+    "enabled": false,
+    "reviewerModel": null,
+    "conveneOn": []
+  },
+  "delegation": {
+    "mode": "AUTO",
+    "maxConcurrentCalls": 6,
+    "maxLogicalPackets": 200,
+    "writersPerWave": 1,
+    "isolation": "none",
+    "models": {
+      "commander": null,
+      "workers": [],
+      "reviewer": null,
+      "allowSubstitution": false,
+      "fallback": {}
+    },
+    "onClassExhausted": "ask_user",
+    "announceAutonomous": true
+  }
+}
