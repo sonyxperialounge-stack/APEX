@@ -233,3 +233,9 @@ License 1.0** (see [`LICENSE`](LICENSE)):
 - ❌ You may **not sell it** or use it commercially
 - ❌ You may **not modify it** or distribute modified versions
 - ❌ You may **not rename it** or claim it as your own
+
+**Removing the license or copyright headers grants no rights — it only removes your
+permission.** Tampering with the license is a criminal offense under the Copyright
+Act 1957 (India, §§51/63/63B), 17 U.S.C. §1202 (US/DMCA), EU Directive 2009/24/EC,
+and the Berne Convention. See [`LEGAL-NOTICE.md`](LEGAL-NOTICE.md) for the full
+legal warning, applicable sections, and the notice to AI agents.

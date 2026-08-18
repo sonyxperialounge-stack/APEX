@@ -18,7 +18,7 @@ const PAYLOAD = path.join(RUNTIME, "payload")
 
 /** Directories and files copied verbatim from the project root into the payload. */
 const COPY_DIRS = ["core", "adapters", "templates"]
-const COPY_FILES = ["START-HERE.md", "README.md", "EXAMPLES.md"]
+const COPY_FILES = ["START-HERE.md", "README.md", "EXAMPLES.md", "LEGAL-NOTICE.md"]
 
 /** Present only in the repository, never in the shipped package. */
 export const NOT_SHIPPED = ["install", "build", "runtime", ".github"]
