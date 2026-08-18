@@ -105,4 +105,8 @@ is what keeps every engine testable with no host running.
 
 ---
 
-MIT
+## License
+
+Not open source. Distributed under the **APEX Personal Use License 1.0**
+([`LICENSE`](LICENSE)): free personal, non-commercial use of unmodified copies only.
+You may **not** sell, modify, or rename this software.

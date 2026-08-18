@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "APEX — an operating doctrine that makes any AI coding agent work like a disciplined senior engineer",
   "type": "module",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=20.0.0"
   },

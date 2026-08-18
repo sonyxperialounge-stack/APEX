@@ -221,3 +221,15 @@ a named regression test for that in the build plan.
 **Using it:** [`START-HERE.md`](START-HERE.md) — give the link to any AI.
 **Building it:** [`build/BUILD-MASTER-PROMPT.md`](build/BUILD-MASTER-PROMPT.md).
 **Seeing it work:** [`EXAMPLES.md`](EXAMPLES.md).
+
+---
+
+## License
+
+This project is **not open source**. It is distributed under the **APEX Personal Use
+License 1.0** (see [`LICENSE`](LICENSE)):
+
+- ✅ Use it and share **unmodified copies, free, for personal non-commercial use**
+- ❌ You may **not sell it** or use it commercially
+- ❌ You may **not modify it** or distribute modified versions
+- ❌ You may **not rename it** or claim it as your own

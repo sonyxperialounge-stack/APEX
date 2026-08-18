@@ -1,21 +1,66 @@
-MIT License
+APEX Personal Use License 1.0 ("APEX-PUL-1.0")
 
-Copyright (c) 2026 APEX contributors
+Copyright (c) 2026 Lalit. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The "Software" means this repository, "APEX — ARMY V3", including all of its
+source code, documentation, doctrine files, adapters, templates, build plans,
+configuration, and all materials distributed with it.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This Software is source-available, NOT open source. It is made publicly
+visible on GitHub with only the limited rights granted below. All rights not
+expressly granted are reserved by the copyright holder.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. GRANT
+   Subject to the Prohibitions in Section 2, and provided every copy retains
+   this license and the copyright notice above, the copyright holder grants
+   you a free, non-exclusive, non-transferable, non-sublicensable, revocable
+   right, for PERSONAL AND NON-COMMERCIAL purposes only, to:
+
+   a. use the Software unmodified (for example: attach the doctrine to your
+      own personal projects, or run the runtime locally); and
+   b. make and share UNMODIFIED copies of the Software.
+
+2. PROHIBITIONS
+   The following are prohibited without the prior written consent of the
+   copyright holder:
+
+   a. SALE / COMMERCIAL USE. You may not sell, rent, lease, sublicense, or in
+      any way charge money for the Software or any copy or portion of it, and
+      you may not use it for commercial advantage. This includes packaging the
+      Software, or any part of it, into any product, service, course,
+      template, or subscription that is sold or otherwise monetized.
+   b. MODIFICATION. You may not modify, adapt, translate, reverse engineer,
+      or create derivative works of the Software, and you may not distribute
+      or publish any modified version of it.
+   c. RENAMING. You may not remove, alter, or obscure the name "APEX — ARMY
+      V3" (or "APEX") or the author credit in any copy of the Software, and
+      you may not present, rebrand, or relabel the Software under any other
+      name, or in any way that suggests anyone other than the copyright
+      holder authored it.
+
+3. CONTRIBUTIONS
+   You may submit proposed changes (pull requests, issues, patches) to the
+   official repository of the Software. By submitting them you grant the
+   copyright holder a perpetual, irrevocable, worldwide, royalty-free license
+   to incorporate, modify, and distribute your contribution as part of the
+   Software. This clause exists solely so you may propose fixes without
+   violating Section 2(b); only the copyright holder may incorporate changes.
+
+4. PUBLIC HOSTING
+   Where the Software is hosted publicly on GitHub, GitHub's Terms of Service
+   permit users to view the repository and fork it within GitHub. No such view
+   or fork grants any right beyond this license.
+
+5. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+6. TERMINATION
+   Your rights under this license terminate automatically if you fail to
+   comply with any of Sections 2(a)–2(c). Upon termination you must cease all
+   use of the Software and destroy all copies in your possession.
