@@ -1,5 +1,7 @@
 # APEX — ARMY V3
 
+[![verify](https://github.com/sonyxperialounge-stack/APEX/actions/workflows/verify.yml/badge.svg)](https://github.com/sonyxperialounge-stack/APEX/actions/workflows/verify.yml)
+
 **An operating doctrine that makes any AI coding agent work like a disciplined senior engineer.**
 
 Give any AI model the link to [`START-HERE.md`](START-HERE.md) — or to this folder — and it
@@ -115,6 +117,9 @@ claiming things.
 START-HERE.md      ← the one file. Give any AI this link.
 README.md          ← you are here
 EXAMPLES.md        ← worked end-to-end sessions
+LICENSE            The license — personal use only. NOT open source.
+LEGAL-NOTICE.md    Legal warning (India + international sections) and
+                   the notice to AI agents
 
 core/              The doctrine. Twelve files, loaded on demand.
   01-LAWS          the twelve laws that override default habits
@@ -150,7 +155,8 @@ install/           How to attach at each level
 **All 11 phases are built and verified** in the runtime package — `npm run verify` is
 green (typecheck, full suite, build), the packaged tarball installs, and both the CLI and
 the L2 plugin load and run from it. Its own construction is recorded in the runtime package's own ledger, built under APEX itself, gate
-PASSED.
+PASSED. Requires **Node 22.6+** to run the CLI/tests — the supported range is declared in
+the package manifest (`runtime/package.json` in the project repository).
 
 What you get from `npx apex-agent attach` today: requirement tracking with mechanically
 enforced status transitions, grounded verification that records literal command output,
@@ -212,7 +218,7 @@ And one operational failure worth naming: its shipped config contained unescaped
 backslashes, making it invalid JSON, so the integration silently never loaded at all. There is
 a named regression test for that in the build plan.
 
-`Army-V2/` remains untouched as reference. APEX does not depend on any of it.
+Army-V2 remains as reference; APEX is a clean rebuild and does not depend on any of it.
 
 ---
 
