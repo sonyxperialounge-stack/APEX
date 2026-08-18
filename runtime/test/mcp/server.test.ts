@@ -676,15 +676,42 @@ describe("doc/code agreement — the mirror of the dropped-requirements bug", ()
     for (const file of DOCS) {
       const doc = await fsp2.readFile(path.resolve(RUNTIME, "..", "build", file), "utf8").catch(() => "")
       if (!doc) continue
-      for (const block of doc.matchAll(/```ts\n([\s\S]*?)```/g)) {
-        // strip comments and string literals so filenames like "AGENTS.md" stay silent
-        const code = block[1]!
-          .split("\n")
-          .map((l) => l.replace(/\/\/.*$/, "").replace(/"[^"]*"/g, "").replace(/'[^']*'/g, "").replace(/`[^`]*`/g, ""))
+      // Fences must tolerate CRLF: a `\n`-only pattern matches NOTHING on a Windows
+      // checkout (git hands out `\r\n` there), so the scan silently no-ops on Windows
+      // while still running on Linux. That asymmetry is exactly how drift hides — the
+      // first CI run caught 25 phantoms on Linux that Windows had been "passing" all along.
+      for (const block of doc.matchAll(/```ts\r?\n([\s\S]*?)```/g)) {
+        // strip comments, string/template literals and REGEX literals so filenames like
+        // "AGENTS.md" stay silent — and so SQL keywords inside a detection regex
+        // (/DROP\s+(DATABASE|TABLE)/) stop counting as identifiers
+        const stripped = block[1]!
+          .split(/\r?\n/)
+          // import lines reference names declared by the external module, not by src
+          .filter((l) => !/^\s*import\b/.test(l))
+          .map((l) =>
+            l
+              .replace(/\/\/.*$/, "")
+              .replace(/"[^"]*"/g, "")
+              .replace(/'[^']*'/g, "")
+              .replace(/`[^`]*`/g, "")
+              .replace(/\/(?:\\.|[^/\\\n])+\/[a-z]*/g, ""),
+          )
           .join("\n")
-        for (const m of code.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)) {
+
+        // Names the block itself declares — locals, classes, interfaces — are part of
+        // the example, not claims about src.
+        const local = new Set<string>()
+        for (const m of stripped.matchAll(/(?:const|let|var|function|class|interface|type|enum)\s+([A-Z][A-Za-z0-9_]*)/g))
+          local.add(m[1]!)
+
+        for (const m of stripped.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b(?!\s*[:?])/g)) {
           const name = m[1]!
-          if (builtins.has(name) || declared.has(name)) continue
+          // A lone uppercase letter in a doc example is a generic parameter
+          // (`function safe<A extends any[], R>`), never a type from src.
+          if (name.length === 1) continue
+          // Object keys and case labels are VALUES in the example, not type references
+          // — the lookahead above already dropped `NAME:` shapes.
+          if (builtins.has(name) || declared.has(name) || local.has(name)) continue
           phantom.push(`${file}: ${name}`)
         }
       }

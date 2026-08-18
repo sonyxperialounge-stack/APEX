@@ -74,8 +74,13 @@ export function safe<A extends unknown[], R>(
       return await Promise.race([
         fn(...args),
         new Promise<never>((_, reject) => {
+          // Deliberately NOT unref'd: when the wrapped hook hangs, this timer is the
+          // ONLY thing keeping the event loop alive. Unref it and an empty loop exits
+          // before the timeout fires — the runner observes a pending promise with nothing
+          // left to run, and the hang is never bounded at all (caught on Node 22).
+          // The timer is cleared in `finally` once the race settles, so it never outlives
+          // the hook execution window.
           timer = setTimeout(() => reject(new Error(`hook ${name} exceeded ${timeoutMs}ms`)), timeoutMs)
-          timer.unref?.()
         }),
       ])
     } catch (err) {

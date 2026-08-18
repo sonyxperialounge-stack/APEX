@@ -70,9 +70,26 @@ describe("GOV-003 — protected write, evasion resistance", () => {
     assert.equal(gov().isProtectedWrite(path.join(dir, "config", "prod.yaml")), true)
   })
 
-  test("blocks case variation on Windows only", () => {
+  test("blocks case variation exactly when the filesystem resolves case variants", async () => {
+    // The block comes from realpath resolving "CONFIG/PROD.YAML" onto the real
+    // "config/prod.yaml", which only happens on a case-INSENSITIVE filesystem. That is
+    // Windows (always), macOS (APFS default), and usually NOT Linux — so the expectation
+    // is probed from the filesystem itself, never hardcoded to a platform. The first
+    // version guessed `platform === "win32"` and broke on macOS CI for exactly this reason.
+    const probeFile = path.join(dir, "case-probe.txt")
+    await fsp.writeFile(probeFile, "x")
+    const fsResolvesCase = await fsp
+      .access(path.join(dir, "CASE-PROBE.TXT"))
+      .then(() => true)
+      .catch(() => false)
+
     const result = gov().isProtectedWrite("CONFIG/PROD.YAML")
-    assert.equal(result, process.platform === "win32")
+    assert.equal(
+      result,
+      fsResolvesCase,
+      `case variation was ${result ? "blocked" : "allowed"} but the filesystem ` +
+        `${fsResolvesCase ? "does" : "does not"} resolve case variants`,
+    )
   })
 
   test("blocks anything outside allowed_paths (deny by default)", () => {

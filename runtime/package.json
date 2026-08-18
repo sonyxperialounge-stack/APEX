@@ -5,7 +5,7 @@
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.6.0"
   },
   "bin": {
     "apex-agent": "./bin/apex-agent.js"
@@ -26,7 +26,7 @@
     "test:unit": "node --test --experimental-strip-types \"test/core/*.test.ts\" \"test/engines/*.test.ts\"",
     "test:integration": "node --test --experimental-strip-types \"test/mcp/*.test.ts\" \"test/cli/*.test.ts\"",
     "prepack": "npm run sync:payload && npm run clean && npm run build",
-    "verify": "npm run sync:payload && npm run typecheck && npm test && npm run build",
+    "verify": "npm run sync:payload && npm run typecheck && npm run clean && npm run build && npm test",
     "sync:payload": "node scripts/sync-payload.mjs"
   },
   "dependencies": {},

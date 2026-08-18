@@ -85,7 +85,7 @@ through this one, which is what makes the invariants enforceable.
 
 ```ts
 export class Ledger {
-  constructor(private root: string, private fs: FileSystem) {}
+  constructor(private root: string) {}
 
   async init(config: ApexConfig): Promise<void>      // never overwrites an existing ledger
   async loadConfig(): Promise<ApexConfig>
@@ -112,7 +112,7 @@ export class Ledger {
 ### The transition table — LED-004, the heart of the engine
 
 ```ts
-const LEGAL: Record<ReqStatus, ReqStatus[]> = {
+const LEGAL_TRANSITIONS: Record<ReqStatus, ReqStatus[]> = {
   NOT_STARTED:              ["IN_PROGRESS", "BLOCKED", "NOT_APPLICABLE"],
   IN_PROGRESS:              ["IMPLEMENTED_NOT_VERIFIED", "BLOCKED", "NOT_APPLICABLE"],
   IMPLEMENTED_NOT_VERIFIED: ["VERIFIED_COMPLETE", "IN_PROGRESS", "BLOCKED"],
@@ -124,10 +124,10 @@ const LEGAL: Record<ReqStatus, ReqStatus[]> = {
 async setStatus(id, next, opts) {
   const req = await this.get(id)
 
-  if (!LEGAL[req.status].includes(next))
+  if (!LEGAL_TRANSITIONS[req.status].includes(next))
     throw new ApexError(
       `Illegal transition ${req.status} → ${next} for ${id}. ` +
-      `Legal from here: ${LEGAL[req.status].join(", ")}. ` +
+      `Legal from here: ${LEGAL_TRANSITIONS[req.status].join(", ")}. ` +
       `To reach VERIFIED_COMPLETE, first implement it (IN_PROGRESS → ` +
       `IMPLEMENTED_NOT_VERIFIED), then verify it with evidence.`)
 
@@ -203,13 +203,13 @@ not define — a fabricated command that fails proves nothing about the code.
 ### The cascade — VER-003
 
 ```ts
-const ORDER: VerifyType[] = ["parse", "types", "lint", "unit", "suite", "build", "runtime"]
+const CASCADE_ORDER: VerifyType[] = ["parse", "types", "lint", "unit", "suite", "build", "runtime"]
 
 async cascade(changedFiles, reqIds, opts = {}) {
   const records: VerificationRecord[] = []
 
-  for (const tier of ORDER) {
-    if (opts.maxTier && ORDER.indexOf(tier) > ORDER.indexOf(opts.maxTier)) break
+  for (const tier of CASCADE_ORDER) {
+    if (opts.maxTier && CASCADE_ORDER.indexOf(tier) > CASCADE_ORDER.indexOf(opts.maxTier)) break
 
     const command = tier === "unit"
       ? await this.targetedTest(changedFiles[0])     // VER-005: smallest relevant check
@@ -274,7 +274,7 @@ that measures correctness must never be able to alter the measurement.
 
 ```ts
 export class Governor {
-  constructor(private cfg: ApexConfig, private fs: FileSystem, private git: GitClient | null) {}
+  constructor(private cfg: ApexConfig, private git: GitClient | null = null) {}
 
   decide(op: Operation): Decision
   isProtectedRead(p: string): boolean
@@ -311,7 +311,7 @@ command containing the path rather than a tool argument.
 ### The hard blocklist — GOV-002
 
 ```ts
-const BLOCKLIST: Rule[] = [
+const RULES: Rule[] = [
   { id: "protected-write",  test: op => op.kind === "write"  && this.isProtectedWrite(op.path) },
   { id: "protected-read",   test: op => op.kind === "read"   && this.isProtectedRead(op.path) },
   { id: "unbounded-delete", test: op => /rm\s+-[rf]{2}|find\s+.*-delete|Remove-Item.*-Recurse.*-Force/.test(op.command ?? "")
@@ -325,13 +325,13 @@ const BLOCKLIST: Rule[] = [
 ]
 
 decide(op: Operation): Decision {
-  for (const rule of BLOCKLIST) {
+  for (const rule of RULES) {
     if (rule.test(op)) return {
       allowed: false, rule: rule.id, requiresSnapshot: false,
-      reason: EXPLANATIONS[rule.id],       // the model must learn WHY, not just that it failed
+      reason: `[APEX BLOCKED: ${rule.id}] ${rule.reason}`,   // every rule carries its own WHY
     }
   }
-  return MODE_POLICY[this.cfg.autonomy](op)   // GOV-001
+  return this.modePolicy(op)   // GOV-001: the blocklist runs first, THEN the autonomy policy
 }
 ```
 
@@ -465,7 +465,7 @@ export class Warden {
 ### The model substitution law — FLT-004, the single most important rule here
 
 ```ts
-async resolveModels(order: FleetOrder): Promise<ResolvedModels> {
+async resolveModels(order: FleetOrder): Promise<{ commander: string; workers: string[]; reviewer: string | null }> {
   const live = await this.host.listModels()
   const missing = order.requestedModels.filter(m => !live.some(l => l.key === m))
   if (missing.length === 0) return bind(order, live)

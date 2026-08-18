@@ -3,6 +3,16 @@ name: verify
 # X-003 / CORE-007 — cross-platform is a claim until CI proves it. Windows is listed
 # first because it is the primary target and the platform where this project's two worst
 # bugs lived (an unescaped path in JSON, and a shell child that survived its timeout).
+#
+# Node range: the test suite runs sources via --experimental-strip-types, which exists
+# from Node 22.6 on — Node 20 cannot even parse the flag. The shipped artifact (dist/)
+# is plain ES2022 JS, but a claim is not support until CI exercises it, so the matrix
+# covers exactly the versions this file declares: 22 and 24.
+#
+# Step order matters: tests inspect the compiled dist/ (packaging regressions) and the
+# L2 shim is only written when dist/plugin exists — so `build` MUST run before `test`.
+# The first public CI run proved it: test-before-build failed 9/9 jobs on a fresh clone
+# where dist/ did not exist yet.
 
 on:
   push:
@@ -20,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        node: [20, 22, 24]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +46,11 @@ jobs:
       - name: typecheck
         run: npx tsc --noEmit
 
+      - name: build
+        run: npm run clean && npm run build
+
       - name: test
         run: npm test
-
-      - name: build
-        run: npm run build
 
       - name: pack and install from the tarball
         shell: bash

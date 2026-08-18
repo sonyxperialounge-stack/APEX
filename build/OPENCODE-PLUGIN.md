@@ -13,11 +13,10 @@
 
 ```ts
 // src/plugin/index.ts
-import type { Plugin } from "@opencode-ai/plugin"
 import { Engines } from "../engines/index.js"
 import { safe } from "./safe.js"
 
-export const ApexPlugin: Plugin = async ({ project, directory, worktree, client, $ }) => {
+export const ApexPlugin = async ({ project, directory, worktree, client, $ }) => {
   const engines = await Engines.bootstrap({ projectRoot: worktree ?? directory, client, $ })
   await engines.ledger.writeRuntimeMarker({ level: 2, version: VERSION })   // PLG-015
 

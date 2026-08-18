@@ -45,7 +45,7 @@ would be more code than the implementation.
 case "initialize": {
   const requested = String(msg.params?.protocolVersion ?? "")
   return ok(msg.id, {
-    protocolVersion: SUPPORTED.includes(requested) ? requested : LATEST_SUPPORTED,
+    protocolVersion: SUPPORTED_PROTOCOLS.includes(requested) ? requested : LATEST_SUPPORTED,
     capabilities: {
       tools:     {},                                    // MCP-002: advertise only what exists
       resources: { subscribe: false, listChanged: false },

@@ -120,12 +120,24 @@ export function apexDir(projectRoot: string): string {
   return path.join(projectRoot, ".apex")
 }
 
-/** True when a path is a filesystem root: `/`, `C:\`, or a bare UNC share root. */
+/**
+ * True when a path is a filesystem root: `/`, `C:\`, or a bare UNC share root.
+ *
+ * Windows-shaped roots are classified as pure strings FIRST, because a host can hand
+ * over a Windows root while we run on Linux (and vice versa) — `path.resolve()` is
+ * host-dependent and turns `C:\` into a relative path on posix. Only paths that are
+ * not Windows roots fall through to the host's own resolver, which correctly answers
+ * for `/` on posix and `C:\` on Windows.
+ */
 export function isFilesystemRoot(p: string): boolean {
   if (!p) return true
-  const resolved = path.resolve(p)
-  if (path.dirname(resolved) === resolved) return true
-  return /^[A-Za-z]:[\\/]?$/.test(resolved) || resolved === "/" || /^[\\/]{2}[^\\/]+[\\/]?$/.test(resolved)
+  const t = p.trim()
+  // A drive root on any host: "C:", "C:\", "d:/"
+  if (/^[A-Za-z]:[\\/]*$/.test(t)) return true
+  // A bare UNC share root on any host: "//server/share" or "\\server\share"
+  if (/^[\\/]{2}[^\\/]+[\\/][^\\/]+[\\/]*$/.test(t)) return true
+  const resolved = path.resolve(t)
+  return path.dirname(resolved) === resolved
 }
 
 /**
