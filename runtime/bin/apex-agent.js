@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
- * APEX — ARMY V3 — Copyright (c) 2026 Lalit. All rights reserved.
+ * APEX — ARMY V3 — Copyright (c) 2026 Lalit Sharma. All rights reserved.
  * Licensed under the APEX Personal Use License 1.0 (see the LICENSE file).
  * Not open source: personal, non-commercial use of unmodified copies only.
  * Modification, resale, commercial use, and renaming are prohibited.

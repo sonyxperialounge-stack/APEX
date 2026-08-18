@@ -2,7 +2,7 @@
   "name": "apex-agent",
   "version": "1.0.0",
   "description": "APEX — an operating doctrine that makes any AI coding agent work like a disciplined senior engineer",
-  "author": "Lalit",
+  "author": "Lalit Sharma",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {

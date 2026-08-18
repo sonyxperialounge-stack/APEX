@@ -1,5 +1,5 @@
 /*
- * APEX — ARMY V3 — Copyright (c) 2026 Lalit. All rights reserved.
+ * APEX — ARMY V3 — Copyright (c) 2026 Lalit Sharma. All rights reserved.
  * Licensed under the APEX Personal Use License 1.0 (see the LICENSE file).
  * Not open source: personal, non-commercial use of unmodified copies only.
  * Modification, resale, commercial use, and renaming are prohibited.
@@ -179,7 +179,7 @@ export async function main(argv: string[]): Promise<void> {
     case "version":
       process.stderr.write(VERSION + "\n")
       process.stderr.write(
-        "Copyright (c) 2026 Lalit — APEX Personal Use License 1.0.\n" +
+        "Copyright (c) 2026 Lalit Sharma — APEX Personal Use License 1.0.\n" +
           "Personal non-commercial use only; modification, resale, and renaming are prohibited.\n",
       )
       return
