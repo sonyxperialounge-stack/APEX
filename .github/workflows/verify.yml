@@ -62,7 +62,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/consumer"
           cd "$RUNNER_TEMP/consumer"
           npm init -y > /dev/null
-          npm install "$GITHUB_WORKSPACE/runtime/apex-agent-1.0.0.tgz"
+          # Glob, not a hardcoded version — a version bump must not break the pipeline.
+          tarball=$(ls "$GITHUB_WORKSPACE"/runtime/apex-agent-*.tgz | head -n1)
+          npm install "$tarball"
           npx apex-agent --version
           npx apex-agent init
           npx apex-agent gate || true   # an empty ledger must FAIL the gate

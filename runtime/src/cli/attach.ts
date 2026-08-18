@@ -400,6 +400,12 @@ export async function detach(host?: HostName): Promise<DetachResult> {
           await fsp.rm(modified.backup, { force: true })
           restored.push(modified.path)
         }
+      } else if (existsSync(modified.path)) {
+        // No backup means the file did NOT exist before attach created it. The honest inverse
+        // of that is removal — reporting "notFound" left APEX's keys sitting in the host config
+        // forever (audit 2026-08-18).
+        await fsp.rm(modified.path, { force: true })
+        removed.push(modified.path)
       } else {
         notFound.push(modified.path)
       }

@@ -1,5 +1,4 @@
 {
-  "projectRoot": "D:\\multiworker opencode\\Army-V3\\runtime",
   "autonomy": "GUARDED",
   "allowedPaths": [
     "."

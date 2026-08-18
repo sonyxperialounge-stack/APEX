@@ -32,6 +32,7 @@ import { Verifier } from "../engines/verifier.ts"
 import { Governor } from "../engines/governor.ts"
 import { Warden, renderPacket } from "../engines/warden.ts"
 import { Council } from "../engines/council.ts"
+import { Recall, MEMORY_SECTIONS, type MemorySection } from "../engines/recall.ts"
 import { NullHostClient } from "../host/types.ts"
 import { UserDecisionRequired } from "../core/errors.ts"
 import { RealCommandRunner } from "../core/exec.ts"
@@ -429,11 +430,24 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
 }
 
 async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
+  // Trust note (audit 2026-08-18): EVERY tool honours a client-supplied projectRoot, not only
+  // apex_init. This MCP server lives in the caller's local trust domain, and pinning tools to
+  // the startup root would break legitimate multi-project sessions — so the behaviour stays,
+  // documented here rather than left implicit. Ledger creation at a filesystem root is refused;
+  // narrower containment is the caller's responsibility.
   const root = String(args.projectRoot ?? ctx.projectRoot)
   const ledger = new Ledger(root)
 
   switch (name) {
     case "apex_init": {
+      // The schema declares the enum, but the SERVER must enforce it too — a malformed value
+      // would otherwise be persisted into config.json (audit 2026-08-18).
+      const autonomy = args.autonomy as string | undefined
+      if (autonomy !== undefined && !["MANUAL", "GUARDED", "AUTO", "FULL_AUTO"].includes(autonomy)) {
+        throw new ApexError(
+          `apex_init: autonomy "${autonomy}" is not a valid mode — use MANUAL, GUARDED, AUTO or FULL_AUTO.`,
+        )
+      }
       const result = await ledger.init({
         projectRoot: root,
         autonomy: args.autonomy as never,
@@ -597,8 +611,15 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
       const config = await ledger.loadConfig()
       const warden = new Warden(new NullHostClient(), ledger, new Governor(config), config)
       const existing = await ledger.listSubagents()
+      // An id derived from the COUNT collides when the markdown parse under-counts (or records
+      // are hand-edited), and upsert then silently overwrites history. Derive from the MAX
+      // recorded id instead — the way nextId does it (audit 2026-08-18).
+      const maxWorker = existing.reduce((m, s) => {
+        const n = /^W-(\d+)$/.exec(s.id)
+        return n ? Math.max(m, Number(n[1])) : m
+      }, 0)
       const packet = {
-        id: `W-${String(existing.length + 1).padStart(4, "0")}`,
+        id: `W-${String(maxWorker + 1).padStart(4, "0")}`,
         reqIds: (args.reqIds as string[]) ?? [],
         objective: String(args.objective),
         context: String(args.context ?? ""),
@@ -787,8 +808,18 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
       return text((await readMemory(ledger)) || "# Project Memory\n(empty — nothing learned yet)")
 
     case "apex_memory_write": {
-      await appendMemory(ledger, String(args.section), String(args.fact))
-      return json({ ok: true, section: args.section })
+      // Route through Recall.capture (audit 2026-08-18): the schema's enum is client-side
+      // only — the SERVER validates the section, and a fact containing credentials must be
+      // REFUSED, not merely redacted. Recall owns both behaviours.
+      const section = String(args.section)
+      if (!(MEMORY_SECTIONS as readonly string[]).includes(section)) {
+        throw new ApexError(
+          `apex_memory_write: "${section}" is not a memory section — use one of: ${MEMORY_SECTIONS.join(", ")}.`,
+        )
+      }
+      const recall = new Recall(root, ledger)
+      const result = await recall.capture(section as MemorySection, String(args.fact))
+      return json({ ok: result.written, section, reason: result.reason || undefined })
     }
 
     default:
@@ -904,18 +935,6 @@ function json(value: unknown): ToolResult {
 async function readMemory(ledger: Ledger): Promise<string> {
   const { readTextOrNull } = await import("../core/json.ts")
   return (await readTextOrNull(ledger.file("MEMORY.md"))) ?? ""
-}
-
-async function appendMemory(ledger: Ledger, section: string, fact: string): Promise<void> {
-  const { readTextOrNull, writeText } = await import("../core/json.ts")
-  const current = (await readTextOrNull(ledger.file("MEMORY.md"))) ?? "# Project Memory\n"
-  const heading = `## ${section}`
-  const line = `- ${fact.trim()}`
-  if (current.includes(line)) return // deduped
-  const next = current.includes(heading)
-    ? current.replace(heading, `${heading}\n${line}`)
-    : `${current.trimEnd()}\n\n${heading}\n${line}\n`
-  await writeText(ledger.file("MEMORY.md"), next)
 }
 
 async function findSnapshot(root: string, id: string) {

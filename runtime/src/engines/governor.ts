@@ -101,7 +101,11 @@ const RULES: Rule[] = [
     reason:
       "This rewrites or discards work that may not be yours. Use --force-with-lease on a branch " +
       "you created, and revert only the specific files you changed.",
-    test: (op) => op.kind === "bash" && HISTORY_REWRITE.test(op.command ?? ""),
+    // Length cap (audit 2026-08-18): the input is a model/host-supplied command string and the
+    // pattern below carries a nested-quantifier shape; capping keeps a crafted multi-kilobyte
+    // string from dragging tool.execute.before into pathological matching. A rewrite command
+    // hidden past 4KB of decoy text is not something this rule should ever be asked to parse.
+    test: (op) => op.kind === "bash" && HISTORY_REWRITE.test((op.command ?? "").slice(0, 4096)),
   },
   {
     id: "blanket-stash",

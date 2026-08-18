@@ -121,7 +121,7 @@ LICENSE            The license — personal use only. NOT open source.
 LEGAL-NOTICE.md    Legal warning (India + international sections) and
                    the notice to AI agents
 
-core/              The doctrine. Twelve files, loaded on demand.
+core/              The doctrine. Thirteen files, loaded on demand.
   01-LAWS          the twelve laws that override default habits
   02-COGNITION     how to think before acting
   03-EVIDENCE      what counts as proof — the centre of the system

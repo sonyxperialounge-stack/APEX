@@ -533,7 +533,11 @@ export async function ApexPlugin(ctx: PluginContext = {}): Promise<Record<string
     "experimental.chat.messages.transform": safe("messages.transform", messagesTransform(engines)),
     "experimental.session.compacting": safe("session.compacting", onCompacting(engines)),
     "tool.execute.before": safe("tool.execute.before", toolBefore(engines), 15_000),
-    "tool.execute.after": safe("tool.execute.after", toolAfter(engines), 60_000),
+    // Aligned with the verifier (audit 2026-08-18): this hook AWAITS the verification cascade,
+    // whose tiers run 180s (types/unit) to 600s (integration). The old 60s bound made the hook
+    // give up while the cascade kept writing verification records in the background — harmless
+    // but surprising. The hook must outlive the work it reports, so it now does.
+    "tool.execute.after": safe("tool.execute.after", toolAfter(engines), 610_000),
     "permission.ask": safe("permission.ask", permissionAsk(engines)),
     "chat.params": safe("chat.params", chatParams(engines)),
     event: safe("event", onEvent(engines)),

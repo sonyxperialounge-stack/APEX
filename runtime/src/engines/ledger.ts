@@ -267,10 +267,16 @@ export class Ledger {
   async loadConfig(): Promise<ApexConfig> {
     const stored = await readJson<Record<string, unknown>>(this.file("config.json"), {})
     const raw = this.normalise(stored) as Partial<ApexConfig>
+    // A stored projectRoot that does not EXIST here came from another machine or clone.
+    // Honouring it silently turns Governor path protection into decoration — do_not_touch
+    // patterns resolve against a ghost directory and guard nothing (audit 2026-08-18).
+    // Fall back to the ledger's own root; the ledger's location IS the project's truth.
+    const storedRoot = raw.projectRoot
+    const projectRoot = storedRoot && existsSync(storedRoot) ? storedRoot : this.root
     return {
       ...DEFAULT_CONFIG,
       ...raw,
-      projectRoot: raw.projectRoot || this.root,
+      projectRoot,
       limits: { ...DEFAULT_CONFIG.limits, ...(raw.limits ?? {}) },
       council: { ...DEFAULT_CONFIG.council, ...(raw.council ?? {}) },
       delegation: {
