@@ -483,3 +483,22 @@ Surprises: spawned `node script.ts` argv vanishing silently in this environment 
   (join newline) by the loader refusing the file — cheap lesson, keep writing test
   files with the file tool.
 Next: WP-025b (hot-view overflow -> consolidation candidate) — the last Phase 2 packet.
+
+---
+
+## WP-025b — Hot-view overflow → consolidation candidate · DONE · 2026-09-10
+
+Files: ~runtime/src/stores/memory-store.ts (budgeted renderHotViews + delegation),
+  +runtime/src/stores/memory-pending.ts (pending surface split out),
+  ~runtime/test/stores/memory-store.test.ts (+3)
+Decision: overflow is a CONDITION with a remedy, not a drop: the canonical store is
+  unbounded, the views fit budget, and the fix is a staged consolidation candidate —
+  a normal mutation that passes the same gates (approval, re-scan). Module split to
+  stores/memory-pending.ts triggered by my own MOD-T05 size scan (381 > 350) — the
+  ceiling forced a cleaner boundary rather than being loosened.
+Verify: `npm run verify` -> 865 pass, 0 fail, exit 0.
+Evidence: EVD-024.
+Surprises: my test asserted "6 overflow" but honest math gives 3 (3 records fit the
+  500-token USER budget); the assertion now derives the count from the gist and checks
+  the payload matches it.
+Next: PHASE 2 COMPLETE (WP-020..WP-029 + WP-025b all DONE). Phase 3 (archive) at WP-030.

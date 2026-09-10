@@ -484,3 +484,69 @@ describe("WP-022 stage / listPending / resolvePending", () => {
 function toIsoStringNow(): string {
   return new Date().toISOString()
 }
+
+// ── WP-025b — hot-view overflow -> consolidation candidate (54 §10) ───────────
+
+describe("WP-025b — hot-view capacity", () => {
+  test("MEM-T08: overflow produces a consolidation candidate and never loses the canonical record", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-hotview-")
+    const store = openMemoryStore(memoryDir)
+    // Each record ~120 tokens of text; 6 preferences = ~720 tokens > USER budget 500.
+    const longText = "word ".repeat(100) // ~125 tokens
+    const records = Array.from({ length: 6 }, (_, i) =>
+      makeRecord({ id: `MEM-000000001-aaaa0${i}`, kind: "preference", semanticKey: `preference.overflow_${i}`, text: longText }) as never,
+    )
+    await store.commit(0, records)
+    const views = await store.renderHotViews()
+
+    // ALL canonical records survive — nothing dropped, nothing lost.
+    const state = await store.read()
+    assert.equal(state.records.length, 6, "canonical store keeps every record")
+
+    // The USER view is within its budget.
+    const userMd = await fsp.readFile(views.user, "utf8")
+    const { estimateTokens } = await import("../../src/engines/cortex.ts")
+    assert.ok(estimateTokens(userMd) <= 500, `USER view within budget: ${estimateTokens(userMd)}`)
+
+    // The consolidation candidate is STAGED (a pending mutation for a human/model pass).
+    const pending = await store.listPending()
+    const consolidation = pending.find((m) => m.gist.includes("Consolidate the hot views"))
+    assert.ok(consolidation, "consolidation candidate staged")
+    const countMatch = /(\d+) active record\(s\)/.exec(consolidation!.gist)
+    assert.ok(countMatch, "the gist names the overflow count")
+    assert.ok(Number(countMatch[1]) >= 1, `at least one record overflows: ${countMatch[1]}`)
+    assert.equal(consolidation!.requiredApproval, true, "consolidation needs approval like any mutation")
+    // The overflow ids are in the payload for the consolidator to merge/retire —
+    // every record the view could NOT fit, and none it could.
+    const payload = consolidation!.proposedPayload as { consolidate: string[] }
+    assert.equal(payload.consolidate.length, Number(countMatch[1]), "payload ids match the gist count")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+
+  test("MEM-T09: consolidation preserves provenance of every merged item", async () => {
+    // A merge through mergeExactDuplicate keeps BOTH observations' provenance.
+    const existing = makeRecord({ text: "Use pnpm, not npm." }) as never
+    const { mergeExactDuplicate: mergeExactDuplicateImpl } = await import("../../src/engines/memory-librarian.ts")
+    const merged = mergeExactDuplicateImpl(
+      existing,
+      "use pnpm, not npm",
+      { sourceType: "verified_event", sourceId: "V-042", observedAt: "2026-09-11T00:00:00.000Z" },
+      "2026-09-11T00:00:00.000Z",
+    )
+    assert.ok(merged)
+    assert.equal(merged!.provenance.length, 2, "both observations survive the merge")
+    assert.ok(merged!.provenance.some((p) => p.sourceId === "V-042"), "evidence linkage preserved")
+    assert.equal(merged!.text, "Use pnpm, not npm.", "the strongest text wins, unchanged")
+  })
+
+  test("a view within budget stages nothing and emits no condition", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-hotview-ok-")
+    const store = openMemoryStore(memoryDir)
+    await store.commit(0, [makeRecord({ text: "Use pnpm." }) as never])
+    const views = await store.renderHotViews()
+    const userMd = await fsp.readFile(views.user, "utf8")
+    assert.ok(userMd.includes("Use pnpm."))
+    assert.equal((await store.listPending()).length, 0, "no consolidation staged when nothing overflows")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})

@@ -77,7 +77,9 @@ import {
   readJson, readJsonlSafe, rewriteJsonl, appendJsonl, writeJson, withCrossProcessLock,
 } from "../core/json.ts"
 import { toIsoString, newId } from "../core/ids.ts"
+import { openPendingStore } from "./memory-pending.ts"
 import { scan, type ScanContext } from "../core/redact.ts"
+import { estimateTokens } from "../engines/cortex.ts"
 import { event } from "../core/log.ts"
 import type { PendingMutation } from "../core/types.ts"
 
@@ -129,6 +131,18 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
   const lockFile = path.join(memoryDir, "..", "locks", "global-memory.lock")
   const viewDir = opts.hotViewDir ?? memoryDir
 
+  const writeRecords = async (records: MemoryRecordV1[], revision: number): Promise<void> => {
+    await rewriteJsonl(recordsFile, records)
+    await writeJson(stateFile, { schemaVersion: 1, revision })
+  }
+  const pending = openPendingStore(
+    { pendingFile, recordsFile, stateFile, lockFile },
+    readRaw,
+    writeRecords,
+    isRecordShape,
+    { now, scanContext: opts.scanContext },
+  )
+
   async function readRaw(): Promise<MemoryStoreState> {
     const state = await readJson<{ schemaVersion?: number; revision?: number }>(stateFile, {})
     const { lines } = await readJsonlSafe<MemoryRecordV1>(recordsFile)
@@ -155,93 +169,16 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
       return withCrossProcessLock(lockFile, "memory-read", async () => readRaw())
     },
 
-    // ── Pending mutations (12 §10) ────────────────────────────────────────────
-    // Staged writes live in pending/mutations.jsonl and survive restart. Approval
-    // re-scans the payload FIRST (12 §10: "revalidated before approval") — a mutation
-    // whose payload turned hostile between staging and approval is rejected, not
-    // applied. The scanner verdict at staging time is evidence, never a waiver.
-
     async stage(mutation: PendingMutation): Promise<string> {
-      return withCrossProcessLock(lockFile, "memory-stage", async () => {
-        const id = mutation.id || newId("MEM", { now })
-        await appendJsonl(pendingFile, { ...mutation, id })
-        event("memory.stage", { id, target: mutation.target, operation: mutation.operation })
-        return id
-      })
+      return pending.stage(mutation)
     },
 
     async listPending(): Promise<PendingMutation[]> {
-      const { lines } = await readJsonlSafe<PendingMutation>(pendingFile)
-      return lines.map((l) => l.record)
+      return pending.listPending()
     },
 
     async resolvePending(id: string, decision: "approve" | "reject"): Promise<{ applied: boolean; revalidated: boolean; reason?: string }> {
-      return withCrossProcessLock(
-        lockFile,
-        "memory-resolve",
-        async () => {
-          const pending = (await readJsonlSafe<PendingMutation>(pendingFile)).lines.map((l) => l.record)
-          const target = pending.find((m) => m.id === id)
-          if (!target) {
-            throw new ApexError(`Unknown pending mutation ${id}.`, "UNKNOWN_PENDING")
-          }
-          const rest = pending.filter((m) => m.id !== id)
-          const rewrite = async (): Promise<void> => {
-            await rewriteJsonl(pendingFile, rest)
-          }
-
-          if (decision === "reject") {
-            await rewrite()
-            event("memory.pending_rejected", { id })
-            return { applied: false, revalidated: false }
-          }
-
-          // REVALIDATE before applying (12 §10): scan the payload text again, now.
-          const payloadText =
-            typeof target.proposedPayload === "string"
-              ? target.proposedPayload
-              : JSON.stringify(target.proposedPayload ?? "")
-          const verdict = scan(payloadText, opts.scanContext ?? "memory")
-          if (verdict.verdict === "deny") {
-            // Never applied; stays inspectable until the user rejects it.
-            event("memory.pending_denied_on_approval", { id, rules: verdict.findings.map((f) => f.rule) })
-            return {
-              applied: false,
-              revalidated: true,
-              reason: `Re-scan denied the payload: ${verdict.findings.map((f) => f.rule).join(", ")}. The mutation stays staged; reject it to clear.`,
-            }
-          }
-          if (verdict.verdict === "review" && target.requiredApproval) {
-            // A review-grade payload that needed approval has it (this call IS the
-            // approval) — record the revalidation finding and continue.
-            event("memory.pending_review_noted", { id, rules: verdict.findings.map((f) => f.rule) })
-          }
-
-          // Apply against the CURRENT state with the recorded base revision checked.
-          const current = await readRaw()
-          if (target.target === "memory" && target.baseRevision !== current.revision) {
-            // The world moved since staging: the caller must re-derive. Never blind-apply.
-            return {
-              applied: false,
-              revalidated: true,
-              reason: `Base revision ${target.baseRevision} is stale (store is at ${current.revision}). Re-derive the mutation and stage it again.`,
-            }
-          }
-          if (target.target === "memory" && target.operation === "create") {
-            const rec = target.proposedPayload as MemoryRecordV1
-            if (!isRecordShape(rec)) {
-              return { applied: false, revalidated: true, reason: "Payload no longer satisfies the record contract." }
-            }
-            const nextRecords = [...current.records.filter((r) => r.id !== rec.id), rec]
-            await rewriteJsonl(recordsFile, nextRecords)
-            await writeJson(stateFile, { schemaVersion: 1, revision: current.revision + 1 })
-          }
-          await rewrite()
-          event("memory.pending_approved", { id, applied: target.operation })
-          return { applied: true, revalidated: true }
-        },
-        { timeoutMs: 15_000 },
-      )
+      return pending.resolvePending(id, decision)
     },
 
     async commit(expectedRevision: number, next: MemoryRecordV1[]): Promise<number> {
@@ -285,27 +222,72 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
       )
     },
 
+    /**
+     * Hot views with the 54 §10 capacity contract: USER.md <= 500 estimated tokens,
+     * GLOBAL.md <= 1000. Overflow is never a silent drop — the canonical records all
+     * stay, the view is rendered up to budget, MEMORY_HOT_VIEW_FULL is emitted, and a
+     * CONSOLIDATION CANDIDATE is staged (a normal memory mutation that merges or
+     * retires the weakest entries, passing the same policy gates). MEM-T08/T09.
+     */
     async renderHotViews(): Promise<HotViewPaths> {
-      const { records } = await readRaw()
+      const { records, revision } = await readRaw()
       const prefs = records.filter((r) => r.scope.kind === "global" && r.status === "active" && r.kind === "preference")
       const facts = records.filter((r) => r.scope.kind === "global" && r.status === "active" && r.kind !== "preference")
-      const userMd = [
-        "# USER — stable personal preferences (generated view)",
-        "",
-        ...prefs.map((r) => `- **${r.semanticKey}:** ${r.text} _(${r.confidence.toFixed(2)})_`),
-        "",
-      ].join("\n")
-      const globalMd = [
-        "# GLOBAL — most useful active global facts (generated view)",
-        "",
-        ...facts.map((r) => `- **${r.kind} ${r.semanticKey}:** ${r.text}`),
-        "",
-      ].join("\n")
+
+      const line = (r: MemoryRecordV1): string =>
+        r.kind === "preference"
+          ? `- **${r.semanticKey}:** ${r.text} _(${r.confidence.toFixed(2)})_`
+          : `- **${r.kind} ${r.semanticKey}:** ${r.text}`
+
+      const fit = (heading: string, items: MemoryRecordV1[], budgetTokens: number): { md: string; overflow: MemoryRecordV1[] } => {
+        const out: string[] = [`# ${heading}`, ""]
+        let used = estimateTokens(out.join("\n"))
+        const overflow: MemoryRecordV1[] = []
+        for (const r of items) {
+          const cost = estimateTokens(line(r))
+          if (used + cost > budgetTokens) {
+            overflow.push(r)
+            continue
+          }
+          out.push(line(r))
+          used += cost
+        }
+        out.push("")
+        return { md: out.join("\n"), overflow }
+      }
+
+      const userFit = fit("USER — stable personal preferences (generated view)", prefs, 500)
+      const globalFit = fit("GLOBAL — most useful active global facts (generated view)", facts, 1000)
+      const overflow = [...userFit.overflow, ...globalFit.overflow]
+
       const userFile = path.join(viewDir, "USER.md")
       const globalFile = path.join(viewDir, "GLOBAL.md")
       const { writeText } = await import("../core/json.ts")
-      await writeText(userFile, userMd)
-      await writeText(globalFile, globalMd)
+      await writeText(userFile, userFit.md)
+      await writeText(globalFile, globalFit.md)
+
+      if (overflow.length > 0) {
+        // MEM-T08: commit the canonical record happened in commit(); the view overflow
+        // is a CONDITION, not a failure — and the fix is a consolidation candidate.
+        event("memory.hot_view_full", {
+          code: "MEMORY_HOT_VIEW_FULL",
+          userOverflow: userFit.overflow.length,
+          globalOverflow: globalFit.overflow.length,
+          revision,
+        })
+        await appendJsonl(pendingFile, {
+          id: newId("MEM", { now }),
+          target: "memory",
+          operation: "patch",
+          createdAt: toIsoString(now()),
+          source: "memory-store:hot-view-overflow",
+          gist: `Consolidate the hot views: ${overflow.length} active record(s) do not fit their view budget. Merge or retire the weakest entries; canonical records are all intact.`,
+          proposedPayload: { consolidate: overflow.map((r) => r.id) },
+          baseRevision: revision,
+          scanner: { verdict: "allow", reasons: [] },
+          requiredApproval: true,
+        } as never)
+      }
       return { user: userFile, global: globalFile }
     },
 
