@@ -74,10 +74,12 @@ import fsp from "node:fs/promises"
 import path from "node:path"
 import { ApexError } from "../core/errors.ts"
 import {
-  readJson, readJsonlSafe, rewriteJsonl, writeJson, withCrossProcessLock,
+  readJson, readJsonlSafe, rewriteJsonl, appendJsonl, writeJson, withCrossProcessLock,
 } from "../core/json.ts"
-import { toIsoString } from "../core/ids.ts"
+import { toIsoString, newId } from "../core/ids.ts"
+import { scan, type ScanContext } from "../core/redact.ts"
 import { event } from "../core/log.ts"
+import type { PendingMutation } from "../core/types.ts"
 
 export interface MemoryStoreState {
   schemaVersion: number
@@ -95,6 +97,8 @@ export interface MemoryStoreOptions {
   now?: () => number
   /** Where the hot views render. Defaults to the store directory. */
   hotViewDir?: string
+  /** Scan context for revalidation of staged memory mutations. Default "memory". */
+  scanContext?: ScanContext
 }
 
 /**
@@ -111,6 +115,9 @@ export interface MemoryStoreOptions {
 export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}): {
   read(): Promise<MemoryStoreState>
   commit(expectedRevision: number, next: MemoryRecordV1[]): Promise<number>
+  stage(mutation: PendingMutation): Promise<string>
+  listPending(): Promise<PendingMutation[]>
+  resolvePending(id: string, decision: "approve" | "reject"): Promise<{ applied: boolean; revalidated: boolean; reason?: string }>
   renderHotViews(): Promise<HotViewPaths>
   health(): Promise<Array<{ id: string; status: "OK" | "WARN" | "DEGRADED"; summary: string }>>
   readonly dir: string
@@ -118,6 +125,7 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
   const now = opts.now ?? Date.now
   const recordsFile = path.join(memoryDir, "records.jsonl")
   const stateFile = path.join(memoryDir, "state.json")
+  const pendingFile = path.join(memoryDir, "pending", "mutations.jsonl")
   const lockFile = path.join(memoryDir, "..", "locks", "global-memory.lock")
   const viewDir = opts.hotViewDir ?? memoryDir
 
@@ -145,6 +153,95 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
 
     async read(): Promise<MemoryStoreState> {
       return withCrossProcessLock(lockFile, "memory-read", async () => readRaw())
+    },
+
+    // ── Pending mutations (12 §10) ────────────────────────────────────────────
+    // Staged writes live in pending/mutations.jsonl and survive restart. Approval
+    // re-scans the payload FIRST (12 §10: "revalidated before approval") — a mutation
+    // whose payload turned hostile between staging and approval is rejected, not
+    // applied. The scanner verdict at staging time is evidence, never a waiver.
+
+    async stage(mutation: PendingMutation): Promise<string> {
+      return withCrossProcessLock(lockFile, "memory-stage", async () => {
+        const id = mutation.id || newId("MEM", { now })
+        await appendJsonl(pendingFile, { ...mutation, id })
+        event("memory.stage", { id, target: mutation.target, operation: mutation.operation })
+        return id
+      })
+    },
+
+    async listPending(): Promise<PendingMutation[]> {
+      const { lines } = await readJsonlSafe<PendingMutation>(pendingFile)
+      return lines.map((l) => l.record)
+    },
+
+    async resolvePending(id: string, decision: "approve" | "reject"): Promise<{ applied: boolean; revalidated: boolean; reason?: string }> {
+      return withCrossProcessLock(
+        lockFile,
+        "memory-resolve",
+        async () => {
+          const pending = (await readJsonlSafe<PendingMutation>(pendingFile)).lines.map((l) => l.record)
+          const target = pending.find((m) => m.id === id)
+          if (!target) {
+            throw new ApexError(`Unknown pending mutation ${id}.`, "UNKNOWN_PENDING")
+          }
+          const rest = pending.filter((m) => m.id !== id)
+          const rewrite = async (): Promise<void> => {
+            await rewriteJsonl(pendingFile, rest)
+          }
+
+          if (decision === "reject") {
+            await rewrite()
+            event("memory.pending_rejected", { id })
+            return { applied: false, revalidated: false }
+          }
+
+          // REVALIDATE before applying (12 §10): scan the payload text again, now.
+          const payloadText =
+            typeof target.proposedPayload === "string"
+              ? target.proposedPayload
+              : JSON.stringify(target.proposedPayload ?? "")
+          const verdict = scan(payloadText, opts.scanContext ?? "memory")
+          if (verdict.verdict === "deny") {
+            // Never applied; stays inspectable until the user rejects it.
+            event("memory.pending_denied_on_approval", { id, rules: verdict.findings.map((f) => f.rule) })
+            return {
+              applied: false,
+              revalidated: true,
+              reason: `Re-scan denied the payload: ${verdict.findings.map((f) => f.rule).join(", ")}. The mutation stays staged; reject it to clear.`,
+            }
+          }
+          if (verdict.verdict === "review" && target.requiredApproval) {
+            // A review-grade payload that needed approval has it (this call IS the
+            // approval) — record the revalidation finding and continue.
+            event("memory.pending_review_noted", { id, rules: verdict.findings.map((f) => f.rule) })
+          }
+
+          // Apply against the CURRENT state with the recorded base revision checked.
+          const current = await readRaw()
+          if (target.target === "memory" && target.baseRevision !== current.revision) {
+            // The world moved since staging: the caller must re-derive. Never blind-apply.
+            return {
+              applied: false,
+              revalidated: true,
+              reason: `Base revision ${target.baseRevision} is stale (store is at ${current.revision}). Re-derive the mutation and stage it again.`,
+            }
+          }
+          if (target.target === "memory" && target.operation === "create") {
+            const rec = target.proposedPayload as MemoryRecordV1
+            if (!isRecordShape(rec)) {
+              return { applied: false, revalidated: true, reason: "Payload no longer satisfies the record contract." }
+            }
+            const nextRecords = [...current.records.filter((r) => r.id !== rec.id), rec]
+            await rewriteJsonl(recordsFile, nextRecords)
+            await writeJson(stateFile, { schemaVersion: 1, revision: current.revision + 1 })
+          }
+          await rewrite()
+          event("memory.pending_approved", { id, applied: target.operation })
+          return { applied: true, revalidated: true }
+        },
+        { timeoutMs: 15_000 },
+      )
     },
 
     async commit(expectedRevision: number, next: MemoryRecordV1[]): Promise<number> {

@@ -333,3 +333,24 @@ Surprises: my first CAS test asserted a PATCH-style writer and failed — the co
   and bash heredocs break on long embedded backtick scripts — write big test blobs with
   the file tool and concatenate.
 Next: WP-022 (pending mutations)
+
+---
+
+## WP-022 — Pending mutations · DONE · 2026-09-10
+
+Files: ~runtime/src/stores/memory-store.ts (stage/listPending/resolvePending),
+  ~runtime/test/stores/memory-store.test.ts (+4 tests)
+Decision: staged mutations live in pending/mutations.jsonl (framed JSONL) — survive
+  restart by construction. Approval RE-SCANS the payload first (12 §10): the recorded
+  staging verdict is evidence, never a waiver. Deny-at-approval keeps the mutation staged
+  for inspection (reject clears it). baseRevision checked against the current state — a
+  staged mutation from a moved world is refused with a named reason, never blind-applied.
+Verify: `npm run verify` -> 808 pass, 0 fail, exit 0.
+Evidence: EVD-016.
+Surprises: two honest-threat-model lessons: (1) editing a framed JSONL payload on disk
+  does not produce "hostile payload" — it produces a quarantined line (checksum framing
+  works as designed); the realistic hostile case is a stale recorded verdict. (2) The
+  20-process race flaked once under full-suite parallel load (retry exhaustion at ~80
+  attempts); passed on re-run and in the standalone file — if it recurs, raise the retry
+  budget or serialize that describe block.
+Next: WP-023 (normalization, dedupe, near-duplicate detection)
