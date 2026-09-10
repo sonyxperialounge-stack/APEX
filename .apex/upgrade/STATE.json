@@ -281,7 +281,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T10:48:12.048Z",
       "finishedAt": "2026-09-10T11:01:44.230Z",
-      "commit": null,
+      "commit": "e0cbfc2",
       "evidence": [
         "EVD-022"
       ],
