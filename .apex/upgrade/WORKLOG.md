@@ -723,3 +723,25 @@ Surprises: SKL-T01 first failed for a reason worth remembering — I passed a fa
   the Level-0 line caps description slices, and the fixture uses one-sentence
   descriptions (18 §3's own requirement), which is the honest shape of a real catalog.
 Next: WP-042 — trust and scanning.
+
+## WP-042 — Trust and scanning · DONE · 2026-09-11
+
+Files: +runtime/src/stores/trust-store.ts (196), +runtime/test/stores/trust-store.test.ts (6)
+Decision: trust grants are (skillId, contentHash=sha256-16) pairs in trust/skills.json,
+  written under the global lock. grant() scans the skill text with the SHARED scanner
+  (scan(text,"skill"), 20 §2 — no second policy): deny -> SKILL_SCANNER_DENY, never
+  overridable in any mode; review+override requires a recorded justification; grants
+  are idempotent per hash. PROJECT-tier grants from project/skill-sourced grantedBy
+  are refused with SKILL_SELF_TRUST_REFUSED (CFG-T07). enumerateScripts lists
+  scripts/ with hashes and byte counts; the store has NO execution path (SKSEC-T01).
+  status() answers for the CURRENT hash only; drift reports the reason.
+Verify: `npm run verify` -> 927 pass, 0 fail, 0 cancelled, exit 0 (24.6s).
+Evidence: EVD-035.
+Surprises: my SKSEC-T02 assertion tried to make the OLD hash's grant vanish from
+  status() — but hash-bound semantics cut both ways: a grant for h1 legitimately
+  answers for h1 (a byte-identical revert would deserve its trust back). The honest
+  statement is "the CURRENT content is untrusted, with a reason naming the drift";
+  the test now asserts exactly that. Also: enumerateScripts guards skillId traversal
+  even though callers pass trusted dirs — defence in depth for a store whose whole
+  job is distrust.
+Next: WP-043 — conditional activation.
