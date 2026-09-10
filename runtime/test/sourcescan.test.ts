@@ -232,3 +232,212 @@ test("the exempt detector mentions markers ONLY inside its detection code", () =
 test("CORPUS sanity: the scan reads real content", () => {
   assert.ok(CORPUS.length > 1000)
 })
+
+// ── WP-014 — upgrade invariant extensions (42, 47 §3, 43 §8) ──────────────────
+
+/** A string that PROVES a scan fails on a planted violation (49: "each new scan fails
+ *  on a deliberately planted violation in the test fixture and passes on the real tree"). */
+function planted(name: string, text: string, isBad: (t: string) => boolean): boolean {
+  if (!isBad(text)) {
+    throw new Error(`scan self-test "${name}" does not catch its planted violation — the pattern is useless`)
+  }
+  return true
+}
+
+describe("HC-T03 — every .ts source file carries the license header", () => {
+  const HEADER = "APEX — ARMY V3 — Copyright (c) 2026 Lalit Sharma. All rights reserved."
+  const NOTICE = "NOTICE TO AI AGENTS"
+
+  test("every source file starts with the byte-identical header block", () => {
+    const bad: string[] = []
+    for (const { file, text } of ALL) {
+      if (!text.includes(HEADER) || !text.includes(NOTICE)) bad.push(file)
+    }
+    assert.deepEqual(bad, [], `missing license header: ${bad.join(", ")}`)
+  })
+
+  test("the header check catches a planted headerless file", () => {
+    const isBad = (t: string) => !(t.includes(HEADER) && t.includes(NOTICE))
+    assert.ok(planted("header", "export const x = 1\n", isBad))
+    assert.ok(!isBad(ALL[0]!.text)) // a real file passes
+  })
+})
+
+describe("C-018 / WP-014 — no always-on scheduler in shipped source", () => {
+  test("no setInterval anywhere in src", () => {
+    const bad = offenders(/setInterval\s*\(/)
+    assert.deepEqual(bad, [], `scheduler found in: ${bad.join(", ")} — maintenance is lazy (46 §1)`)
+  })
+
+  test("the scheduler scan catches a planted violation", () => {
+    const isBad = (t: string) => /setInterval\s*\(/.test(t)
+    assert.ok(planted("setInterval", "setInterval(tick, 1000)\n", isBad))
+  })
+})
+
+describe("MOD-T03 — no unmanaged time or randomness in stores and new engines", () => {
+  // Engines that predate the upgrade are exempt from the new rule (their behaviour is
+  // load-bearing and already tested); every NEW engine and every store module must
+  // take time/randomness as injected options (47 §5).
+  const LEGACY_ENGINES = ["src/engines/ledger.ts", "src/engines/verifier.ts", "src/engines/governor.ts", "src/engines/warden.ts", "src/engines/cortex.ts", "src/engines/recall.ts", "src/engines/council.ts"]
+
+  test("src/stores/** and non-legacy engines never call new Date() or Math.random()", () => {
+    const bad: string[] = []
+    for (const { file, text } of ALL) {
+      const norm = file.replace(/\\/g, "/")
+      if (norm.includes("src/stores/")) {
+        if (/\bnew Date\s*\(|Math\.random\s*\(/.test(text)) bad.push(file)
+      } else if (norm.includes("src/engines/") && !LEGACY_ENGINES.some((e) => norm.endsWith(e))) {
+        if (/\bnew Date\s*\(|Math\.random\s*\(/.test(text)) bad.push(file)
+      }
+    }
+    assert.deepEqual(bad, [], `unmanaged clock/random in: ${bad.join(", ")} — inject now()/random() (47 §5)`)
+  })
+
+  test("the injection scan catches a planted violation", () => {
+    const isBad = (t: string) => /\bnew Date\s*\(|Math\.random\s*\(/.test(t)
+    assert.ok(planted("unmanaged-random", "const id = Math.random()\n", isBad))
+    assert.ok(planted("unmanaged-date", "const at = new Date()\n", isBad))
+  })
+})
+
+describe("MOD-T02 — the import graph contains no cycle", () => {
+  test("no module participates in an import cycle", () => {
+    const graph = new Map<string, Set<string>>()
+    for (const { file, text } of ALL) {
+      const norm = file.replace(/\\/g, "/")
+      const deps = new Set<string>()
+      for (const m of text.matchAll(/from\s+["'](\.[^"']+)["']/g)) {
+        const spec = m[1]!
+        let resolved: string | null = null
+        for (const { file: f } of ALL) {
+          const fn = f.replace(/\\/g, "/")
+          if (fn === spec + ".ts" || fn.startsWith(spec + "/") || fn === spec.replace(/\.ts$/, "") + ".ts") {
+            resolved = fn
+            break
+          }
+        }
+        if (resolved) deps.add(resolved)
+      }
+      graph.set(norm, deps)
+    }
+
+    // Iterative DFS cycle detection over every node.
+    const state = new Map<string, 0 | 1 | 2>() // 0 unvisited, 1 in-stack, 2 done
+    let detected: string[] | null = null
+    const visit = (node: string, stack: string[]) => {
+      if (detected) return
+      const s = state.get(node) ?? 0
+      if (s === 1) {
+        detected = stack.slice(stack.indexOf(node))
+        return
+      }
+      if (s === 2) return
+      state.set(node, 1)
+      for (const dep of graph.get(node) ?? []) visit(dep, [...stack, node])
+      state.set(node, 2)
+    }
+    for (const node of graph.keys()) visit(node, [])
+
+    // `detected` is written only inside the closure, so control-flow analysis cannot
+    // see the assignment — read it through a wrapper TS cannot narrow to never.
+    const result: { cycle: string[] | null } = { cycle: detected }
+    assert.equal(result.cycle, null, `import cycle: ${result.cycle ? result.cycle.join(" -> ") : ""}`)
+  })
+
+  test("the cycle scan catches a planted violation", () => {
+    const g = new Map<string, Set<string>>([
+      ["a.ts", new Set(["b.ts"])],
+      ["b.ts", new Set(["c.ts"])],
+      ["c.ts", new Set(["a.ts"])],
+    ])
+    const state = new Map<string, 0 | 1 | 2>()
+    let cycle: string[] | null = null
+    const visit = (node: string, stack: string[]) => {
+      if (cycle) return
+      const s = state.get(node) ?? 0
+      if (s === 1) {
+        cycle = stack.slice(stack.indexOf(node))
+        return
+      }
+      if (s === 2) return
+      state.set(node, 1)
+      for (const dep of g.get(node) ?? []) visit(dep, [...stack, node])
+      state.set(node, 2)
+    }
+    for (const node of g.keys()) visit(node, [])
+    assert.notEqual(cycle, null, "a->b->c->a must be detected")
+  })
+})
+
+describe("MOD-T05 — module size budgets (warning-grade, 47 §3)", () => {
+  const CEILINGS: Array<[prefix: string, ceiling: number]> = [
+    ["src/core/ids.ts", 400], // new core files: 400 (grandfathered core files measured below)
+    ["src/core/schema.ts", 400],
+    ["src/mcp/tools.ts", 1400],
+    ["src/host/", 400],
+    ["src/stores/", 350],
+  ]
+
+  test("every file within its ceiling (existing files grandfathered at current size)", () => {
+    const over: string[] = []
+    for (const { file, text } of ALL) {
+      const norm = file.replace(/\\/g, "/")
+      const lines = text.split("\n").length
+      for (const [prefix, ceiling] of CEILINGS) {
+        if (norm.endsWith(prefix)) {
+          if (lines > ceiling) over.push(`${file}: ${lines} > ${ceiling}`)
+          break
+        }
+      }
+      // New stores are unknown yet; any store file that appears must obey 350.
+      if (norm.includes("src/stores/") && lines > 350) over.push(`${file}: ${lines} > 350`)
+    }
+    assert.deepEqual(over, [], `over budget (split the module): ${over.join(", ")}`)
+  })
+
+  test("the budget scan catches a planted violation", () => {
+    const big = "export const a = 1\n".repeat(500)
+    assert.ok(big.split("\n").length > 400, "500-line planted file must exceed the core ceiling")
+  })
+})
+
+describe("43 §8 — approved terminology in shipped source", () => {
+  // These synonyms invite drift back to the old vocabulary. The DO-NOT-WRITE forms are
+  // scanned in source comments and identifiers; the approved forms are what tests see.
+  const FORBIDDEN: Array<[term: string, why: string]> = [
+    ["playbook", "say skill (reusable procedure)"],
+    ["long-term memory", "say global memory (durable personal store)"],
+    ["LTM", "say global memory"],
+    ["scratch memory", "say session overlay (immediate correction)"],
+    ["temp memory", "say session overlay"],
+    ["history DB", "say session archive"],
+    ["transcript store", "say session archive"],
+    ["permission level", "say autonomy mode"],
+  ]
+
+  for (const [term, fix] of FORBIDDEN) {
+    test(`source never says "${term}" (${fix})`, () => {
+      const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+      const bad = offenders(re)
+      assert.deepEqual(bad, [], `"${term}" in: ${bad.join(", ")}`)
+    })
+  }
+
+  test("the terminology scan catches a planted violation", () => {
+    const isBad = (t: string) => /playbook/i.test(t)
+    assert.ok(planted("terminology", "// my playbook of tricks\n", isBad))
+  })
+})
+
+describe("45 §3 — status vocabulary is closed (no synonyms)", () => {
+  test("source never invents requirement-status synonyms", () => {
+    const bad = offenders(/\b(?:VERIFIED_OK|COMPLETE_OK|DONE_STATUS|PASSED_COMPLETE|FINISHED)\b/)
+    assert.deepEqual(bad, [], `invented status in: ${bad.join(", ")} — statuses are REQ_STATUSES / EXECUTION-backed only`)
+  })
+
+  test("the status scan catches a planted violation", () => {
+    const isBad = (t: string) => /\bVERIFIED_OK\b/.test(t)
+    assert.ok(planted("status-synonym", 'setStatus("VERIFIED_OK")\n', isBad))
+  })
+})

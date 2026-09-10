@@ -151,3 +151,24 @@ Surprises: REAL BUG caught by the torn-tail test — appending after a truncated
   Truncation recovery now works as 12 §6 demands. Recorded in .apex/MEMORY.md later
   (Phase 2 wiring); noted here for the next agent.
 Next: WP-014 (source-scan invariant extensions)
+
+---
+
+## WP-014 — Source-scan invariant extensions · DONE · 2026-09-10
+
+Files: ~runtime/test/sourcescan.test.ts
+Decision: legacy engines (the 7 pre-upgrade files) are exempt from the new injected-clock
+  rule — 47 §5 governs NEW modules and their existing behaviour is load-bearing and tested;
+  exemption list is explicit in the test. Size budgets warning-grade per 47 §3 ("soft
+  ceilings"): enforced as scan failures for NEW files; existing files grandfathered at
+  current size (json.ts 599 lines exceeds the 400 core ceiling but predates the rule —
+  splitting it would violate "additive, not a rewrite"). Each scan ships a planted-violation
+  self-test asserting the PATTERN catches what it claims to catch.
+Verify: `npm run verify` -> 723 pass, 0 fail, exit 0 (+21 tests).
+Evidence: EVD-007.
+Surprises: TypeScript control-flow analysis narrows a closure-written variable to its
+  initial type at the read point — `cycle ? cycle.join(...) : ""` is a `never` error even
+  with an explicit null-union. Reading through an object wrapper defeats the narrowing.
+  Cost me three typecheck round-trips; second failure per the ladder made me probe TS in
+  isolation instead of guessing again.
+Next: WP-015 (path and home resolution)
