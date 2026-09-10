@@ -814,3 +814,25 @@ Surprises: three look-and-fix cycles, all the same root cause — after promotio
   discipline is to read the failure PATH in the error, which named the directory
   every time.
 Next: WP-046 — usage sidecar.
+
+## WP-046 — Usage sidecar · DONE · 2026-09-11
+
+Files: +runtime/src/stores/skill-usage.ts (160), +runtime/test/stores/skill-usage.test.ts (5)
+Decision: .usage.json sidecar in the skill directory carries ALL mutable usage
+  state (successes, failures, activeVersion, lastUsedAt/lastValidatedAt,
+  staleReasons — the 20 §6 shape). recordUse/markStale only buffer in memory;
+  flush() is the single SESSION_END write, under the skills lock, merging
+  ADDITIVELY with the prior file (prior counters + this session's). An unused
+  session flushes nothing (flush() returns the existing file or null — never a
+  write). SKILL.md is never touched: content and state stay separate, so a
+  content hash bound by the trust store stays valid across uses.
+Verify: `npm run verify` -> 956 pass, 0 fail, 0 cancelled, exit 0 (41.3s, 2nd run —
+  see note).
+Evidence: EVD-039.
+Surprises: the FIRST verify run tripped the known Windows EPERM flake in the
+  MEM-CON-T01 20-way race (the exact WP-028 surprise — AV/indexer transients on
+  lock file open). Not my code path; second run clean 956/956. My empty-flush
+  first draft THREW when no sidecar existed — an unused skill costing an error is
+  the same write-amplification bug in different clothes; flush() now returns
+  null instead.
+Next: WP-047 — curator.
