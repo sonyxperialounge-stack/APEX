@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T17:53:05.698Z",
+  "updatedAt": "2026-09-10T18:53:51.024Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "4",
-  "currentPacket": "WP-040",
+  "currentPacket": "WP-041",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -385,7 +385,13 @@
       "commit": "be5da80"
     },
     "WP-040": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T18:29:01.188Z",
+      "finishedAt": "2026-09-10T18:53:51.023Z",
+      "evidence": [
+        "EVD-033"
+      ],
+      "notes": "frontmatter subset parser + 41§10 header validation + 18§4 body check + advisory linter (18§8) in engines/skill-linter.ts"
     },
     "WP-041": {
       "status": "PENDING"

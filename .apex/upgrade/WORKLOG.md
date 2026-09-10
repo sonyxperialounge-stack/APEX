@@ -675,3 +675,30 @@ Surprises: three in one packet. (1) The index's n-gram fallback scores 1 on
   (3) The scroll clamping test expected 13..32 but honest math at index 31 gives
   22..32 — the clamp was right, my expectation was wrong.
 Next: PHASE 3 COMPLETE (WP-030..WP-037 all DONE). Phase 4 (skills) at WP-040.
+
+## WP-040 — Skill format, parser, linter · DONE · 2026-09-10
+
+Files: +runtime/src/stores/skill-store.ts (302), +runtime/src/engines/skill-linter.ts (103),
+  +runtime/test/stores/skill-store.test.ts (10)
+Decision: zero-dependency frontmatter SUBSET parser (key: value scalars, dotted nested
+  keys, inline [a, b] lists, booleans, and inline object lists for requiresEnvironment).
+  Header validation per 41 §10 — every error names its field. Body check per 18 §4 (11
+  required sections, missing ones named). Advisory linter per 18 §8 in engines/
+  skill-linter.ts (store under its 350-line ceiling, MOD-T05): errors/warnings/
+  securityFlags/estimatedTokens; secrets + bypass instructions + control chars are
+  securityFlags, temp paths + raw logs + giant pastes are warnings. 54 §5 fallbackFor
+  parsed; 54 §6 requiresEnvironment = NAMES ONLY (UPPER_SNAKE validated, no value
+  path anywhere). Linter re-exported from the store for one import surface.
+Verify: `npm run verify` -> 916 pass, 0 fail, 0 cancelled, exit 0 (31.7s).
+Evidence: EVD-033.
+Surprises: THREE tooling traps in one packet, all recorded for the next agent.
+  (1) A bash heredoc truncated mid-file AGAIN — completed the tail with python, but
+  python literal "\n" in a replacement string wrote REAL newlines into string
+  literals, corrupting the file (NUL byte + broken quotes). Salvage cost more than
+  writing fresh; the file tool is the only safe way to author source. (2) My license
+  header drifted on one line ("ss. 51, 63, 63B" vs "ss. 51, 63 (up to 3 yrs
+  imprisonment + fine), 63B") — the byte-identical sourcescan caught it; fixed by
+  splicing the canonical 18 lines, and a sweep confirmed the other new files clean.
+  (3) Backslash escaping in heredocs: \\ became \, mangling the temp-path regex —
+  rebuilt it with new RegExp("...\\+") so the escape count is explicit.
+Next: WP-041 — progressive disclosure.
