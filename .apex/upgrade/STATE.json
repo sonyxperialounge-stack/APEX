@@ -467,7 +467,8 @@
       "evidence": [
         "EVD-040"
       ],
-      "notes": "curator: conservative vocabulary, interval guard, pinned protection, archive-not-delete"
+      "notes": "curator: conservative vocabulary, interval guard, pinned protection, archive-not-delete",
+      "commit": "21df2e5"
     },
     "WP-047b": {
       "status": "PENDING"
