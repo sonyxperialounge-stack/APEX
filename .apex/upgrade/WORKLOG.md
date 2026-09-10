@@ -99,3 +99,17 @@ Surprises: first typecheck failed on destructuring under noUncheckedIndexedAcces
   (`string | undefined`); the codebase style is `x!` assertions. My first draft also
   invented helpers that don't exist — re-read paths.ts before writing, always.
 Next: WP-011 (schema classification)
+
+---
+
+## WP-011 — Schema classification · DONE · 2026-09-10
+
+Files: +runtime/src/core/schema.ts, +runtime/test/core/schema.test.ts
+Decision: null (no schema marker) classifies as legacy 0 per 29 §8 (adopt non-destructively,
+  never assume current). All six stores start at CURRENT_SCHEMA 1 — no migrations exist yet;
+  bumps land with the packets that change store shapes. classifySchema is the single
+  classifier (one effects-taxonomy-style ownership rule).
+Verify: `npm run verify` -> 687 pass, 0 fail, exit 0 (+7 tests).
+Evidence: EVD-004.
+Surprises: none — 47 §4.2's contract is exact and matched the plan.
+Next: WP-012 (cross-process lock)
