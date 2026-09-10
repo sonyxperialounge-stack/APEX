@@ -133,3 +133,21 @@ Surprises: Windows dynamic import() of an absolute path needs a file:// URL
   "live holder" test must use async spawn — a spawnSync sleeper is indistinguishable from a
   crashed writer. Both recorded here for the next Windows test author.
 Next: WP-013 (JSONL primitives)
+
+---
+
+## WP-013 — JSONL primitives · DONE · 2026-09-10
+
+Files: ~runtime/src/core/json.ts, +runtime/test/core/json-jsonl.test.ts
+Decision: appendJsonl uses fsp.open(file, "a") + handle.writeFile inside json.ts (the
+  CORE-005 sanctioned module) — no sourcescan SANCTIONED edit was needed. Framing is
+  {seq, sha8, record} per 47 §4.3. Malformed lines quarantine to `<file>.quarantine`
+  (raw, append-only) + a jsonl.quarantine event; reads never throw.
+Verify: `npm run verify` -> 702 pass, 0 fail, exit 0 (+7 tests).
+Evidence: EVD-006.
+Surprises: REAL BUG caught by the torn-tail test — appending after a truncated write
+  glued the new frame onto the fragment (both lines lost). Root cause: append assumes the
+  file ends with \n. Fix: prepend a repair \n when the last byte is not a newline.
+  Truncation recovery now works as 12 §6 demands. Recorded in .apex/MEMORY.md later
+  (Phase 2 wiring); noted here for the next agent.
+Next: WP-014 (source-scan invariant extensions)

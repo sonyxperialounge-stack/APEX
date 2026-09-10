@@ -29,6 +29,7 @@
 
 import fs from "node:fs"
 import fsp from "node:fs/promises"
+import { createHash } from "node:crypto"
 import os from "node:os"
 import path from "node:path"
 import { ApexError } from "./errors.ts"
@@ -302,6 +303,138 @@ export async function copyDir(from: string, to: string): Promise<string[]> {
 
 export function existsSync(p: string): boolean {
   return fs.existsSync(p)
+}
+
+// ── JSONL primitives (12 §6, 28 §9, 47 §4.3) ──────────────────────────────────
+
+export interface JsonlLine<T> {
+  seq: number
+  record: T
+}
+
+export interface JsonlReadResult<T> {
+  lines: JsonlLine<T>[]
+  /** Raw malformed lines, moved to quarantine rather than dropped or thrown. */
+  quarantined: string[]
+  nextSeq: number
+}
+
+/**
+ * Append one framed record. Each line is `{"seq":N,"sha":"<8 hex>","record":{...}}`
+ * (47 §4.3): the checksum detects a torn write, the sequence detects a lost one. The
+ * in-process file lock serialises appends within this process; cross-process callers
+ * hold `withCrossProcessLock` around batches. Returns the assigned sequence number.
+ */
+export async function appendJsonl<T>(file: string, record: T): Promise<number> {
+  return withFileLock(file, async () => {
+    await fsp.mkdir(path.dirname(file), { recursive: true })
+    const { nextSeq } = await readJsonlFramed(file)
+    const payload = JSON.stringify(record)
+    const sha = createHash("sha256").update(payload).digest("hex").slice(0, 8)
+    let line = JSON.stringify({ seq: nextSeq, sha, record: JSON.parse(payload) }) + "\n"
+    // Truncation recovery (12 §6): a torn write can leave the last line without its
+    // newline. Appending then would glue the new frame onto the fragment and corrupt
+    // BOTH. Repair the boundary first — the fragment itself stays quarantinable.
+    const existing = await readTextOrNull(file)
+    if (existing !== null && existing.length > 0 && !existing.endsWith("\n")) {
+      line = "\n" + line
+    }
+    // Append through the sanctioned writer module only: open in append mode, write, sync.
+    const handle = await fsp.open(file, "a")
+    try {
+      await handle.writeFile(line, "utf8")
+      await handle.sync()
+    } finally {
+      await handle.close()
+    }
+    return nextSeq
+  })
+}
+
+/**
+ * Read framed JSONL tolerantly. A malformed line — torn tail, bad checksum, JSON error,
+ * sequence gap — is QUARANTINED, never fatal and never silently dropped (12 §6): the raw
+ * line goes to `<file>.quarantine` alongside the good records, and the caller decides.
+ * Sequence numbers restart at 1 after a gap: a gap means lost lines, and the next write
+ * continues from the HIGHEST seen seq + 1 so the file never rewinds.
+ */
+export async function readJsonlSafe<T>(file: string): Promise<JsonlReadResult<T>> {
+  const text = await readTextOrNull(file)
+  if (text === null) return { lines: [], quarantined: [], nextSeq: 1 }
+  const lines: JsonlLine<T>[] = []
+  const quarantined: string[] = []
+  let maxSeq = 0
+
+  for (const raw of text.split("\n")) {
+    const line = raw.trim()
+    if (line === "") continue
+    let parsed: { seq?: unknown; sha?: unknown; record?: unknown }
+    try {
+      parsed = JSON.parse(line) as typeof parsed
+    } catch {
+      quarantined.push(line)
+      continue
+    }
+    const seqOk = Number.isInteger(parsed.seq) && (parsed.seq as number) > 0
+    const payload = JSON.stringify(parsed.record ?? null)
+    const shaOk =
+      typeof parsed.sha === "string" &&
+      parsed.sha === createHash("sha256").update(payload).digest("hex").slice(0, 8)
+    if (seqOk && shaOk && parsed.record !== undefined) {
+      const seq = parsed.seq as number
+      maxSeq = Math.max(maxSeq, seq)
+      lines.push({ seq, record: parsed.record as T })
+    } else {
+      quarantined.push(line)
+    }
+  }
+
+  if (quarantined.length > 0) {
+    const qFile = `${file}.quarantine`
+    const handle = await fsp.open(qFile, "a")
+    try {
+      await handle.writeFile(quarantined.map((l) => l + "\n").join(""), "utf8")
+    } finally {
+      await handle.close()
+    }
+    event("jsonl.quarantine", { file: path.basename(file), count: quarantined.length })
+  }
+  return { lines, quarantined, nextSeq: maxSeq + 1 }
+}
+
+/** Internal: framing read without quarantine side effects (for append's seq calc). */
+async function readJsonlFramed(file: string): Promise<{ nextSeq: number }> {
+  const text = await readTextOrNull(file)
+  if (text === null) return { nextSeq: 1 }
+  let maxSeq = 0
+  for (const raw of text.split("\n")) {
+    const line = raw.trim()
+    if (line === "") continue
+    try {
+      const parsed = JSON.parse(line) as { seq?: unknown }
+      if (Number.isInteger(parsed.seq) && (parsed.seq as number) > maxSeq) {
+        maxSeq = parsed.seq as number
+      }
+    } catch {
+      /* torn tail: the next append continues past the highest good seq */
+    }
+  }
+  return { nextSeq: maxSeq + 1 }
+}
+
+/**
+ * Compact / rewrite: all records re-framed in order through the atomic write path.
+ * Quarantined lines are NOT included — they live in the quarantine file until a human
+ * or Doctor decides. Order and content of the good records are preserved byte-wise
+ * in meaning (same seq order, same records).
+ */
+export async function rewriteJsonl<T>(file: string, records: T[]): Promise<void> {
+  const framed = records.map((record, i) => {
+    const payload = JSON.stringify(record)
+    const sha = createHash("sha256").update(payload).digest("hex").slice(0, 8)
+    return JSON.stringify({ seq: i + 1, sha, record: JSON.parse(payload) })
+  })
+  await writeTextAtomic(file, framed.map((l) => l + "\n").join(""))
 }
 
 // ── Cross-process lock (12 §3–§5) ────────────────────────────────────────────
