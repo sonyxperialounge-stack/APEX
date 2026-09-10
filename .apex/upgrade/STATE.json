@@ -427,7 +427,8 @@
       "evidence": [
         "EVD-036"
       ],
-      "notes": "skillApplicable engine: lifecycle/platform/requires/fallbackFor/env gates, reasons stated, trust outside"
+      "notes": "skillApplicable engine: lifecycle/platform/requires/fallbackFor/env gates, reasons stated, trust outside",
+      "commit": "7f98482"
     },
     "WP-044": {
       "status": "PENDING"
