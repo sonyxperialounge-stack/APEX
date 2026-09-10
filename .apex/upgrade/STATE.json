@@ -235,7 +235,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T10:02:57.050Z",
       "finishedAt": "2026-09-10T10:12:42.769Z",
-      "commit": null,
+      "commit": "d73f51c",
       "evidence": [
         "EVD-018"
       ],
