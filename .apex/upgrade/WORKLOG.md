@@ -82,3 +82,20 @@ Verify: the named tests are part of the suite that produced the WP-002 result (E
 Evidence: EVD-001.
 Surprises: none.
 Next: Phase 0 exit gate recorded — phase0: PASSED in STATE.json. Begin Phase 1 (WP-010).
+
+---
+
+## WP-010 — ID generation · DONE · 2026-09-10
+
+Files: +runtime/src/core/ids.ts, +runtime/test/core/ids.test.ts (types.ts untouched — no new shared types were needed)
+Decision: ids are STATELESS — the spec's determinism requirement ("identical injected inputs
+  yield identical ids", 43 §7) rules out any module-level monotonic counter, so uniqueness is
+  time + 36^6 random alone, and the time part is zero-padded to 9 base36 digits so string
+  sort equals numeric sort. Used canonicalCase+realpathSafe from paths.ts (existing) rather
+  than a new canonicalisation; ApexError with code BAD_ID_PREFIX per HC-012.
+Verify: `npm run verify` -> 680 pass, 0 fail, exit 0 (was 671; +9 new tests).
+Evidence: EVD-003.
+Surprises: first typecheck failed on destructuring under noUncheckedIndexedAccess
+  (`string | undefined`); the codebase style is `x!` assertions. My first draft also
+  invented helpers that don't exist — re-read paths.ts before writing, always.
+Next: WP-011 (schema classification)
