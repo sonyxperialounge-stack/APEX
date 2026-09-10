@@ -35,6 +35,7 @@ let home: string
 let project: string
 let savedApexHome: string | undefined
 let sessionId: string
+let store: ReturnType<typeof openArchiveStore>
 
 beforeEach(async () => {
   home = await fsp.mkdtemp(path.join(os.tmpdir(), "apex-arcccli-home-"))
@@ -46,7 +47,7 @@ beforeEach(async () => {
   // Seed the archive the way WP-036 capture does — through the store's persist path.
   const archiveDir = path.join(home, "archive")
   await fsp.mkdir(path.join(home, "locks"), { recursive: true })
-  const store = openArchiveStore(archiveDir, { now: () => 1789065600000 })
+  store = openArchiveStore(archiveDir, { now: () => 1789065600000 })
   sessionId = await store.appendSession({
     startedAt: "2026-09-10T00:00:00.000Z",
     projectKey: "prj_9999999999999999",
@@ -134,6 +135,31 @@ describe("WP-037 archive CLI — discover / browse / read / scroll (16 §5)", ()
     const missing = runArchive(["read", "SES-doesnotexist"])
     assert.notEqual(missing.code, 0, "reading an unknown session is a failure")
     assert.match(missing.out, /No session named/)
+  })
+
+  test("CTX-T07: a read that would exceed 50% of the context budget is refused, with a narrower alternative", async () => {
+    // One event whose body totals ~8000 chars ≈ 2000 tokens — the entire default
+    // 2000-token budget. A full read must be REFUSED, not truncated and not silently passed.
+    const fat = "y".repeat(8000)
+    await store.persistEvent({ sessionId, type: "decision", text: fat })
+    const read = runArchive(["read", sessionId])
+    assert.notEqual(read.code, 0, "a >50% read is a refusal, not a success")
+    assert.match(read.out, /50% attached-content hard guard/, "the refusal names the hard guard")
+    assert.match(read.out, /range, or ask for a summary/, "the refusal offers a narrower range or a summary")
+    assert.match(read.out, /scroll with a narrower window/, "the surface suggests its own narrower alternative")
+  })
+
+  test("soft guard: a read between 25% and 50% of the budget warns and still proceeds", async () => {
+    // A FRESH session (no seed events) with 2 × 1100-char events ≈ 550 tokens ≈ 27.5%
+    // of the 2000-token budget — past the 25% soft guard, under the 50% hard guard.
+    const softSession = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z" })
+    await store.persistEvent({ sessionId: softSession, type: "decision", text: "a".repeat(1100) })
+    await store.persistEvent({ sessionId: softSession, type: "decision", text: "b".repeat(1100) })
+    const read = runArchive(["read", softSession])
+    assert.equal(read.code, 0, "a 25-50% read still proceeds")
+    assert.match(read.out, /WARN: this read would use \d+% of the context budget\./, "the cost is reported")
+    assert.doesNotMatch(read.out, /hard guard/, "no refusal")
+    assert.match(read.out, /aaaaaaaa/, "the event body is present")
   })
 
   test("--json returns machine-readable output for every sub", async () => {

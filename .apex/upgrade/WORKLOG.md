@@ -954,3 +954,24 @@ Surprises: grep treats a test file containing NUL bytes as binary and SILENTLY
   audit's first grep pass produced three false "missing" verdicts.
 Next: WP-026b (attached-context 25/50 guard), then WP-041b/042b/047b/049b/049c,
 then Phase 5 at WP-050.
+
+## WP-026b — Attached-context 25/50 guard · DONE · 2026-09-11
+
+Files: +runtime/src/engines/context-guard.ts (81), ~runtime/src/core/types.ts (+ApexContextConfig),
+  ~runtime/src/engines/ledger.ts (default + nested merge + normalise), ~runtime/src/cli/archive-cli.ts
+  (guard on read/scroll), ~runtime/templates/config.json (+context block), ~core/08-CONTEXT.md
+  (THE ATTACHED-CONTEXT GUARD), +runtime/test/engines/context-guard.test.ts (7), ~runtime/test/cli/archive-cli.test.ts (+2)
+Decision: 54 §11.1's two-stage guard (<=25% expand, 25-50% warn, >50% refuse) lives in ONE
+  pure engine (context-guard.ts) measuring against config.context.budgetTokens (44; default
+  2000). Wired at the archive read/scroll user surface (the only bulk-read surface in the
+  tree today): the guard decides on the exact events that would be emitted, a refusal sets
+  exit 1 and names the narrower alternative (`--around` window), a soft case warns with the
+  cost. Nothing is truncated silently; nothing is refused without naming the rule (54 §11.1).
+Verify: `npm run verify` -> 982 pass, 0 fail, 0 cancelled, exit 0 (29.2s).
+Evidence: EVD-044.
+Surprises: archive-cli tests seed 33 events per session, so "add two fat events" tests had to
+  open their OWN session or the aggregate crossed 50% and refused (correctly). The pure-engine
+  tests caught my first draft using `>` where the spec says `>` for 50% too — exactly 50% is
+  the soft side, 50.1% refuses. closeSession is NOT idempotent (throws ILLEGAL_SESSION_CLOSE
+  on a second call) — tests must not re-close a session the harness already closed.
+Next: WP-041b (fallbackFor + requiresEnvironment activation).

@@ -29,6 +29,8 @@ import path from "node:path"
 import { openArchiveStore } from "../stores/archive-store.ts"
 import { openArchiveIndex } from "../engines/archive-index.ts"
 import { openGlobalHome } from "../stores/global-home.ts"
+import { Ledger } from "../engines/ledger.ts"
+import { decideAttachmentForText } from "../engines/context-guard.ts"
 import { say } from "../core/log.ts"
 import type { ArchiveEvent, SessionRecordV1 } from "../core/types.ts"
 
@@ -48,6 +50,25 @@ export async function runArchiveCli(input: ArchiveCliArgs): Promise<void> {
   const archiveDir = home.subdir("archive")
   const store = openArchiveStore(archiveDir, {})
   const index = openArchiveIndex(store, {})
+  // WP-026b — the attached-context guard measures against the configured context
+  // budget (44 `context.budgetTokens`); default 2000 when the ledger is unreadable.
+  const ledger = new Ledger(projectRoot)
+  const budgetTokens = (await ledger.loadConfig().catch(() => null))?.context?.budgetTokens ?? 2000
+
+  /** Guard one bulk read. Returns a refusal message, or null when the read may proceed. */
+  const guard = (events: ArchiveEvent[]): string | null => {
+    const body = events
+      .map((e) => `${e.timestamp} [${e.type}] ${e.text ?? ""} ${(e.refs ?? []).join(" ")}`.trim())
+      .join("\n")
+    const plan = decideAttachmentForText(body, budgetTokens)
+    if (plan.verdict === "REFUSE") {
+      return `${plan.refusal}\nTry archive scroll with a narrower window or --around instead.`
+    }
+    if (plan.verdict === "EXPAND_WARN") {
+      say(`WARN: this read would use ${Math.round(plan.fraction * 100)}% of the context budget.`)
+    }
+    return null
+  }
 
   const flag = (name: string): string | undefined => {
     const i = args.indexOf(name)
@@ -129,6 +150,12 @@ export async function runArchiveCli(input: ArchiveCliArgs): Promise<void> {
         process.exitCode = 1
         return
       }
+      const refusal = guard(events)
+      if (refusal) {
+        say(`\n${refusal}`)
+        process.exitCode = 1
+        return
+      }
       if (json) {
         process.stderr.write(JSON.stringify({ session: session ?? null, events }, null, 2) + "\n")
         return
@@ -152,12 +179,19 @@ export async function runArchiveCli(input: ArchiveCliArgs): Promise<void> {
       const at = Math.max(0, Math.min(around, events.length - 1))
       const from = Math.max(0, at - Math.floor(SCROLL_PAGE / 2))
       const to = Math.min(events.length, from + SCROLL_PAGE)
+      const windowEvents = events.slice(from, to)
+      const refusal = guard(windowEvents)
+      if (refusal) {
+        say(`\n${refusal}`)
+        process.exitCode = 1
+        return
+      }
       if (json) {
-        process.stderr.write(JSON.stringify({ sessionId, total: events.length, window: [from, to], events: events.slice(from, to) }, null, 2) + "\n")
+        process.stderr.write(JSON.stringify({ sessionId, total: events.length, window: [from, to], events: windowEvents }, null, 2) + "\n")
         return
       }
       say(`\n${sessionId} — events ${from + 1}..${to} of ${events.length} (window around #${at + 1}):`)
-      for (const ev of events.slice(from, to)) renderEvent(ev)
+      for (const ev of windowEvents) renderEvent(ev)
       say("")
       return
     }

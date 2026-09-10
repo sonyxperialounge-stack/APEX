@@ -193,6 +193,19 @@ data that would answer it.
 
 ---
 
+## THE ATTACHED-CONTEXT GUARD
+
+Any bulk read pulled into context — a whole file, a directory listing, a diff, an archive
+range — is bounded by a two-stage size guard against the configured context budget
+(`context.budgetTokens`):
+
+- at or under **25 %**: expand freely;
+- **25 % to 50 %**: expand, but warn and record the cost;
+- over **50 %**: refuse; summarise or ask for a narrower range.
+
+The refusal names the exact headroom and the more conservative alternative. A read that would
+blow more than half the working context is never silently accepted.
+
 ## THE PROJECT MEMORY
 
 `.apex/MEMORY.md` persists across all sessions. Write facts that were expensive to learn and

@@ -136,6 +136,16 @@ export interface CouncilConfig {
   conveneOn: string[]
 }
 
+/**
+ * WP-026b — the context budget the attached-context guard measures against
+ * (54 §11.1, amending 13 §5). One key today; the rest of 44's `context` block
+ * arrives with the packets that own them.
+ */
+export interface ApexContextConfig {
+  /** Approximate token ceiling for the whole working context. Default 2000. */
+  budgetTokens: number
+}
+
 export interface ApexConfig {
   projectRoot: string
   autonomy: AutonomyMode
@@ -147,6 +157,7 @@ export interface ApexConfig {
   verifyCommands: Partial<Record<VerifyType, string | null>>
   limits: ApexLimits
   council: CouncilConfig
+  context: ApexContextConfig
   delegation: DelegationConfig
 }
 

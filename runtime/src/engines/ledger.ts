@@ -73,6 +73,7 @@ export const DEFAULT_CONFIG: ApexConfig = {
   verifyCommands: {},
   limits: { maxSameStrategyFailures: 3, maxSubagentRetries: 2, handoffAtContextPct: 80 },
   council: { enabled: false, reviewerModel: null, conveneOn: [] },
+  context: { budgetTokens: 2000 },
   delegation: {
     mode: "AUTO",
     maxConcurrentCalls: 6,
@@ -218,7 +219,7 @@ export class Ledger {
     }
 
     // Nested renames.
-    for (const [outer, inner] of [["limits", null], ["council", null], ["delegation", "models"]] as const) {
+    for (const [outer, inner] of [["limits", null], ["council", null], ["context", null], ["delegation", "models"]] as const) {
       const section = out[outer]
       if (!section || typeof section !== "object") continue
       const fixed: Record<string, unknown> = {}
@@ -284,6 +285,7 @@ export class Ledger {
         ...(raw.delegation ?? {}),
         models: { ...DEFAULT_CONFIG.delegation.models, ...(raw.delegation?.models ?? {}) },
       },
+      context: { ...DEFAULT_CONFIG.context, ...(raw.context ?? {}) },
     }
   }
 

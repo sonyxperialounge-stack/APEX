@@ -28,6 +28,11 @@
     "handoffAtContextPct": 80
   },
 
+  "_contextNote": "The attached-context guard's budget. context.budgetTokens is the token ceiling for the whole working context; attached content over 50% is refused, over 25% warns (54 §11.1).",
+  "context": {
+    "budgetTokens": 2000
+  },
+
   "council": {
     "enabled": false,
     "reviewerModel": null,

@@ -272,7 +272,14 @@
       "notes": "+8 tests; CTX-T03..T06 green; frozen snapshot + overlay live"
     },
     "WP-026b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T03:10:00.000Z",
+      "finishedAt": "2026-09-11T03:55:00.000Z",
+      "commit": "PENDING",
+      "evidence": [
+        "EVD-044"
+      ],
+      "notes": "attached-context 25/50 guard (54 §11.1); context-guard.ts engine + archive read/scroll wiring; 982 pass"
     },
     "WP-027": {
       "status": "DONE",
