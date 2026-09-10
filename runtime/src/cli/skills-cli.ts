@@ -32,6 +32,7 @@ import { openGlobalHome } from "../stores/global-home.ts"
 import { lintSkill } from "../engines/skill-linter.ts"
 import { newId, toIsoString } from "../core/ids.ts"
 import { say } from "../core/log.ts"
+import { writeText } from "../core/json.ts"
 import type { SkillLifecycle } from "../engines/skill-forge.ts"
 
 export interface SkillsCliArgs {
@@ -205,6 +206,43 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
       return
     }
 
+    case "pin": {
+      const name = positional()[0]
+      if (!name) return usageSkills()
+      const dir = await findSkillDir(skillsRoot, name)
+      if (!dir) {
+        say(`\nNo shipped skill named ${name}.`)
+        process.exitCode = 1
+        return
+      }
+      // The marker is written through the write chokepoint like every other file.
+      await writeText(path.join(dir, ".pinned"), "")
+      if (json) {
+        process.stderr.write(JSON.stringify({ pinned: name, dir: dir.replace(skillsRoot, "skills") }, null, 2) + "\n")
+        return
+      }
+      say(`Pinned ${name} — protected from automatic staleness and archival (54 §9.4).`)
+      return
+    }
+
+    case "unpin": {
+      const name = positional()[0]
+      if (!name) return usageSkills()
+      const dir = await findSkillDir(skillsRoot, name)
+      if (!dir) {
+        say(`\nNo shipped skill named ${name}.`)
+        process.exitCode = 1
+        return
+      }
+      await fsp.rm(path.join(dir, ".pinned"), { force: true })
+      if (json) {
+        process.stderr.write(JSON.stringify({ unpinned: name }, null, 2) + "\n")
+        return
+      }
+      say(`Unpinned ${name} — the curator may now stale-mark or archive it again.`)
+      return
+    }
+
     case "pending": {
       // Candidates awaiting a promotion decision.
       const pendingDir = path.join(skillsRoot, "pending")
@@ -230,6 +268,28 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
   }
 }
 
+/**
+ * Locate a shipped skill's directory by its header name: `<skills>/<category>/<name>`
+ * where SKILL.md exists, or `<skills>/<name>` when the caller already used the
+ * category path. Returns null when no such skill is shipped.
+ */
+async function findSkillDir(skillsRoot: string, name: string): Promise<string | null> {
+  const read = (p: string): Promise<string[]> =>
+    fsp.readdir(p, { withFileTypes: true }).then(
+      (es) => es.filter((e) => e.isDirectory() && !e.name.startsWith(".")).map((e) => e.name),
+      () => [],
+    )
+  const direct = path.join(skillsRoot, name)
+  const directHit = await fsp.access(path.join(direct, "SKILL.md")).then(() => true, () => false)
+  if (directHit) return direct
+  for (const category of await read(skillsRoot)) {
+    const candidate = path.join(skillsRoot, category, name)
+    const hit = await fsp.access(path.join(candidate, "SKILL.md")).then(() => true, () => false)
+    if (hit) return candidate
+  }
+  return null
+}
+
 function usageSkills(): void {
   say(`
 apex-agent skills <sub> [args]
@@ -240,8 +300,11 @@ apex-agent skills <sub> [args]
   pending                       list staged candidates awaiting promotion
   promote <id> [--user-override]  promote through the forge gates
   retire <name>                 archive a shipped skill (never deletes)
+  pin <name>                    protect a shipped skill from staleness and archival
+  unpin <name>                  lift the protection
 
 Skills are future instruction: promotion needs evidence, or your explicit
 override — recorded as unverified, and demoted on its first real failure.
+Pinned skills are protected from automatic staleness and archival (54 §9.4).
 `)
 }

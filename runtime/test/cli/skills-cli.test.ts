@@ -175,4 +175,39 @@ describe("WP-049 skills CLI (18 §5)", () => {
     assert.equal(none.code, 0, none.out)
     assert.match(none.out, /No skill matches/)
   })
+
+  test("pin protects a skill from the curator; unpin restores it (54 §9.4)", async () => {
+    // Ship one skill via the full path.
+    const draft = path.join(project, "draft4.md")
+    await fsp.writeFile(draft, DRAFT.replace("cli-test-skill", "pin-me").replace("requires.capabilities: [fs.read]", "requires.capabilities: [fs.gone-cap]"), "utf8")
+    const stage = runSkills(["stage", draft])
+    const id = /SKL-[0-9a-z-]+/.exec(stage.out)![0]
+    runSkills(["promote", id, "--user-override"])
+
+    // The skill's capability does not exist -> unpinned, the curator would stale-mark it.
+    const pin = runSkills(["pin", "pin-me"])
+    assert.equal(pin.code, 0, pin.out)
+    assert.match(pin.out, /Pinned pin-me/)
+    assert.match(pin.out, /protected from automatic staleness and archival/, "the reason is stated")
+
+    const marker = path.join(home, "skills", "engineering", "pin-me", ".pinned")
+    assert.ok(await fsp.access(marker).then(() => true, () => false), "the .pinned marker exists")
+
+    // The curator directly: capability gone AND pinned -> skip, never stale-mark.
+    const { runCuration } = await import("../../src/engines/skill-curator.ts") as typeof import("../../src/engines/skill-curator.ts")
+    const report = await runCuration({ skillsRoot: path.join(home, "skills"), now: Date.now, isAvailable: () => false, lastCuratedAt: 0 })
+    const acted = report.actions.find((a) => a.skill === "pin-me")
+    assert.equal(acted?.action, "skip", "the pinned skill is skipped, not stale-marked")
+
+    // Unpin lifts the protection.
+    const unpin = runSkills(["unpin", "pin-me"])
+    assert.equal(unpin.code, 0, unpin.out)
+    assert.ok(await fsp.access(marker).then(() => false, () => true), "the marker is gone")
+  })
+
+  test("pin on an unknown skill fails with a named error", async () => {
+    const pin = runSkills(["pin", "no-such-skill"])
+    assert.notEqual(pin.code, 0)
+    assert.match(pin.out, /No shipped skill named no-such-skill/)
+  })
 })

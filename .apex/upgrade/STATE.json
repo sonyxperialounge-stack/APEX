@@ -492,7 +492,14 @@
       "commit": "21df2e5"
     },
     "WP-047b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T00:00:00.000Z",
+      "finishedAt": "2026-09-11T00:00:00.000Z",
+      "evidence": [
+        "EVD-047"
+      ],
+      "notes": "archive dir, pinning, curator min-interval; skills pin/unpin CLI added",
+      "commit": "PENDING"
     },
     "WP-048": {
       "status": "DONE",

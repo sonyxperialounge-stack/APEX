@@ -1021,3 +1021,24 @@ Surprises: the shared-mutable-cache bug only shows under multiple boots in ONE p
   (tests), never in the CLI — exactly why the test exists. Single-run debug scripts
   passed while the suite failed.
 Next: WP-047b (archive dir, pinning, curator min-interval).
+## WP-047b — archive dir, pinning, curator min-interval (DONE)
+
+Date: 2026-09-11
+Packet: WP-047b (54 §9.3–§9.5, SKSEC-T08/T09, LIFE-T08)
+Files: ~runtime/src/cli/skills-cli.ts, ~runtime/test/cli/skills-cli.test.ts (+2),
+  +.apex/upgrade/EVIDENCE/EVD-047.md
+Decision: inspection found the WP-047b engine surface ALREADY implemented and tested:
+  archive-never-delete (skill-curator.ts moves the body to .archive/, the retire CLI
+  reports where), curator min-interval (runCuration returns ran:false inside the default
+  168h window and persists lastCuratedAt in .state.json), and the .pinned marker check
+  (SKSEC-T09). The ONE missing surface was the CLI: 54 §9.4 calls for `skills pin` but
+  no command created the marker. Added pin/unpin to skills-cli.ts with findSkillDir()
+  resolution by header name. Root-cause fix: the first draft wrote the marker with
+  fsp.writeFile, which the CORE-005 source scan correctly refused (writes only through
+  json.ts/log.ts) — the marker now goes through writeText; unpin's fsp.rm is a delete,
+  matching the retire/rename precedent.
+Verify: `npm run verify` -> 990 pass, 0 fail, 0 cancelled, exit 0 (26.9s).
+Evidence: EVD-047.
+Surprises: the CORE-005 source-scan test exists precisely to catch this class of drift —
+  the scan refused the direct write before the full suite ever had to.
+Next: WP-049b (seed skill library + non-clobbering sync).
