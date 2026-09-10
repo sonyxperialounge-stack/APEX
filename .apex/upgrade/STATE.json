@@ -391,7 +391,8 @@
       "evidence": [
         "EVD-033"
       ],
-      "notes": "frontmatter subset parser + 41§10 header validation + 18§4 body check + advisory linter (18§8) in engines/skill-linter.ts"
+      "notes": "frontmatter subset parser + 41§10 header validation + 18§4 body check + advisory linter (18§8) in engines/skill-linter.ts",
+      "commit": "6ee26a6"
     },
     "WP-041": {
       "status": "PENDING"
