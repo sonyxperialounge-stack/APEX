@@ -371,7 +371,8 @@
       "evidence": [
         "EVD-031"
       ],
-      "notes": "capture engine + L1 MCP tools (apex_archive_*) + L2 hook wiring; verifications link V- ids"
+      "notes": "capture engine + L1 MCP tools (apex_archive_*) + L2 hook wiring; verifications link V- ids",
+      "commit": "31db678"
     },
     "WP-037": {
       "status": "PENDING"
