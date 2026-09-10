@@ -105,7 +105,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T06:09:41.620Z",
       "finishedAt": "2026-09-10T06:24:26.629Z",
-      "commit": null,
+      "commit": "1168fd5",
       "evidence": [
         "EVD-005"
       ],
