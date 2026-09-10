@@ -354,3 +354,21 @@ Surprises: two honest-threat-model lessons: (1) editing a framed JSONL payload o
   attempts); passed on re-run and in the standalone file — if it recurs, raise the retry
   budget or serialize that describe block.
 Next: WP-023 (normalization, dedupe, near-duplicate detection)
+
+---
+
+## WP-023 — Normalization, dedupe, near-duplicate detection · DONE · 2026-09-10
+
+Files: +runtime/src/engines/memory-librarian.ts (normalize/similarity/classify/merge
+  portion), +runtime/test/engines/memory-librarian.test.ts
+Decision: classifyPair is called only WITHIN a subject (same scope+kind+semanticKey —
+  isSameSubject guard); text similarity NEVER decides a merge alone (11 §4/§5).
+  Exact duplicates refresh provenance transactionally (11 §3), never a second truth row.
+  The 3-gram fallback is a candidate detector that can only RAISE classification.
+Verify: `npm run verify` -> 821 pass, 0 fail, exit 0 (+13 tests).
+Evidence: EVD-017.
+Surprises: THREE Unicode-folding defects in my first normalize (missing \p{M} splitting
+  Devanagari; trailing '.' surviving; nukta treated as meaningful). All found by the
+  multilingual fixtures with probe evidence — exactly the SEC-T08 discipline. Also
+  removed an arbitrary *0.95 damping on the trigram fallback that contradicted 11 §11.
+Next: WP-024 (correction, supersession, conflicts)

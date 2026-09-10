@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T09:46:23.653Z",
+  "updatedAt": "2026-09-10T10:02:57.050Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "2",
-  "currentPacket": "WP-023",
+  "currentPacket": "WP-024",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -222,7 +222,14 @@
       "notes": "+4 tests; revalidation-before-approval proven"
     },
     "WP-023": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T09:46:23.653Z",
+      "finishedAt": "2026-09-10T10:02:57.049Z",
+      "commit": null,
+      "evidence": [
+        "EVD-017"
+      ],
+      "notes": "+13 tests; 3 Unicode-folding defects fixed"
     },
     "WP-024": {
       "status": "PENDING"
