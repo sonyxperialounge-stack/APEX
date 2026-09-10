@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T08:26:10.154Z",
+  "updatedAt": "2026-09-10T09:09:58.254Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -17,8 +17,8 @@
       "exit": 0
     }
   },
-  "currentPhase": "0",
-  "currentPacket": "WP-019",
+  "currentPhase": "2",
+  "currentPacket": "WP-020",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -182,7 +182,14 @@
       "notes": "+8 tests; MIG-T01..T05 green; interrupted-check reordered first"
     },
     "WP-019": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T08:26:10.154Z",
+      "finishedAt": "2026-09-10T09:09:58.252Z",
+      "commit": null,
+      "evidence": [
+        "EVD-013"
+      ],
+      "notes": "+8 tests; DOC-T01/T03 green; CLI --repair wired"
     },
     "WP-020": {
       "status": "PENDING"

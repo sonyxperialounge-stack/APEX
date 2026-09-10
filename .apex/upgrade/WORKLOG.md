@@ -274,3 +274,23 @@ Surprises: two of my own bugs: (1) interrupted-detection ordered after the curre
   schema module never declares. Both caught by the fixtures. Lesson written into this
   entry: assert against the declared contract, not the demo I imagined.
 Next: WP-019 (Doctor foundation)
+
+---
+
+## WP-019 — Doctor foundation · DONE · 2026-09-10
+
+Files: +runtime/src/engines/doctor.ts, +runtime/test/engines/doctor.test.ts,
+  ~runtime/src/cli/index.ts (--repair flag + durable-state section in doctor)
+Decision: runDoctor composes the existing engines (global-home describe, migration
+  journal finder) instead of re-implementing checks — Doctor owns reporting, stores own
+  their state (C-008: no second authority). Repairs bounded to the four 31 §12 actions
+  and exported as REPAIRABLE so the test pins the list. Future schema = BLOCKED + read-only,
+  never "repaired" (DOC-T03). CLI doctor keeps its existing install-diagnosis section and
+  adds the durable-state section — additive, existing INS-008 tests untouched and green.
+Verify: `npm run verify` -> 789 pass, 0 fail, exit 0 (+8 tests).
+Evidence: EVD-013.
+Surprises: my --repair gate required an OK/WARN resolve, silently excluding the absent
+  home — the one case home-ensure exists for. Tests caught it. Also the tree mixes LF and
+  CRLF across files, so byte-identical header comparison must normalize newlines first
+  (checked-out older files are CRLF; new ones are LF).
+Next: PHASE 1 COMPLETE. Phase 2 (memory fabric) begins at WP-020.

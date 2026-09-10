@@ -38,7 +38,7 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
 
   apex-agent attach [--host <name>] [--all-hosts]        install into ONE host (the deepest available)
   apex-agent detach [--host <name>]                      remove cleanly, restoring your original config
-  apex-agent doctor [--project <path>]                   what is installed, what is broken, how to fix it
+  apex-agent doctor [--project <path>] [--repair]           what is installed, what is broken, how to fix it
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
   apex-agent gate [--project <path>]                     run the completion gate
@@ -54,16 +54,18 @@ interface Args {
   project?: string
   json: boolean
   allHosts: boolean
+  repair: boolean
 }
 
 export function parseArgs(argv: string[]): Args {
-  const out: Args = { command: argv[0] ?? "help", json: false, allHosts: false }
+  const out: Args = { command: argv[0] ?? "help", json: false, allHosts: false, repair: false }
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--host") out.host = argv[++i] as HostName
     else if (arg === "--project" || arg === "-p") out.project = argv[++i]
     else if (arg === "--json") out.json = true
     else if (arg === "--all-hosts") out.allHosts = true
+    else if (arg === "--repair") out.repair = true
   }
   if (out.host && !KNOWN_HOSTS.includes(out.host)) {
     throw new Error(`Unknown host "${out.host}". Known: ${KNOWN_HOSTS.join(", ")}`)
@@ -137,8 +139,22 @@ export async function main(argv: string[]): Promise<void> {
       const errors = lines.filter((l) => l.status === "error").length
       const warnings = lines.filter((l) => l.status === "warn").length
       say(`\nLEVEL: ${level}`)
-      say(`${errors} error(s), ${warnings} warning(s)\n`)
-      if (errors) process.exitCode = 1
+
+      // The upgrade's durable-state checks (WP-019): read-only by default; --repair is
+      // limited to the four sanctioned reversible repairs (31 §12).
+      const { runDoctor } = await import("../engines/doctor.ts")
+      const report = await runDoctor({ projectRoot }, { repair: args.repair })
+      say(`\nDURABLE STATE`)
+      for (const check of report.checks) {
+        say(`  ${check.status.padEnd(10)} ${check.summary}`)
+        if (check.remediation) say(`      fix: ${check.remediation}`)
+      }
+      if (report.repaired.length) say(`  repaired: ${report.repaired.join(", ")}`)
+      say(`  worst: ${report.worst}`)
+
+      const hard = report.checks.filter((c) => c.status === "BLOCKED" || c.status === "DEGRADED").length
+      say(`${errors} error(s), ${warnings} warning(s), ${hard} durable-state issue(s)\n`)
+      if (errors || hard) process.exitCode = 1
       return
     }
 

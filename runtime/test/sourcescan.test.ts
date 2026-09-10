@@ -245,10 +245,14 @@ function planted(name: string, text: string, isBad: (t: string) => boolean): boo
 }
 
 describe("HC-T03 — every .ts source file carries the license header", () => {
-  // Byte-for-byte canonical header, taken from a pre-existing file (42 §5: copied
+  // Byte-for-byte canonical header TEXT, taken from a pre-existing file (42 §5: copied
   // byte-for-byte — a paraphrase is a defect even if it mentions the right words).
+  // Line endings are normalized before comparison: the tree carries both LF (new
+  // files) and CRLF (git-checked-out older files), and the header's integrity is about
+  // the characters, not the EOL convention the host picked.
   const CANON_FILE = ALL.find((f) => f.file.replace(/\\/g, "/").endsWith("src/core/paths.ts"))
-  const CANON_LINES = CANON_FILE ? CANON_FILE.text.split("\n").slice(0, 17) : []
+  const norm = (s: string): string => s.replace(/\r\n/g, "\n")
+  const CANON_LINES = CANON_FILE ? norm(CANON_FILE.text).split("\n").slice(0, 17) : []
   const CANON = CANON_LINES.join("\n")
 
   test("the canonical header is 17 lines: NOTICE clause with the blank separator and terminator", () => {
@@ -262,7 +266,7 @@ describe("HC-T03 — every .ts source file carries the license header", () => {
   test("every source file starts with the byte-identical header block", () => {
     const bad: string[] = []
     for (const { file, text } of ALL) {
-      if (!text.startsWith(CANON)) bad.push(file)
+      if (!norm(text).startsWith(CANON)) bad.push(file)
     }
     assert.deepEqual(bad, [], `header not byte-identical to canonical: ${bad.join(", ")}`)
   })
