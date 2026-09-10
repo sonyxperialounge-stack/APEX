@@ -439,7 +439,7 @@
         "EVD-046"
       ],
       "notes": "source tiers, scan caching by content hash + policy version (SKSEC-T07), deny never overridable, fresh-cache-object fix",
-      "commit": "5472766"
+      "commit": "4552d28"
     },
     "WP-043": {
       "status": "DONE",
