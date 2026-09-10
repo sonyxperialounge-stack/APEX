@@ -1,0 +1,46 @@
+{
+  "projectRoot": "D:/APEX/Army-V3",
+  "autonomy": "GUARDED",
+  "allowedPaths": [
+    "."
+  ],
+  "doNotRead": [],
+  "doNotTouch": [],
+  "ignore": [
+    "node_modules/",
+    ".git/",
+    "dist/",
+    "build/",
+    "__pycache__/",
+    ".venv/",
+    "vendor/"
+  ],
+  "sourcesOfTruth": [],
+  "verifyCommands": {},
+  "limits": {
+    "maxSameStrategyFailures": 3,
+    "maxSubagentRetries": 2,
+    "handoffAtContextPct": 80
+  },
+  "council": {
+    "enabled": false,
+    "reviewerModel": null,
+    "conveneOn": []
+  },
+  "delegation": {
+    "mode": "AUTO",
+    "maxConcurrentCalls": 6,
+    "maxLogicalPackets": 200,
+    "writersPerWave": 1,
+    "isolation": "none",
+    "models": {
+      "commander": null,
+      "workers": [],
+      "reviewer": null,
+      "allowSubstitution": false,
+      "fallback": {}
+    },
+    "onClassExhausted": "ask_user",
+    "announceAutonomous": true
+  }
+}

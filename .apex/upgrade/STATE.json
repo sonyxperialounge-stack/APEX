@@ -1,0 +1,735 @@
+{
+  "schemaVersion": 1,
+  "plan": "army-update-plan",
+  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
+  "startedAt": "2026-09-10T05:36:15.128Z",
+  "updatedAt": "2026-09-10T05:36:15.128Z",
+  "baseline": {
+    "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
+    "dirtyAtStart": false,
+    "node": "v24.16.0",
+    "npm": "11.13.0",
+    "os": "win32",
+    "suite": {
+      "pass": 671,
+      "fail": 0,
+      "cancelled": 0,
+      "exit": 0
+    }
+  },
+  "currentPhase": "0",
+  "currentPacket": null,
+  "phase0": "PASSED",
+  "packets": {
+    "WP-001": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-002": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-003": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-004": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-005": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-006": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T05:36:15.128Z",
+      "finishedAt": "2026-09-10T05:36:15.128Z",
+      "commit": null,
+      "evidence": [
+        "EVD-001"
+      ],
+      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+    },
+    "WP-010": {
+      "status": "PENDING"
+    },
+    "WP-011": {
+      "status": "PENDING"
+    },
+    "WP-012": {
+      "status": "PENDING"
+    },
+    "WP-013": {
+      "status": "PENDING"
+    },
+    "WP-014": {
+      "status": "PENDING"
+    },
+    "WP-015": {
+      "status": "PENDING"
+    },
+    "WP-015b": {
+      "status": "PENDING"
+    },
+    "WP-016": {
+      "status": "PENDING"
+    },
+    "WP-017": {
+      "status": "PENDING"
+    },
+    "WP-018": {
+      "status": "PENDING"
+    },
+    "WP-019": {
+      "status": "PENDING"
+    },
+    "WP-020": {
+      "status": "PENDING"
+    },
+    "WP-021": {
+      "status": "PENDING"
+    },
+    "WP-022": {
+      "status": "PENDING"
+    },
+    "WP-023": {
+      "status": "PENDING"
+    },
+    "WP-024": {
+      "status": "PENDING"
+    },
+    "WP-025": {
+      "status": "PENDING"
+    },
+    "WP-025b": {
+      "status": "PENDING"
+    },
+    "WP-026": {
+      "status": "PENDING"
+    },
+    "WP-026b": {
+      "status": "PENDING"
+    },
+    "WP-027": {
+      "status": "PENDING"
+    },
+    "WP-028": {
+      "status": "PENDING"
+    },
+    "WP-029": {
+      "status": "PENDING"
+    },
+    "WP-030": {
+      "status": "PENDING"
+    },
+    "WP-031": {
+      "status": "PENDING"
+    },
+    "WP-032": {
+      "status": "PENDING"
+    },
+    "WP-033": {
+      "status": "PENDING"
+    },
+    "WP-034": {
+      "status": "PENDING"
+    },
+    "WP-035": {
+      "status": "PENDING"
+    },
+    "WP-036": {
+      "status": "PENDING"
+    },
+    "WP-037": {
+      "status": "PENDING"
+    },
+    "WP-040": {
+      "status": "PENDING"
+    },
+    "WP-041": {
+      "status": "PENDING"
+    },
+    "WP-041b": {
+      "status": "PENDING"
+    },
+    "WP-042": {
+      "status": "PENDING"
+    },
+    "WP-042b": {
+      "status": "PENDING"
+    },
+    "WP-043": {
+      "status": "PENDING"
+    },
+    "WP-044": {
+      "status": "PENDING"
+    },
+    "WP-045": {
+      "status": "PENDING"
+    },
+    "WP-046": {
+      "status": "PENDING"
+    },
+    "WP-047": {
+      "status": "PENDING"
+    },
+    "WP-047b": {
+      "status": "PENDING"
+    },
+    "WP-048": {
+      "status": "PENDING"
+    },
+    "WP-049": {
+      "status": "PENDING"
+    },
+    "WP-049b": {
+      "status": "PENDING"
+    },
+    "WP-049c": {
+      "status": "PENDING"
+    },
+    "WP-050": {
+      "status": "PENDING"
+    },
+    "WP-050b": {
+      "status": "PENDING"
+    },
+    "WP-051": {
+      "status": "PENDING"
+    },
+    "WP-052": {
+      "status": "PENDING"
+    },
+    "WP-053": {
+      "status": "PENDING"
+    },
+    "WP-054": {
+      "status": "PENDING"
+    },
+    "WP-055": {
+      "status": "PENDING"
+    },
+    "WP-056": {
+      "status": "PENDING"
+    },
+    "WP-056b": {
+      "status": "PENDING"
+    },
+    "WP-057": {
+      "status": "PENDING"
+    },
+    "WP-058": {
+      "status": "PENDING"
+    },
+    "WP-059": {
+      "status": "PENDING"
+    },
+    "WP-060": {
+      "status": "PENDING"
+    },
+    "WP-061": {
+      "status": "PENDING"
+    },
+    "WP-062": {
+      "status": "PENDING"
+    },
+    "WP-063": {
+      "status": "PENDING"
+    },
+    "WP-064": {
+      "status": "PENDING"
+    },
+    "WP-065": {
+      "status": "PENDING"
+    },
+    "WP-065b": {
+      "status": "PENDING"
+    },
+    "WP-066": {
+      "status": "PENDING"
+    },
+    "WP-067": {
+      "status": "PENDING"
+    },
+    "WP-068": {
+      "status": "PENDING"
+    },
+    "WP-070": {
+      "status": "PENDING"
+    },
+    "WP-071": {
+      "status": "PENDING"
+    },
+    "WP-072": {
+      "status": "PENDING"
+    },
+    "WP-073": {
+      "status": "PENDING"
+    },
+    "WP-073b": {
+      "status": "PENDING"
+    },
+    "WP-074": {
+      "status": "PENDING"
+    },
+    "WP-075": {
+      "status": "PENDING"
+    },
+    "WP-080": {
+      "status": "PENDING"
+    },
+    "WP-081": {
+      "status": "PENDING"
+    },
+    "WP-082": {
+      "status": "PENDING"
+    },
+    "WP-083": {
+      "status": "PENDING"
+    },
+    "WP-084": {
+      "status": "PENDING"
+    },
+    "WP-085": {
+      "status": "PENDING"
+    },
+    "WP-085b": {
+      "status": "PENDING"
+    },
+    "WP-086": {
+      "status": "PENDING"
+    },
+    "WP-087": {
+      "status": "PENDING"
+    },
+    "WP-088": {
+      "status": "PENDING"
+    },
+    "WP-089": {
+      "status": "PENDING"
+    }
+  },
+  "packetOrder": [
+    "WP-001",
+    "WP-002",
+    "WP-003",
+    "WP-004",
+    "WP-005",
+    "WP-006",
+    "WP-010",
+    "WP-011",
+    "WP-012",
+    "WP-013",
+    "WP-014",
+    "WP-015",
+    "WP-015b",
+    "WP-016",
+    "WP-017",
+    "WP-018",
+    "WP-019",
+    "WP-020",
+    "WP-021",
+    "WP-022",
+    "WP-023",
+    "WP-024",
+    "WP-025",
+    "WP-025b",
+    "WP-026",
+    "WP-026b",
+    "WP-027",
+    "WP-028",
+    "WP-029",
+    "WP-030",
+    "WP-031",
+    "WP-032",
+    "WP-033",
+    "WP-034",
+    "WP-035",
+    "WP-036",
+    "WP-037",
+    "WP-040",
+    "WP-041",
+    "WP-041b",
+    "WP-042",
+    "WP-042b",
+    "WP-043",
+    "WP-044",
+    "WP-045",
+    "WP-046",
+    "WP-047",
+    "WP-047b",
+    "WP-048",
+    "WP-049",
+    "WP-049b",
+    "WP-049c",
+    "WP-050",
+    "WP-050b",
+    "WP-051",
+    "WP-052",
+    "WP-053",
+    "WP-054",
+    "WP-055",
+    "WP-056",
+    "WP-056b",
+    "WP-057",
+    "WP-058",
+    "WP-059",
+    "WP-060",
+    "WP-061",
+    "WP-062",
+    "WP-063",
+    "WP-064",
+    "WP-065",
+    "WP-065b",
+    "WP-066",
+    "WP-067",
+    "WP-068",
+    "WP-070",
+    "WP-071",
+    "WP-072",
+    "WP-073",
+    "WP-073b",
+    "WP-074",
+    "WP-075",
+    "WP-080",
+    "WP-081",
+    "WP-082",
+    "WP-083",
+    "WP-084",
+    "WP-085",
+    "WP-085b",
+    "WP-086",
+    "WP-087",
+    "WP-088",
+    "WP-089"
+  ],
+  "dependencies": {
+    "WP-001": [],
+    "WP-002": [
+      "WP-001"
+    ],
+    "WP-003": [
+      "WP-002"
+    ],
+    "WP-004": [
+      "WP-002"
+    ],
+    "WP-005": [
+      "WP-001"
+    ],
+    "WP-006": [
+      "WP-002"
+    ],
+    "WP-010": [
+      "WP-006"
+    ],
+    "WP-011": [
+      "WP-010"
+    ],
+    "WP-012": [
+      "WP-010"
+    ],
+    "WP-013": [
+      "WP-012"
+    ],
+    "WP-014": [
+      "WP-013"
+    ],
+    "WP-015": [
+      "WP-011"
+    ],
+    "WP-015b": [
+      "WP-015"
+    ],
+    "WP-016": [
+      "WP-015",
+      "WP-012"
+    ],
+    "WP-017": [
+      "WP-006"
+    ],
+    "WP-018": [
+      "WP-011",
+      "WP-013",
+      "WP-016"
+    ],
+    "WP-019": [
+      "WP-016",
+      "WP-018"
+    ],
+    "WP-020": [
+      "WP-019"
+    ],
+    "WP-021": [
+      "WP-020",
+      "WP-013"
+    ],
+    "WP-022": [
+      "WP-021"
+    ],
+    "WP-023": [
+      "WP-020"
+    ],
+    "WP-024": [
+      "WP-023",
+      "WP-021"
+    ],
+    "WP-025": [
+      "WP-024"
+    ],
+    "WP-025b": [
+      "WP-025"
+    ],
+    "WP-026": [
+      "WP-025"
+    ],
+    "WP-026b": [
+      "WP-026"
+    ],
+    "WP-027": [
+      "WP-026"
+    ],
+    "WP-028": [
+      "WP-027"
+    ],
+    "WP-029": [
+      "WP-022",
+      "WP-025"
+    ],
+    "WP-030": [
+      "WP-029"
+    ],
+    "WP-031": [
+      "WP-030",
+      "WP-017"
+    ],
+    "WP-032": [
+      "WP-030"
+    ],
+    "WP-033": [
+      "WP-030"
+    ],
+    "WP-034": [
+      "WP-033"
+    ],
+    "WP-035": [
+      "WP-034"
+    ],
+    "WP-036": [
+      "WP-031"
+    ],
+    "WP-037": [
+      "WP-035"
+    ],
+    "WP-040": [
+      "WP-037"
+    ],
+    "WP-041": [
+      "WP-040"
+    ],
+    "WP-041b": [
+      "WP-043"
+    ],
+    "WP-042": [
+      "WP-040",
+      "WP-017"
+    ],
+    "WP-042b": [
+      "WP-042"
+    ],
+    "WP-043": [
+      "WP-041"
+    ],
+    "WP-044": [
+      "WP-029",
+      "WP-032"
+    ],
+    "WP-045": [
+      "WP-044",
+      "WP-042"
+    ],
+    "WP-046": [
+      "WP-045"
+    ],
+    "WP-047": [
+      "WP-046"
+    ],
+    "WP-047b": [
+      "WP-047"
+    ],
+    "WP-048": [
+      "WP-044"
+    ],
+    "WP-049": [
+      "WP-045"
+    ],
+    "WP-049b": [
+      "WP-045"
+    ],
+    "WP-049c": [
+      "WP-049"
+    ],
+    "WP-050": [
+      "WP-019"
+    ],
+    "WP-050b": [
+      "WP-051"
+    ],
+    "WP-051": [
+      "WP-050"
+    ],
+    "WP-052": [
+      "WP-051"
+    ],
+    "WP-053": [
+      "WP-051"
+    ],
+    "WP-054": [
+      "WP-053"
+    ],
+    "WP-055": [
+      "WP-054"
+    ],
+    "WP-056": [
+      "WP-051",
+      "WP-042"
+    ],
+    "WP-056b": [
+      "WP-056"
+    ],
+    "WP-058": [
+      "WP-054"
+    ],
+    "WP-059": [
+      "WP-050"
+    ],
+    "WP-060": [
+      "WP-029",
+      "WP-049",
+      "WP-057"
+    ],
+    "WP-061": [
+      "WP-060"
+    ],
+    "WP-062": [
+      "WP-061"
+    ],
+    "WP-063": [
+      "WP-053",
+      "WP-060"
+    ],
+    "WP-064": [
+      "WP-060"
+    ],
+    "WP-065": [
+      "WP-064"
+    ],
+    "WP-065b": [
+      "WP-065"
+    ],
+    "WP-066": [
+      "WP-065"
+    ],
+    "WP-067": [
+      "WP-061",
+      "WP-060"
+    ],
+    "WP-068": [
+      "WP-067"
+    ],
+    "WP-070": [
+      "WP-068"
+    ],
+    "WP-071": [
+      "WP-070"
+    ],
+    "WP-072": [
+      "WP-058",
+      "WP-029",
+      "WP-049"
+    ],
+    "WP-073": [
+      "WP-072"
+    ],
+    "WP-073b": [
+      "WP-073"
+    ],
+    "WP-074": [
+      "WP-073"
+    ],
+    "WP-075": [
+      "WP-074"
+    ],
+    "WP-080": [
+      "WP-075"
+    ],
+    "WP-081": [
+      "WP-080"
+    ],
+    "WP-082": [
+      "WP-081"
+    ],
+    "WP-083": [
+      "WP-018",
+      "WP-074"
+    ],
+    "WP-084": [
+      "WP-070"
+    ],
+    "WP-085": [
+      "WP-070"
+    ],
+    "WP-085b": [
+      "WP-085"
+    ],
+    "WP-086": [
+      "WP-085"
+    ],
+    "WP-087": [
+      "WP-083"
+    ],
+    "WP-088": [
+      "WP-087"
+    ],
+    "WP-089": [
+      "WP-088"
+    ],
+    "WP-057": [
+      "WP-055"
+    ]
+  },
+  "descoped": {},
+  "blocked": [],
+  "openQuestions": []
+}
