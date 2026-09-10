@@ -326,3 +326,90 @@ describe("WP-024 resolveCandidate", () => {
     assert.equal(out.conflicts.length, 0, "equivalence never conflicts")
   })
 })
+
+// ── WP-025 — selection and budgeting (10 §7, 10 §9, 13 §2, 44 §3) ──────────────
+
+import { selectMemory } from "../../src/engines/memory-librarian.ts"
+
+describe("WP-025 selectMemory", () => {
+  const NOW = "2026-09-10T00:00:00.000Z"
+
+  test("memory.useGlobal:false yields ZERO global records (CFG-T06)", () => {
+    const global1 = rec({ id: "MEM-000000001-aaaaaa", text: "Use pnpm." })
+    const proj = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "This project uses npm." })
+    const out = selectMemory([global1, proj], { projectKey: "prj_1111111111111111", useGlobal: false }, "", NOW)
+    assert.equal(out.records.filter((r) => r.scope.kind === "global").length, 0, "zero global records")
+    assert.ok(out.records.length > 0, "project memory still injects")
+    assert.ok(out.skipped.some((s) => s.reason.includes("useGlobal")), "the skip is recorded with its reason")
+  })
+
+  test("expired items never appear (MEM-T05); the skip says when it expired", () => {
+    const expired = rec({ id: "MEM-000000001-aaaaaa", text: "Use Node 18.", expiresAt: "2026-01-01T00:00:00.000Z" })
+    const fresh = rec({ id: "MEM-000000002-bbbbbb", text: "Use Node 24." })
+    const out = selectMemory([expired, fresh], {}, "", NOW)
+    assert.equal(out.records.some((r) => r.id === "MEM-000000001-aaaaaa"), false)
+    assert.equal(out.records.some((r) => r.id === "MEM-000000002-bbbbbb"), true)
+    assert.ok(out.skipped.find((s) => s.id === "MEM-000000001-aaaaaa")!.reason.includes("expired"))
+  })
+
+  test("other projects' records are invisible (C-020 bidirectional isolation)", () => {
+    const theirs = rec({ id: "MEM-000000001-aaaaaa", scope: { kind: "project", projectKey: "prj_2222222222222222" }, text: "Secret other-project fact" })
+    const mine = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "My project fact" })
+    const out = selectMemory([theirs, mine], { projectKey: "prj_1111111111111111" }, "", NOW)
+    assert.equal(out.records.some((r) => r.text.includes("Secret other-project")), false)
+    assert.ok(out.records.some((r) => r.text.includes("My project fact")))
+  })
+
+  test("category opt-outs skip global records of that kind (44 §3)", () => {
+    const pref = rec({ id: "MEM-000000001-aaaaaa", kind: "preference", text: "preference text" })
+    const rel = rec({ id: "MEM-000000002-bbbbbb", kind: "relationship", text: "relationship text" })
+    const out = selectMemory([pref, rel], { globalCategories: { relationship: false } }, "", NOW)
+    assert.equal(out.records.some((r) => r.kind === "relationship"), false)
+    assert.ok(out.records.some((r) => r.kind === "preference"))
+    assert.ok(out.skipped.some((s) => s.reason.includes("opted out")))
+  })
+
+  test("only active records inject; superseded/conflicted/retracted/stale never do", () => {
+    for (const status of ["superseded", "conflicted", "retracted", "stale"] as const) {
+      const r = rec({ id: `MEM-000000001-${status.slice(0, 6)}`, status })
+      const out = selectMemory([r], {}, "", NOW)
+      assert.equal(out.records.length, 0, `${status} never injects`)
+    }
+  })
+
+  test("project memory comes BEFORE global in injection order (10 §7)", () => {
+    const g = rec({ id: "MEM-000000001-aaaaaa", text: "global fact" })
+    const p = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "project fact" })
+    const out = selectMemory([g, p], { projectKey: "prj_1111111111111111" }, "", NOW)
+    assert.equal(out.records[0]!.text, "project fact")
+    assert.equal(out.records[1]!.text, "global fact")
+  })
+
+  test("the token budget is respected using estimateTokens; the global tail drops first", () => {
+    const longText = "x".repeat(400) // ~100 tokens per record
+    const p = rec({ id: "MEM-000000001-aaaaaa", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: longText })
+    const g1 = rec({ id: "MEM-000000002-bbbbbb", text: longText })
+    const g2 = rec({ id: "MEM-000000003-cccccc", text: longText })
+    // Budget: 250 tokens => project record (100) + one global (100) fit; the second global drops.
+    const out = selectMemory([p, g1, g2], { projectKey: "prj_1111111111111111", maxTokens: 250 }, "", NOW)
+    assert.ok(out.records.includes(p), "the project record survives budget pressure")
+    assert.equal(out.records.length, 2, "project + one global only")
+    assert.ok(out.estimatedTokens <= 250, `within budget: ${out.estimatedTokens}`)
+    assert.ok(out.skipped.some((s) => s.reason.includes("budget")))
+  })
+
+  test("low-relevance records are skipped when task text is given; relevance floor works", () => {
+    const aboutCooking = rec({ id: "MEM-000000001-aaaaaa", text: "recipe for pasta carbonara", semanticKey: "preference.food" })
+    const aboutPkg = rec({ id: "MEM-000000002-bbbbbb", text: "package manager is pnpm", semanticKey: "preference.package_manager" })
+    const out = selectMemory([aboutCooking, aboutPkg], {}, "install dependencies with the package manager", NOW)
+    assert.equal(out.records.some((r) => r.text.includes("pnpm")), true)
+    assert.equal(out.records.some((r) => r.text.includes("carbonara")), false)
+  })
+
+  test("with no task text, everything injectable injects (boot-time behaviour)", () => {
+    const a = rec({ id: "MEM-000000001-aaaaaa", text: "anything" })
+    const b = rec({ id: "MEM-000000002-bbbbbb", text: "something else entirely" })
+    const out = selectMemory([a, b], {}, "", NOW)
+    assert.equal(out.records.length, 2)
+  })
+})

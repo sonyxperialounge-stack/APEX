@@ -391,3 +391,19 @@ Surprises: the reinforce test expected the "reinforce" action label but exact du
   take the earlier merge-provenance branch — same outcome (provenance merge, one row),
   different label. Test now accepts either with the outcome asserted, not the label.
 Next: WP-025 (selection and budgeting)
+
+---
+
+## WP-025 — Selection and budgeting · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/memory-librarian.ts (selectMemory), ~runtime/test/engines/memory-librarian.test.ts (+9)
+Decision: selectMemory is pure (records in, selection out) — the caller wires it to the
+  store and config. Every skip is RECORDED with a reason (the "why isn't my memory here"
+  audit). Budget uses estimateTokens from cortex (42 §7: the only estimator) and drops
+  from the global tail so project facts survive. Expiry evaluated lazily at retrieval
+  (10 §9 — no daemon, no status flip needed to skip). Config keys read via the
+  MemorySelectionConfig struct for now; the ApexConfig keys land with WP-074.
+Verify: `npm run verify` -> 838 pass, 0 fail, exit 0.
+Evidence: EVD-019.
+Surprises: none — the pure-function shape made the fixtures straightforward.
+Next: WP-026 (Cortex integration)

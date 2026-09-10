@@ -179,6 +179,7 @@ export function isSameSubject(a: Pick<MemoryRecordV1, "scope" | "kind" | "semant
 // ── Corrections, supersession, conflicts (11 §6–§10) — WP-024 ──────────────────
 
 import { newId as makeId, toIsoString as isoNow } from "../core/ids.ts"
+import { estimateTokens } from "./cortex.ts"
 import type { MemoryCandidate, ConflictRecord } from "../core/types.ts"
 
 export interface ResolveOutcome {
@@ -393,4 +394,126 @@ export async function resolveCandidate(
   next.push(fresh)
   actions.push({ action: "create", id: fresh.id, reason: "new subject slot" })
   return { records: next, actions, conflicts }
+}
+
+// ── Selection and budgeting (10 §7, 10 §9, 13 §2, 32 §3, 44 §3) — WP-025 ────────
+
+export interface MemorySelectionConfig {
+  /** The current project's key — records of OTHER projects are never visible. */
+  projectKey?: string
+  /** memory.useGlobal from project config (44 §3). Default true. */
+  useGlobal?: boolean
+  /** memory.globalCategories per-kind opt-out map (44 §3). Default: all true. */
+  globalCategories?: Partial<Record<string, boolean>>
+  /** Token budget for the whole memory block, estimated via estimateTokens. */
+  maxTokens?: number
+}
+
+export interface MemorySelection {
+  /** Chosen records in injection order: project first, then global (10 §7). */
+  records: MemoryRecordV1[]
+  /** Records skipped and why — the audit trail for "why isn't my memory here". */
+  skipped: Array<{ id: string; reason: string }>
+  estimatedTokens: number
+  budget: number
+}
+
+/** Relevance of a record to the current task text: normalized token overlap. */
+function relevance(record: MemoryRecordV1, taskText: string): number {
+  if (!taskText.trim()) return 0
+  const rt = tokens(normalizeMemoryText(record.text))
+  const tt = tokens(normalizeMemoryText(taskText))
+  if (rt.size === 0 || tt.size === 0) return 0
+  let hits = 0
+  for (const t of tt) if (rt.has(t)) hits++
+  return hits / Math.min(rt.size, tt.size)
+}
+
+export const RELEVANCE_FLOOR = 0.05
+
+/**
+ * Select injectable memory for a task (WP-025). Pure — no writes, no store access.
+ *
+ * Order (10 §7): exact-project active memory first, then global active memory; a
+ * project override changes resolution for that project, it never deletes the global
+ * fact. Skips (each recorded): other-project records (C-020), category opt-outs,
+ * useGlobal:false, non-active statuses (superseded/conflicted/retracted/stale never
+ * inject), expired items (10 §9 — evaluated lazily at retrieval), and relevance below
+ * floor when a task text is given. The budget is enforced with estimateTokens (42 §7:
+ * the only estimator), dropping from the END (global tail) so project facts survive.
+ */
+export function selectMemory(
+  records: MemoryRecordV1[],
+  cfg: MemorySelectionConfig,
+  taskText: string,
+  nowIso: string,
+): MemorySelection {
+  const budget = cfg.maxTokens ?? 1_000
+  const useGlobal = cfg.useGlobal ?? true
+  const categories = cfg.globalCategories ?? {}
+  const skipped: MemorySelection["skipped"] = []
+  const now = Date.parse(nowIso)
+
+  const injectable: MemoryRecordV1[] = []
+  for (const r of records) {
+    if (r.scope.kind === "project") {
+      if (r.scope.projectKey !== cfg.projectKey) {
+        skipped.push({ id: r.id, reason: `other project (${r.scope.projectKey}) — invisible here (C-020)` })
+        continue
+      }
+    } else if (!useGlobal) {
+      skipped.push({ id: r.id, reason: "memory.useGlobal is false for this project (CFG-T06)" })
+      continue
+    } else {
+      const on = categories[r.kind] ?? true
+      if (!on) {
+        skipped.push({ id: r.id, reason: `global category "${r.kind}" opted out in project config` })
+        continue
+      }
+    }
+    if (r.status !== "active") {
+      skipped.push({ id: r.id, reason: `status ${r.status} — only active records inject` })
+      continue
+    }
+    if (r.expiresAt !== undefined) {
+      const at = Date.parse(r.expiresAt)
+      if (Number.isFinite(at) && at <= now) {
+        skipped.push({ id: r.id, reason: `expired at ${r.expiresAt} (10 §9)` })
+        continue
+      }
+    }
+    if (taskText.trim() && relevance(r, taskText) < RELEVANCE_FLOOR) {
+      skipped.push({ id: r.id, reason: "below relevance floor for this task" })
+      continue
+    }
+    injectable.push(r)
+  }
+
+  // Project first, then global (10 §7); inside each, most recently updated first.
+  const project = injectable.filter((r) => r.scope.kind === "project")
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const global_ = injectable.filter((r) => r.scope.kind === "global")
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+
+  const chosen: MemoryRecordV1[] = []
+  let used = 0
+  const render = (r: MemoryRecordV1): number => estimateTokens(`- ${r.text}`)
+  for (const r of project) {
+    const cost = render(r)
+    if (used + cost > budget && chosen.length > 0) break
+    if (used + cost > budget) break
+    chosen.push(r)
+    used += cost
+  }
+  for (const r of global_) {
+    const cost = render(r)
+    if (used + cost > budget) {
+      skipped.push({ id: r.id, reason: `over token budget (${budget}) — dropped from the global tail` })
+      continue
+    }
+    chosen.push(r)
+    used += cost
+  }
+
+  return { records: chosen, skipped, estimatedTokens: used, budget }
 }
