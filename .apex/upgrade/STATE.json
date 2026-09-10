@@ -361,7 +361,8 @@
       "evidence": [
         "EVD-030"
       ],
-      "notes": "retention prune (dry-run, evidence-refusal, pinned, idempotent) + scoped export with re-redaction"
+      "notes": "retention prune (dry-run, evidence-refusal, pinned, idempotent) + scoped export with re-redaction",
+      "commit": "2a3cace"
     },
     "WP-036": {
       "status": "PENDING"
