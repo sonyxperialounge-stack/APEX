@@ -309,7 +309,6 @@
       "startedAt": "2026-09-10T17:35:00.000Z",
       "finishedAt": "2026-09-10T18:42:48.000Z",
       "commit": "0532964",
-      "finishedAt": "2026-09-10T18:42:48.000Z"
       "evidence": [
         "EVD-025"
       ],
@@ -319,20 +318,17 @@
       "status": "DONE",
       "startedAt": "2026-09-10T18:45:00.000Z",
       "finishedAt": "2026-09-10T19:00:00.000Z",
-      "commit": "d0c2b6c"
+      "commit": "d0c2b6c",
       "evidence": [
         "EVD-026"
       ],
       "notes": "+2 tests; 871 pass total; persistEvent redaction chokepoint + source scan"
     },
     "WP-032": {
-      "status": "PENDING"
-    },
-    "WP-032": {
       "status": "DONE",
       "startedAt": "2026-09-10T18:45:00.000Z",
       "finishedAt": "2026-09-10T19:10:00.000Z",
-      "commit": "pending",
+      "commit": "671be7e",
       "evidence": [
         "EVD-027"
       ],
