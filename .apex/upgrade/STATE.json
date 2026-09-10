@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T08:09:04.487Z",
+  "updatedAt": "2026-09-10T08:26:10.154Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "0",
-  "currentPacket": "WP-018",
+  "currentPacket": "WP-019",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -172,7 +172,14 @@
       "notes": "+13 tests; SEC-T08 zero false positives on multilingual corpus"
     },
     "WP-018": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T08:09:04.487Z",
+      "finishedAt": "2026-09-10T08:26:10.153Z",
+      "commit": null,
+      "evidence": [
+        "EVD-012"
+      ],
+      "notes": "+8 tests; MIG-T01..T05 green; interrupted-check reordered first"
     },
     "WP-019": {
       "status": "PENDING"

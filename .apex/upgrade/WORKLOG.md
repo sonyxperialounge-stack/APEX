@@ -256,3 +256,21 @@ Surprises: command-anchored rm -rf regexes (governor's shape) silently missed pr
   recorded so nobody "unifies" the two pattern lists naively. Also: fixtures live at
   test/fixtures/security per 51 §1, not beside the test file — resolve with path.resolve("..", ...).
 Next: WP-018 (migration registry and journal)
+
+---
+
+## WP-018 — Migration registry and journal · DONE · 2026-09-10
+
+Files: +runtime/src/stores/migration-registry.ts, +runtime/test/stores/migration-registry.test.ts
+Decision: runner executes exactly 29 §5's order (lock -> read/validate -> backup ->
+  in-memory compute+validate -> atomic replace via writeJson -> journal terminal entry).
+  Journal STARTED-without-terminal = MIGRATION_INTERRUPTED, blocks new runs, surfaced to
+  Doctor via findInterruptedMigrations; recovery stays a --repair act (never silent).
+  Future schema refused before any lock. Missing hop refused by name (no guessed paths).
+Verify: `npm run verify` -> 781 pass, 0 fail, exit 0 (+8 tests).
+Evidence: EVD-012.
+Surprises: two of my own bugs: (1) interrupted-detection ordered after the current-version
+  short-circuit — invisible exactly when it mattered; (2) tests asserting a v2 target the
+  schema module never declares. Both caught by the fixtures. Lesson written into this
+  entry: assert against the declared contract, not the demo I imagined.
+Next: WP-019 (Doctor foundation)
