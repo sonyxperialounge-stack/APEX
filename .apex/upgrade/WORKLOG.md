@@ -836,3 +836,24 @@ Surprises: the FIRST verify run tripped the known Windows EPERM flake in the
   the same write-amplification bug in different clothes; flush() now returns
   null instead.
 Next: WP-047 — curator.
+
+## WP-047 — Curator · DONE · 2026-09-11
+
+Files: +runtime/src/engines/skill-curator.ts (185), +runtime/test/engines/skill-curator.test.ts (6)
+Decision: runCuration with a conservative action vocabulary — stale-mark (reason in
+  the sidecar), stage-suggestion, archive (retirement MOVES the body to
+  skills/.archive/<name>-<version>, 54 §9.3), skip. NO delete exists in the
+  vocabulary (SKSEC-T03). Deterministic findings: duplicate NAME fields,
+  unparseable frontmatter — reported, files intact. Staleness triggers: vanished
+  required capability (20 §7), prior staleReasons; stale skills excluded from
+  high-confidence selection (SKSEC-T05). Pinned (.pinned marker) skills are
+  skipped with a reason (54 §9.4/SKSEC-T09). Repeated verified-use failures
+  (>=8) archive. Pacing: now - lastCuratedAt >= 168h default, persisted to
+  skills/.state.json (54 §9.5/LIFE-T08) — a skipped pass keeps the prior stamp.
+Verify: `npm run verify` -> 962 pass, 0 fail, 0 cancelled, exit 0 (24.9s).
+Evidence: EVD-040.
+Surprises: none — the packet wired cleanly onto the WP-040 parser, the WP-046
+  sidecar shape and the activation inputs. The archive threshold (8 failures)
+  is a named constant, not config magic; if 44 wants it configurable later,
+  the seam is one parameter.
+Next: WP-048 — subagent learning restriction (warden).
