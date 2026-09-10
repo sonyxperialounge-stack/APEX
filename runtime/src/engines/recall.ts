@@ -71,6 +71,11 @@ export class Recall {
     return this.ledger.file("MEMORY.md")
   }
 
+  /** The raw MEMORY.md bytes, or null when absent — the round-trip baseline (WP-027). */
+  async rawText(): Promise<string | null> {
+    return readTextOrNull(this.file())
+  }
+
   // ── REC-001 — read / write ────────────────────────────────────────────────
 
   async read(): Promise<MemoryFact[]> {
@@ -312,4 +317,63 @@ export function extractRefs(text: string): string[] {
 
 function looksLikePath(ref: string): boolean {
   return /[/\\]/.test(ref) || /\.\w{1,5}$/.test(ref)
+}
+
+// ── Librarian bridge (14 §2, 42 §8, 40 §7) — WP-027 ───────────────────────────
+//
+// The six MEMORY_SECTIONS stay exactly as they are (42 §8): new content maps INTO
+// them (coupled files -> Architecture, verification quirks -> Traps, tool
+// availability -> Environment). The bridge exposes facts WITH metadata (provenance
+// shape, refs, date) without changing the Markdown format a human reads — reading
+// never writes, and an unchanged file round-trips byte-identically.
+
+export interface BridgedFact {
+  section: MemorySection
+  text: string
+  refs: string[]
+  date: string
+  /** Project memory is project_file-sourced by definition (10 §4 provenance). */
+  sourceType: "project_file"
+  /** When this read happened — the observation timestamp for bridging into the librarian. */
+  observedAt: string
+}
+
+export class RecallBridge {
+  private recall: Recall
+
+  constructor(recall: Recall) {
+    this.recall = recall
+  }
+
+  /** All facts with bridge metadata. The file is never modified by reading. */
+  async readBridged(nowIso: string): Promise<BridgedFact[]> {
+    const facts = await this.recall.read()
+    return facts.map((f) => ({
+      section: f.section,
+      text: f.text,
+      refs: f.refs,
+      date: f.date,
+      sourceType: "project_file" as const,
+      observedAt: nowIso,
+    }))
+  }
+
+  /** Facts relevant to the given files — the shape the librarian's selection consumes. */
+  async relevantBridged(files: string[], limit: number, nowIso: string): Promise<BridgedFact[]> {
+    const texts = await this.recall.relevant(files, limit)
+    const all = await this.readBridged(nowIso)
+    // Recall.relevant renders "[Section] text"; match on the text body, preserving order.
+    return texts
+      .map((t) => {
+        const m = /^\[[^\]]+\]\s+(.*)$/.exec(t)
+        const body = m ? m[1]! : t
+        return all.find((f) => f.text === body || f.text === t)
+      })
+      .filter((f): f is BridgedFact => Boolean(f))
+  }
+
+  /** The raw file bytes — for round-trip verification (WP-027 Done-when). */
+  async rawText(): Promise<string | null> {
+    return this.recall.rawText()
+  }
 }

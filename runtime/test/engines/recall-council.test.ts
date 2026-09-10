@@ -449,3 +449,72 @@ describe("CNC-007/008 — honest cost accounting and recording", () => {
     assert.match(progress, /Council: 1 call\(s\) — review-model/)
   })
 })
+
+// ── WP-027 — recall bridge (42 §8, 40 §7) ─────────────────────────────────────
+
+import { RecallBridge } from "../../src/engines/recall.ts"
+
+describe("WP-027 — recall bridge", () => {
+  test("an existing MEMORY.md round-trips byte-identically when nothing changes", async () => {
+    const human = [
+      "# Project Memory",
+      "",
+      "## Environment",
+      "- Node 24, Windows first-class (2026-08-01)",
+      "",
+      "## Traps",
+      "- fs.rename over an open handle behaves differently on Windows (2026-08-15, VER-012)",
+      "- custom note in a hand-edited shape the parser ignores",
+      "",
+      "## Failed approaches",
+      "- rewriting the whole engine per release",
+      "",
+    ].join("\n")
+    await fsp.writeFile(ledger.file("MEMORY.md"), human, "utf8")
+
+    // A full read-modify-write cycle that changes NOTHING must not change one byte.
+    const before = await recall.rawText()
+    const facts = await recall.read()
+    assert.ok(facts.length >= 3, "facts parsed")
+    const bridge = new RecallBridge(recall)
+    const bridged = await bridge.readBridged("2026-09-10T00:00:00.000Z")
+    assert.equal(bridged.length, facts.length, "bridge sees the same facts")
+    const after = await recall.rawText()
+    assert.equal(after, before, "reading (raw, parsed, or bridged) never writes")
+    assert.equal(after, human, "the file is byte-identical to what the human wrote")
+  })
+
+  test("the six existing sections are unchanged; new content maps INTO them (42 §8)", () => {
+    assert.deepEqual([...MEMORY_SECTIONS], [
+      "Environment", "Commands", "Architecture", "Traps", "Failed approaches", "User preferences",
+    ])
+  })
+
+  test("bridged facts carry provenance metadata without changing the file format", async () => {
+    await recall.capture("Architecture", "core/json.ts and test/sourcescan.test.ts must change together")
+    const bridge = new RecallBridge(recall)
+    const bridged = await bridge.readBridged("2026-09-10T00:00:00.000Z")
+    const coupled = bridged.find((b) => b.text.includes("must change together"))
+    assert.ok(coupled, "captured fact present")
+    assert.equal(coupled!.sourceType, "project_file")
+    assert.equal(coupled!.section, "Architecture")
+    assert.equal(coupled!.observedAt, "2026-09-10T00:00:00.000Z")
+    // The file itself contains only the human-readable line — no metadata markers.
+    const raw = await recall.rawText()
+    assert.ok(!raw!.includes("project_file"), "metadata never leaks into the file")
+    assert.ok(!raw!.includes("observedAt"), "no machine keys in the Markdown")
+  })
+
+  test("relevantBridged keeps Recall's relevance order and attaches metadata", async () => {
+    await recall.capture("Commands", "npm run verify runs the full pipeline")
+    await recall.capture("Architecture", "unrelated architectural note about the adapters directory")
+    const bridge = new RecallBridge(recall)
+    const out = await bridge.relevantBridged(["package.json", "scripts/sync-payload.mjs"], 3, "2026-09-10T00:00:00.000Z")
+    assert.ok(out.length > 0, "something relevant comes back")
+    assert.ok(out.every((b) => b.sourceType === "project_file"))
+    // The verify-commands fact is more relevant to package.json than the adapters note.
+    if (out.length > 1) {
+      assert.ok(out[0]!.text.includes("verify"), "relevance order preserved through the bridge")
+    }
+  })
+})

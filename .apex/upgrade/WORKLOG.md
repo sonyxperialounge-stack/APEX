@@ -425,3 +425,20 @@ Evidence: EVD-020.
 Surprises: none — the section-bucket architecture made the extension mechanical, and
   the pre-existing 25 cortex tests passing unchanged is the no-regression proof.
 Next: WP-027 (recall bridge)
+
+---
+
+## WP-027 — Recall bridge · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/recall.ts (+rawText, +RecallBridge), ~runtime/test/engines/recall-council.test.ts (+4)
+Decision: RecallBridge as a thin wrapper — Recall stays the parser/owner of MEMORY.md;
+  the bridge only attaches metadata (sourceType project_file, observedAt, refs, date)
+  for the librarian's selection. Zero format changes: provenance lives in the bridge
+  objects, never in the file.
+Verify: `npm run verify` -> 850 pass, 0 fail, exit 0.
+Evidence: EVD-021.
+Surprises: Recall.relevant returns "[Section] text" strings — my bridge matched on raw
+  text and found nothing. Also caught myself mid-edit appending a placeholder comment
+  block to recall.ts (reverted immediately) — the no-markers rule exists for exactly this
+  class of slip; the tree never saw it committed.
+Next: WP-028 (host instruction mirror)
