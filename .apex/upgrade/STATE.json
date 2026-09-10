@@ -437,7 +437,8 @@
       "evidence": [
         "EVD-037"
       ],
-      "notes": "LRNT-T01..T05: gate-gated extraction, fact/skill/none classify, failure as riskFlags, no store writes"
+      "notes": "LRNT-T01..T05: gate-gated extraction, fact/skill/none classify, failure as riskFlags, no store writes",
+      "commit": "a858dae"
     },
     "WP-045": {
       "status": "PENDING"
