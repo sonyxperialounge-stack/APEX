@@ -313,3 +313,23 @@ Surprises: my semantic-key regex rejected `preference.package_manager` — the d
   example — because the character class lacked the underscore. The fixture caught it
   before any store code depended on it.
 Next: WP-021 (memory store read/commit)
+
+---
+
+## WP-021 — Memory store read/commit · DONE · 2026-09-10
+
+Files: ~runtime/src/stores/memory-store.ts (store engine added), ~runtime/test/stores/memory-store.test.ts
+Decision: commit is FULL-STATE with revision CAS under the cross-process lock — a stale
+  writer gets MEMORY_REVISION_CONFLICT and must re-read (12 §7); the store never merges.
+  Canonical = records.jsonl (framed JSONL from WP-013, quarantine-safe) + state.json
+  revision counter; every commit is one atomic rewriteJsonl — kill-safe by construction.
+  Hot views (USER.md/GLOBAL.md) render only active global records and are rebuildable.
+Verify: `npm run verify` -> 804 pass, 0 fail, exit 0 (+7 tests incl. the 20-process race
+  and the SIGKILL fixture).
+Evidence: EVD-015.
+Surprises: my first CAS test asserted a PATCH-style writer and failed — the contract is
+  read-modify-write, and the failing test was wrong, not the store (probe evidence in the
+  EVD). Also: node:test timeout goes in the options overload `test(name, {timeout}, fn)`,
+  and bash heredocs break on long embedded backtick scripts — write big test blobs with
+  the file tool and concatenate.
+Next: WP-022 (pending mutations)

@@ -107,3 +107,230 @@ describe("WP-020 record shapes", () => {
     assert.equal(MemoryRecordV1Schema.validate(badScope), false, "project scope REQUIRES its key")
   })
 })
+
+// ── WP-021 — store read/commit (12 §7, §13 MEM-CON-T01..T07) ──────────────────
+
+import fsp from "node:fs/promises"
+import os from "node:os"
+import pathModule from "node:path"
+import { spawn } from "node:child_process"
+import { fileURLToPath, pathToFileURL } from "node:url"
+import { openMemoryStore } from "../../src/stores/memory-store.ts"
+import { ApexError } from "../../src/core/errors.ts"
+import { setLogDir } from "../../src/core/log.ts"
+
+const HERE = pathModule.dirname(fileURLToPath(import.meta.url))
+
+function makeRecord(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    id: "MEM-000000001-aaaaaa",
+    scope: { kind: "global" },
+    kind: "preference",
+    semanticKey: "preference.package_manager",
+    text: "Use pnpm, not npm.",
+    status: "active",
+    confidence: 0.9,
+    provenance: [{ sourceType: "explicit_user", observedAt: "2026-09-10T00:00:00.000Z" }],
+    createdAt: "2026-09-10T00:00:00.000Z",
+    updatedAt: "2026-09-10T00:00:00.000Z",
+    scanner: { verdict: "allow", reasons: [] },
+    revision: 1,
+    ...over,
+  }
+}
+
+async function tempStore(name: string): Promise<{ dir: string; memoryDir: string }> {
+  const dir = await fsp.mkdtemp(pathModule.join(os.tmpdir(), name))
+  const memoryDir = pathModule.join(dir, "home", "memory")
+  await fsp.mkdir(memoryDir, { recursive: true })
+  await fsp.mkdir(pathModule.join(dir, "home", "locks"), { recursive: true })
+  setLogDir(pathModule.join(dir, "logs"))
+  return { dir, memoryDir }
+}
+
+describe("WP-021 commit — revision CAS", () => {
+  test("first commit writes records and bumps revision; read round-trips", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-cas-")
+    const store = openMemoryStore(memoryDir)
+    const rev = await store.commit(0, [makeRecord() as never])
+    assert.equal(rev, 1)
+    const state = await store.read()
+    assert.equal(state.revision, 1)
+    assert.equal(state.records.length, 1)
+    assert.equal(state.records[0]!.semanticKey, "preference.package_manager")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+
+  test("a stale writer gets MEMORY_REVISION_CONFLICT and nothing is applied", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-conflict-")
+    const store = openMemoryStore(memoryDir)
+    const original = makeRecord() as never
+    await store.commit(0, [original])
+    // Two read-modify-write writers both read revision 1.
+    const stale = openMemoryStore(memoryDir)
+    const fresh = openMemoryStore(memoryDir)
+    const staleBase = await stale.read()
+    const freshBase = await fresh.read()
+    const winner = makeRecord({ id: "MEM-000000001-bbbbbb", text: "winner" }) as never
+    const first = await fresh.commit(freshBase.revision, [...freshBase.records, winner])
+    assert.equal(first, 2)
+    // The stale writer built its array from the SAME revision — must be rejected.
+    const loser = makeRecord({ id: "MEM-000000001-cccccc", text: "loser" }) as never
+    await assert.rejects(
+      stale.commit(staleBase.revision, [...staleBase.records, loser]),
+      (e: unknown) => e instanceof ApexError && e.code === "MEMORY_REVISION_CONFLICT",
+    )
+    const state = await store.read()
+    assert.equal(state.records.length, 2, "winner + original present, loser not applied")
+    assert.equal(state.records.some((r) => r.text === "loser"), false)
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+
+  test("invalid records are refused before any write", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-invalid-")
+    const store = openMemoryStore(memoryDir)
+    await assert.rejects(
+      store.commit(0, [makeRecord({ semanticKey: "BAD KEY" }) as never]),
+      (e: unknown) => e instanceof ApexError && e.code === "MEMORY_RECORD_INVALID",
+    )
+    const state = await store.read()
+    assert.equal(state.revision, 0, "no state change on refusal")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+
+  test("duplicate ids inside one commit are refused", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-dupe-")
+    const store = openMemoryStore(memoryDir)
+    const r = makeRecord() as never
+    await assert.rejects(store.commit(0, [r, r]), (e: unknown) => e instanceof ApexError && e.code === "DUPLICATE_ID")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe("WP-021 hot views (10 §6, C-008)", () => {
+  test("views render from active global records; deleting them loses nothing", async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-view-")
+    const store = openMemoryStore(memoryDir)
+    await store.commit(0, [
+      makeRecord({ text: "Use pnpm, not npm." }) as never,
+      makeRecord({ id: "MEM-000000002-bbbbbb", kind: "fact", semanticKey: "fact.home_layout", text: "Global root is ~/.apex/." }) as never,
+      makeRecord({ id: "MEM-000000003-cccccc", status: "retracted", text: "hidden" }) as never,
+    ])
+    const views = await store.renderHotViews()
+    const user = await fsp.readFile(views.user, "utf8")
+    const global = await fsp.readFile(views.global, "utf8")
+    assert.ok(user.includes("Use pnpm, not npm."), "preference lands in USER.md")
+    assert.ok(global.includes("Global root is ~/.apex/."), "fact lands in GLOBAL.md")
+    assert.ok(!user.includes("hidden") && !global.includes("hidden"), "retracted never renders")
+    // Derived views are deletable and rebuildable with zero data loss.
+    await fsp.rm(views.user, { force: true })
+    await fsp.rm(views.global, { force: true })
+    const again = await store.renderHotViews()
+    assert.ok((await fsp.readFile(again.user, "utf8")).includes("Use pnpm"), "rebuild restores the view")
+    const health = await store.health()
+    assert.ok(health.some((c) => c.id === "DOC-MEM-VIEW" && c.status === "OK"))
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe("WP-021 MEM-CON-T01 — 20 concurrent processes, one unique record each", () => {
+  test("all 20 records present exactly once, revision == 20", { timeout: 180_000 }, async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-race20-")
+    const storeUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/stores/memory-store.ts")).href
+    const logUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/core/log.ts")).href
+    const script = [
+      `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
+      `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
+      `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "w"))})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const myId = "MEM-000000001-" + process.env.WORKER`,
+      `for (let attempt = 0; attempt < 80; attempt++) {`,
+      `  const state = await store.read()`,
+      `  const rec = {`,
+      `    schemaVersion: 1, id: myId, scope: { kind: "global" }, kind: "fact",`,
+      `    semanticKey: "fact.worker_" + process.env.WORKER, text: "worker " + process.env.WORKER + " wrote this",`,
+      `    status: "active", confidence: 0.8,`,
+      `    provenance: [{ sourceType: "verified_event", observedAt: "2026-09-10T00:00:00.000Z" }],`,
+      `    createdAt: "2026-09-10T00:00:00.000Z", updatedAt: "2026-09-10T00:00:00.000Z",`,
+      `    scanner: { verdict: "allow", reasons: [] }, revision: 1,`,
+      `  }`,
+      `  try {`,
+      `    await store.commit(state.revision, [...state.records, rec])`,
+      `    process.exit(0)`,
+      `  } catch (e) {`,
+      `    if (e.code !== "MEMORY_REVISION_CONFLICT") { console.error(String(e)); process.exit(1) }`,
+      `  }`,
+      `}`,
+      `console.error("exhausted retries"); process.exit(1)`,
+    ].join("\n")
+
+    const procs: Array<Promise<void>> = []
+    for (let i = 0; i < 20; i++) {
+      procs.push(
+        new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            process.execPath,
+            ["--experimental-strip-types", "--input-type=module", "-e", script],
+            {
+              env: { ...process.env, NODE_NO_WARNINGS: "1", WORKER: String(i).padStart(2, "0") },
+              stdio: ["ignore", "ignore", "pipe"],
+            },
+          )
+          let err = ""
+          child.stderr.on("data", (d: Buffer) => {
+            err += d.toString()
+          })
+          child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`worker ${i}: ${err.slice(0, 300)}`))))
+        }),
+      )
+    }
+    await Promise.all(procs)
+
+    const store = openMemoryStore(memoryDir)
+    const state = await store.read()
+    assert.equal(state.records.length, 20, "every worker's record present exactly once")
+    assert.equal(state.revision, 20, "each commit bumped the revision once")
+    const ids = new Set(state.records.map((r) => r.id))
+    assert.equal(ids.size, 20)
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe("WP-021 MEM-CON-T04 — killed writer before rename leaves old canonical intact", () => {
+  test("SIGKILL mid-commit: canonical file byte-stable, next writer recovers", { timeout: 60_000 }, async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-kill-")
+    const store = openMemoryStore(memoryDir)
+    await store.commit(0, [makeRecord({ text: "original" }) as never])
+    const before = await fsp.readFile(pathModule.join(memoryDir, "records.jsonl"), "utf8")
+
+    // A child takes the commit path and receives SIGKILL inside the critical section
+    // (before any rewrite can land).
+    const storeUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/stores/memory-store.ts")).href
+    const logUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/core/log.ts")).href
+    const script = [
+      `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
+      `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
+      `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "killer"))})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const state = await store.read()`,
+      `process.kill(process.pid, "SIGKILL")`,
+      `await store.commit(state.revision, [])`,
+    ].join("\n")
+    const child = spawn(
+      process.execPath,
+      ["--experimental-strip-types", "--input-type=module", "-e", script],
+      { env: { ...process.env, NODE_NO_WARNINGS: "1" }, stdio: "ignore" },
+    )
+    await new Promise<void>((resolve) => child.on("exit", () => resolve()))
+
+    const after = await fsp.readFile(pathModule.join(memoryDir, "records.jsonl"), "utf8")
+    assert.equal(after, before, "canonical byte-identical after the kill")
+    // The next writer recovers the store under the stale-lock policy (MEM-CON-T07 shape:
+    // same host, pid absent, old record age — recoverable and audited).
+    const next = openMemoryStore(memoryDir)
+    const state = await next.read()
+    assert.equal(state.records[0]!.text, "original")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})

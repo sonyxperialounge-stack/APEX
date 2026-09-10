@@ -67,3 +67,171 @@ function isRecordShape(v: unknown): v is MemoryRecordV1 {
 export const MemoryRecordV1Schema = {
   validate: isRecordShape,
 }
+
+// ── Store engine (12 §6–§7, 47 §4.7) — added in WP-021 ────────────────────────
+
+import fsp from "node:fs/promises"
+import path from "node:path"
+import { ApexError } from "../core/errors.ts"
+import {
+  readJson, readJsonlSafe, rewriteJsonl, writeJson, withCrossProcessLock,
+} from "../core/json.ts"
+import { toIsoString } from "../core/ids.ts"
+import { event } from "../core/log.ts"
+
+export interface MemoryStoreState {
+  schemaVersion: number
+  revision: number
+  records: MemoryRecordV1[]
+}
+
+export interface HotViewPaths {
+  user: string
+  global: string
+}
+
+export interface MemoryStoreOptions {
+  /** Injectable clock (47 §5). */
+  now?: () => number
+  /** Where the hot views render. Defaults to the store directory. */
+  hotViewDir?: string
+}
+
+/**
+ * Open the memory store rooted at `memoryDir`. All mutations go through `commit`,
+ * which holds the store's cross-process lock and compares revisions (CAS) — a stale
+ * writer gets MEMORY_REVISION_CONFLICT and must re-read; the store NEVER merges
+ * (merging is the librarian's job, WP-023/024).
+ *
+ * Canonical format: records.jsonl (append-oriented, framed). The revision counter
+ * lives in state.json beside it; every commit appends the full new record set as one
+ * rewrite (records are few; correctness beats cleverness here) and bumps revision.
+ * Hot views are DERIVED: delete both and `renderHotViews` rebuilds them (C-008).
+ */
+export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}): {
+  read(): Promise<MemoryStoreState>
+  commit(expectedRevision: number, next: MemoryRecordV1[]): Promise<number>
+  renderHotViews(): Promise<HotViewPaths>
+  health(): Promise<Array<{ id: string; status: "OK" | "WARN" | "DEGRADED"; summary: string }>>
+  readonly dir: string
+} {
+  const now = opts.now ?? Date.now
+  const recordsFile = path.join(memoryDir, "records.jsonl")
+  const stateFile = path.join(memoryDir, "state.json")
+  const lockFile = path.join(memoryDir, "..", "locks", "global-memory.lock")
+  const viewDir = opts.hotViewDir ?? memoryDir
+
+  async function readRaw(): Promise<MemoryStoreState> {
+    const state = await readJson<{ schemaVersion?: number; revision?: number }>(stateFile, {})
+    const { lines } = await readJsonlSafe<MemoryRecordV1>(recordsFile)
+    const records: MemoryRecordV1[] = []
+    for (const line of lines) {
+      const r = line.record
+      if (!isRecordShape(r)) {
+        event("memory.record_invalid", { id: String((r as Record<string, unknown>)?.id ?? "?") })
+        continue
+      }
+      records.push(r)
+    }
+    return {
+      schemaVersion: state.schemaVersion ?? 1,
+      revision: typeof state.revision === "number" ? state.revision : 0,
+      records,
+    }
+  }
+
+  return {
+    dir: memoryDir,
+
+    async read(): Promise<MemoryStoreState> {
+      return withCrossProcessLock(lockFile, "memory-read", async () => readRaw())
+    },
+
+    async commit(expectedRevision: number, next: MemoryRecordV1[]): Promise<number> {
+      for (const r of next) {
+        if (!isRecordShape(r)) {
+          throw new ApexError(
+            `Record ${(r as Record<string, unknown>)?.id ?? "?"} fails the MemoryRecordV1 contract; refusing to commit.`,
+            "MEMORY_RECORD_INVALID",
+          )
+        }
+      }
+      return withCrossProcessLock(
+        lockFile,
+        "memory-commit",
+        async () => {
+          const current = await readRaw()
+          if (current.revision !== expectedRevision) {
+            throw new ApexError(
+              `Revision conflict: expected ${expectedRevision}, store is at ${current.revision}. ` +
+                `Re-read, re-run dedupe/conflict resolution, and retry with the new revision ` +
+                `(12 §7). The store never merges.`,
+              "MEMORY_REVISION_CONFLICT",
+            )
+          }
+          const seen = new Set<string>()
+          for (const r of next) {
+            if (seen.has(r.id)) {
+              throw new ApexError(`Duplicate record id ${r.id} in one commit.`, "DUPLICATE_ID")
+            }
+            seen.add(r.id)
+          }
+          const revision = current.revision + 1
+          // Rewrite is atomic (temp + rename inside rewriteJsonl); a kill before the
+          // rename leaves the OLD canonical intact (MEM-CON-T04).
+          await rewriteJsonl(recordsFile, next)
+          await writeJson(stateFile, { schemaVersion: 1, revision })
+          event("memory.commit", { revision, records: next.length })
+          return revision
+        },
+        { timeoutMs: 15_000 },
+      )
+    },
+
+    async renderHotViews(): Promise<HotViewPaths> {
+      const { records } = await readRaw()
+      const prefs = records.filter((r) => r.scope.kind === "global" && r.status === "active" && r.kind === "preference")
+      const facts = records.filter((r) => r.scope.kind === "global" && r.status === "active" && r.kind !== "preference")
+      const userMd = [
+        "# USER — stable personal preferences (generated view)",
+        "",
+        ...prefs.map((r) => `- **${r.semanticKey}:** ${r.text} _(${r.confidence.toFixed(2)})_`),
+        "",
+      ].join("\n")
+      const globalMd = [
+        "# GLOBAL — most useful active global facts (generated view)",
+        "",
+        ...facts.map((r) => `- **${r.kind} ${r.semanticKey}:** ${r.text}`),
+        "",
+      ].join("\n")
+      const userFile = path.join(viewDir, "USER.md")
+      const globalFile = path.join(viewDir, "GLOBAL.md")
+      const { writeText } = await import("../core/json.ts")
+      await writeText(userFile, userMd)
+      await writeText(globalFile, globalMd)
+      return { user: userFile, global: globalFile }
+    },
+
+    async health() {
+      const state = await readRaw()
+      const checks: Array<{ id: string; status: "OK" | "WARN" | "DEGRADED"; summary: string }> = []
+      const { quarantined } = await readJsonlSafe<MemoryRecordV1>(recordsFile)
+      checks.push({
+        id: "DOC-MEM-STORE",
+        status: quarantined.length > 0 ? "DEGRADED" : "OK",
+        summary:
+          quarantined.length > 0
+            ? `${quarantined.length} malformed line(s) quarantined in records.jsonl.quarantine; ${state.records.length} good records.`
+            : `Memory store healthy: ${state.records.length} record(s), revision ${state.revision}.`,
+      })
+      const userView = path.join(viewDir, "USER.md")
+      const viewExists = await fsp.stat(userView).then(() => true, () => false)
+      checks.push({
+        id: "DOC-MEM-VIEW",
+        status: viewExists ? "OK" : "WARN",
+        summary: viewExists ? "Hot views present." : "Hot views absent — rebuildable from canonical (C-008).",
+      })
+      return checks
+    },
+  }
+}
