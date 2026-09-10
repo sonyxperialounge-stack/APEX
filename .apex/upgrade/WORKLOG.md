@@ -997,3 +997,27 @@ Surprises: the audit discipline paid off twice — a grep-pass missed the pre-ex
   admits only the three legal fields, so a value-bearing entry never matches and is dropped.
   The real guarantee is the REGEX, not an extra check — the extra check was removed.
 Next: WP-042b (source tiers, scan caching, deny never overridable).
+## WP-042b — source tiers, scan caching, deny never overridable (DONE)
+
+Date: 2026-09-11
+Packet: WP-042b (54 §9.1/§9.2, SKSEC-T07)
+Files: ~runtime/src/stores/trust-store.ts, ~runtime/test/stores/trust-store.test.ts (+3),
+  +.apex/upgrade/EVIDENCE/EVD-046.md
+Decision: inspection found the WP-042b surface (SkillTier, grant-time scanning with
+  deny/review routing, deny-never-overridable) ALREADY implemented in the tree. The
+  missing enforcement was 54 §9.2 scan caching: scanSkill now goes through a disk cache
+  keyed by content hash + SCAN_POLICY_VERSION (one scan-cache.json under trust/). An
+  unchanged skill is not re-scanned on the second boot; a policy bump invalidates every
+  cached verdict in one write and the stale file is left in place (nothing deleted);
+  entries store rule names + severities only — never excerpts, so no stale evidence can
+  leak out of the cache. Root-cause fix during the pass: readCache() returned a SHARED
+  module-level EMPTY_CACHE object that scanCached mutates in place, so a fresh boot in
+  the same process inherited the previous boot's entries (false cache hit — the second-
+  boot test caught it with a scanner call-count of 0). readCache() now returns a fresh
+  object every call.
+Verify: `npm run verify` -> 988 pass, 0 fail, 0 cancelled, exit 0 (27.0s).
+Evidence: EVD-046.
+Surprises: the shared-mutable-cache bug only shows under multiple boots in ONE process
+  (tests), never in the CLI — exactly why the test exists. Single-run debug scripts
+  passed while the suite failed.
+Next: WP-047b (archive dir, pinning, curator min-interval).

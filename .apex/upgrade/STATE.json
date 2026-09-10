@@ -415,7 +415,7 @@
       "status": "DONE",
       "startedAt": "2026-09-11T03:55:00.000Z",
       "finishedAt": "2026-09-11T04:25:00.000Z",
-      "commit": "PENDING",
+      "commit": "b80db3e",
       "evidence": [
         "EVD-045"
       ],
@@ -432,7 +432,14 @@
       "commit": "e5e7598"
     },
     "WP-042b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T00:00:00.000Z",
+      "finishedAt": "2026-09-11T00:00:00.000Z",
+      "evidence": [
+        "EVD-046"
+      ],
+      "notes": "source tiers, scan caching by content hash + policy version (SKSEC-T07), deny never overridable, fresh-cache-object fix",
+      "commit": "5472766"
     },
     "WP-043": {
       "status": "DONE",

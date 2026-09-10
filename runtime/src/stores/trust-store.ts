@@ -41,6 +41,19 @@ import { toIsoString } from "../core/ids.ts"
 /** Source tiers (54 §9.1). PROJECT grants are data-tier: never self-trusting. */
 export type SkillTier = "BUILTIN" | "USER" | "LEARNED" | "PROJECT" | "EXTERNAL"
 
+/**
+ * Scanner policy version — part of the scan-cache key (54 §9.2). When the
+ * scanner's own rules change, bump this and every cached verdict invalidates.
+ */
+export const SCAN_POLICY_VERSION = 1
+
+export interface ScanCacheFile {
+  schemaVersion: 1
+  policyVersion: number
+  /** content-hash (16-hex) -> cached verdict. Rule names + severities only — never excerpts. */
+  entries: Record<string, { verdict: ScanResult["verdict"]; rules: Array<{ rule: string; severity: ScanResult["findings"][number]["severity"] }>; scannedAt: string }>
+}
+
 export interface TrustGrant {
   skillId: string
   /** sha256 (16-hex prefix) of the SKILL.md content the grant covers. */
@@ -72,6 +85,12 @@ export interface ScriptListing {
 
 export interface TrustStoreOptions {
   now?: () => number
+  /**
+   * Injectable scanner for tests. Defaults to the shared ingestion scanner
+   * (scan(text, "skill")). The scan-cache key is the CONTENT hash, so an
+   * injected scanner still caches consistently.
+   */
+  scanner?: (text: string) => ScanResult
 }
 
 export interface TrustStore {
@@ -91,8 +110,12 @@ export interface TrustStore {
   }, skillText?: string): Promise<TrustGrant & { granted: boolean }>
   /** Is this skill, at THIS hash, trusted? Answers for the current content only. */
   status(skillId: string, contentHash: string): Promise<TrustStatus>
-  /** Scan skill text with the shared ingestion scanner (20 §2). Pure. */
-  scanSkill(text: string): ScanResult
+  /**
+   * Scan skill text with the shared ingestion scanner (20 §2), cached by content
+   * hash (54 §9.2, SKSEC-T07): an unchanged skill is not re-scanned on the second
+   * boot — a scanner-policy bump (SCAN_POLICY_VERSION) invalidates the whole cache.
+   */
+  scanSkill(text: string): Promise<ScanResult>
   /** Enumerate a skill's scripts/ with content hashes (20 §4). Never executes. */
   enumerateScripts(skillId: string, skillDir: string): Promise<ScriptListing[]>
   readonly file: string
@@ -107,7 +130,53 @@ export async function hashSkillContent(file: string): Promise<string> {
 export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): TrustStore {
   const now = opts.now ?? Date.now
   const file = path.join(homeDir, "trust", "skills.json")
+  const cacheFile = path.join(homeDir, "trust", "scan-cache.json")
   const lockFile = path.join(homeDir, "locks", "trust.lock")
+  const scanOnce = opts.scanner ?? ((text: string) => scan(text, "skill"))
+
+  /** Hash TEXT (not a file) into the 16-hex cache key — pure over content. */
+  function hashText(text: string): string {
+    return createHash("sha256").update(text).digest("hex").slice(0, 16)
+  }
+
+  async function readCache(): Promise<ScanCacheFile> {
+    const stored = await readJson<ScanCacheFile | null>(cacheFile, null)
+    if (stored && stored.schemaVersion === 1 && stored.policyVersion === SCAN_POLICY_VERSION && stored.entries) {
+      return stored
+    }
+    // Missing, malformed, or a policy bump: start clean. The OLD file is left in
+    // place (next write replaces it) — nothing is deleted by a cache invalidation.
+    // A FRESH object every call: scanCached mutates entries in place, and sharing
+    // a module-level empty cache would leak hits across boots in one process.
+    return { schemaVersion: 1, policyVersion: SCAN_POLICY_VERSION, entries: {} }
+  }
+
+  async function writeCache(cache: ScanCacheFile): Promise<void> {
+    await writeJson(cacheFile, cache)
+  }
+
+  /** Cached scan (54 §9.2, SKSEC-T07): hash key, policy-version key, re-scan only on miss. */
+  async function scanCached(text: string): Promise<ScanResult> {
+    const hash = hashText(text)
+    const cache = await readCache()
+    const hit = cache.entries[hash]
+    if (hit) {
+      // A cached entry stores rule names + severities, NOT excerpts: a verdict is
+      // enough to decide policy, and an old excerpt is a stale evidence leak.
+      return {
+        verdict: hit.verdict,
+        findings: hit.rules.map((r) => ({ rule: r.rule, severity: r.severity, excerpt: "" })),
+      }
+    }
+    const fresh = scanOnce(text)
+    cache.entries[hash] = {
+      verdict: fresh.verdict,
+      rules: fresh.findings.map((f) => ({ rule: f.rule, severity: f.severity })),
+      scannedAt: toIsoString(now()),
+    }
+    await writeCache(cache)
+    return fresh
+  }
 
   async function read(): Promise<TrustFile> {
     const stored = await readJson<TrustFile | null>(file, null)
@@ -118,8 +187,8 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
   return {
     file,
 
-    scanSkill(text: string): ScanResult {
-      return scan(text, "skill")
+    async scanSkill(text: string): Promise<ScanResult> {
+      return scanCached(text)
     },
 
     async grant(input, skillText): Promise<TrustGrant & { granted: boolean }> {
@@ -135,7 +204,7 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
       }
 
       if (skillText !== undefined) {
-        const verdict = scan(skillText, "skill")
+        const verdict = await scanCached(skillText)
         if (verdict.verdict === "deny") {
           throw new ApexError(
             `Trust refused: the skill scanner returned deny (${verdict.findings.map((f) => f.rule).join(", ")}). ` +
