@@ -789,3 +789,28 @@ Surprises: the LEDGER, not my seed helper, taught the legal ladder twice: NOT_ST
   fixtures. Also: newId is entropy-unique even on a fixed clock (correct!), so
   LRNT-T05 asserts deterministic CONTENT, not ids.
 Next: WP-045 — skill forge lifecycle.
+
+## WP-045 — Skill forge lifecycle · DONE · 2026-09-11
+
+Files: +runtime/src/engines/skill-forge.ts (~330), +runtime/test/engines/skill-forge.test.ts (9)
+Decision: LEGAL_SKILL_TRANSITIONS table verbatim from 41 §12 with
+  assertSkillTransition naming the legal options. promote() gates IN ORDER:
+  scanner deny (absolute — userOverride cannot pass it, FORGE-T03) -> lint errors
+  (19 §8 hard requirement) -> evidence (verifiedUse + evidenceIds; ONLY this gate
+  honours userOverride, and the override ships as unverifiedPromotion=true in
+  .promotion.json with an honest note, FORGE-T02). Shipped skills live at
+  skills/engineering/<name>/SKILL.md with versions/ history; patch() bumps MINOR,
+  retains the old body verbatim, snapshots the new one (FORGE-T04). reportUse()
+  demotes an unverified promotion to STALE on first real failure via .state.json —
+  the live body stays for review; deletion is never the remedy (54 §9.3).
+Verify: `npm run verify` -> 951 pass, 0 fail, 0 cancelled, exit 0 (24.4s).
+Evidence: EVD-038.
+Surprises: three look-and-fix cycles, all the same root cause — after promotion the
+  pending record is GONE (by design), so inspect-by-candidate-id cannot work. The
+  promotion result now returns the shipped NAME and tests inspect by it; the first
+  draft also tried to parse a title out of a pending ID (dead helper, removed).
+  And my test content had name: forge-skill while expecting reproduce-then-fix on
+  disk — the forge ships under the frontmatter NAME, not the candidate title; the
+  discipline is to read the failure PATH in the error, which named the directory
+  every time.
+Next: WP-046 — usage sidecar.
