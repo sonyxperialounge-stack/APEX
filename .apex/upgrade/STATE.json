@@ -480,7 +480,8 @@
       "evidence": [
         "EVD-041"
       ],
-      "notes": "DelegateResult + validateChildResult: proposals are data, global writes flagged, pending is the legal seam"
+      "notes": "DelegateResult + validateChildResult: proposals are data, global writes flagged, pending is the legal seam",
+      "commit": "2f9d62a"
     },
     "WP-049": {
       "status": "PENDING"
