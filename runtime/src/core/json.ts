@@ -185,6 +185,20 @@ export async function writeText(file: string, text: string): Promise<void> {
   await writeTextAtomic(file, redact(text))
 }
 
+/** Append raw text to a file (for non-JSONL logs like quarantine). Same-process serialised. */
+export async function appendText(file: string, text: string): Promise<void> {
+  return withFileLock(file, async () => {
+    await fsp.mkdir(path.dirname(file), { recursive: true })
+    const handle = await fsp.open(file, "a")
+    try {
+      await handle.writeFile(text, "utf8")
+      await handle.sync()
+    } finally {
+      await handle.close()
+    }
+  })
+}
+
 /** Serialise (checked), write atomically, then re-read and compare (CORE-006). */
 export async function writeJson(file: string, value: unknown): Promise<void> {
   const text = serialiseChecked(value) + "\n" // config files conventionally end with a newline

@@ -502,3 +502,25 @@ Surprises: my test asserted "6 overflow" but honest math gives 3 (3 records fit 
   500-token USER budget); the assertion now derives the count from the gist and checks
   the payload matches it.
 Next: PHASE 2 COMPLETE (WP-020..WP-029 + WP-025b all DONE). Phase 3 (archive) at WP-030.
+
+---
+
+## WP-030 — Archive types and store · DONE · 2026-09-10
+
+Files: +runtime/src/stores/archive-store.ts, +runtime/test/stores/archive-store.test.ts,
+  ~runtime/src/core/types.ts (ArchiveEvent, SessionRecordV1, ARCHIVE_EVENT_TYPES, SESSION_STATUSES),
+  +runtime/src/core/json.ts (appendText), ~runtime/src/stores/archive-store.ts (readEvents quarantine redirect)
+Decision: `appendSession` input makes `id` and `taskIds` optional via `Partial<Pick<>>` (same
+  pattern as `appendEvent`); the implementation generates defaults. `readJsonlSafe` writes
+  quarantined lines to a per-file `.quarantine` side file — the archive store redirects them
+  to the shared `events/quarantine.jsonl` (15 §3 contract) via a new `appendText` in json.ts
+  (42 §4: all writes through json.ts). All writes use `withCrossProcessLock`; no `new Date`/
+  `Math.random` in the store (injected `now`, `newId`/`toIsoString` from ids.ts).
+Verify: `npm run verify` -> 869 pass, 0 fail, exit 0 (+4 new tests; was 865).
+Evidence: EVD-025.
+Surprises: typecheck failed — `appendSession` kept `id`/`taskIds` required after Omit, but
+  the impl generates defaults; fixed with the `Partial<Pick<>>` pattern matching `appendEvent`.
+  The quarantine test failed because `readJsonlSafe` writes to `events/<sessionId>.jsonl.quarantine`
+  (per-file) but `15 §3` + the done-when require `events/quarantine.jsonl` (shared); added
+  `appendText` to json.ts and redirected in `readEvents`.
+Next: WP-031 — redaction chokepoint.

@@ -305,7 +305,14 @@
       "notes": "+7 CLI e2e tests; all 10 §12 operations reachable"
     },
     "WP-030": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T17:17:00.000Z",
+      "finishedAt": "2026-09-10T17:35:00.000Z",
+      "commit": "cc11cba",
+      "evidence": [
+        "EVD-025"
+      ],
+      "notes": "+4 tests; 869 pass total; quarantine redirect to events/quarantine.jsonl"
     },
     "WP-031": {
       "status": "PENDING"

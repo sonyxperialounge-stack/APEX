@@ -419,3 +419,43 @@ export interface PendingMutation {
   scanner: { verdict: "allow" | "review" | "deny"; reasons: string[] }
   requiredApproval: boolean
 }
+
+// ── Session archive (15 §3, 28 §6) ────────────────────────────────────────────
+
+/** The archived event vocabulary (15 §3). */
+export const ARCHIVE_EVENT_TYPES = [
+  "user_message", "assistant_message", "tool_call", "tool_result",
+  "decision", "verification", "requirement_transition", "failure",
+  "learning_candidate", "handoff",
+] as const
+export type ArchiveEventType = (typeof ARCHIVE_EVENT_TYPES)[number]
+
+export interface ArchiveEvent {
+  schemaVersion: 1
+  id: string
+  sessionId: string
+  parentSessionId?: string
+  projectKey?: string
+  timestamp: string
+  hostLabel?: string
+  modelLabel?: string
+  type: ArchiveEventType
+  text?: string
+  refs?: string[]
+  redactionApplied: boolean
+}
+
+export const SESSION_STATUSES = ["OPEN", "CLOSED", "ABORTED"] as const
+export type SessionStatus = (typeof SESSION_STATUSES)[number]
+
+export interface SessionRecordV1 {
+  schemaVersion: 1
+  id: string
+  startedAt: string
+  endedAt?: string
+  projectKey?: string
+  taskIds: string[]
+  host?: string
+  model?: string
+  status: SessionStatus
+}
