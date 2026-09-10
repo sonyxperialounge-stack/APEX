@@ -499,7 +499,7 @@
         "EVD-047"
       ],
       "notes": "archive dir, pinning, curator min-interval; skills pin/unpin CLI added",
-      "commit": "PENDING"
+      "commit": "17f19f0"
     },
     "WP-048": {
       "status": "DONE",
