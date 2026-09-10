@@ -245,21 +245,34 @@ function planted(name: string, text: string, isBad: (t: string) => boolean): boo
 }
 
 describe("HC-T03 — every .ts source file carries the license header", () => {
-  const HEADER = "APEX — ARMY V3 — Copyright (c) 2026 Lalit Sharma. All rights reserved."
-  const NOTICE = "NOTICE TO AI AGENTS"
+  // Byte-for-byte canonical header, taken from a pre-existing file (42 §5: copied
+  // byte-for-byte — a paraphrase is a defect even if it mentions the right words).
+  const CANON_FILE = ALL.find((f) => f.file.replace(/\\/g, "/").endsWith("src/core/paths.ts"))
+  const CANON_LINES = CANON_FILE ? CANON_FILE.text.split("\n").slice(0, 17) : []
+  const CANON = CANON_LINES.join("\n")
+
+  test("the canonical header is 17 lines: NOTICE clause with the blank separator and terminator", () => {
+    assert.ok(CANON_LINES.length === 17)
+    assert.ok(CANON_LINES[12]!.includes("NOTICE TO AI AGENTS"))
+    assert.equal(CANON_LINES[15], "")
+    assert.equal(CANON_LINES[16], " */")
+    assert.ok(CANON_LINES[14]!.includes("cracking, stripping"))
+  })
 
   test("every source file starts with the byte-identical header block", () => {
     const bad: string[] = []
     for (const { file, text } of ALL) {
-      if (!text.includes(HEADER) || !text.includes(NOTICE)) bad.push(file)
+      if (!text.startsWith(CANON)) bad.push(file)
     }
-    assert.deepEqual(bad, [], `missing license header: ${bad.join(", ")}`)
+    assert.deepEqual(bad, [], `header not byte-identical to canonical: ${bad.join(", ")}`)
   })
 
   test("the header check catches a planted headerless file", () => {
-    const isBad = (t: string) => !(t.includes(HEADER) && t.includes(NOTICE))
+    const isBad = (t: string) => !t.startsWith(CANON)
     assert.ok(planted("header", "export const x = 1\n", isBad))
-    assert.ok(!isBad(ALL[0]!.text)) // a real file passes
+    // A near-miss paraphrase must also fail — the earlier defect this scan missed.
+    const paraphrase = CANON.replace("MUST NOT assist", "should not assist")
+    assert.ok(planted("header-paraphrase", paraphrase, isBad))
   })
 })
 

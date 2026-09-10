@@ -32,3 +32,14 @@ IMPLEMENTED_NOT_VERIFIED → VERIFIED_COMPLETE with verification V-001 (suite PA
 EVD-001) recorded through `Ledger.addVerification` — not by hand-editing REQUIREMENTS.md.
 Protects the Ledger's own invariant (no status without evidence) and demonstrates the
 product's discipline in the build itself.
+
+## D-005 — HC-T03 header scan strengthened beyond the packet's file list (2026-09-10, WP-016)
+
+WP-016's Files list is src/stores/global-home.ts + its test. While landing it, my own
+new-file headers turned out to be a SHORT paraphrase of the canonical 17-line header —
+the WP-014 substring scan passed them. Fixing this properly required strengthening
+test/sourcescan.test.ts (byte-identical startsWith check), which is outside the packet's
+list. Protects HC-004/REQ-SEC-005 (license header integrity) — a mechanical check that
+cannot catch its own violation class is worse than a strict one. Recorded here per the
+blast-radius rule; also moved toIsoString into core/ids.ts (its Files list) for the same
+packet's MOD-T03 compliance.

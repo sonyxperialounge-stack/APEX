@@ -213,3 +213,26 @@ Surprises: `**/*credentials.json` glob also matches a docs file named credential
   passes. One typecheck round on tuple destructuring (noUncheckedIndexedAccess) — typed the
   corpus array explicitly.
 Next: WP-016 (global home store)
+
+---
+
+## WP-016 — Global home store · DONE · 2026-09-10
+
+Files: +runtime/src/stores/global-home.ts, +runtime/test/stores/global-home.test.ts,
+  ~runtime/src/core/ids.ts (toIsoString helper), ~runtime/test/sourcescan.test.ts
+  (HC-T03 strengthened to byte-identical header comparison — outside the packet's Files
+  list, recorded in DECISIONS D-005)
+Decision: ensure() = cross-process init lock (from WP-012) + temp-name build + atomic
+  rename per directory; EEXIST/ENOTEMPTY treated as idempotent win. Future-schema
+  home.json is read-only (29 §7). describe() re-probes the live mode at DOCTOR time
+  rather than trusting the open-time snapshot. Stores hold no Date-constructor token:
+  ISO formatting lives in core/ids.ts toIsoString.
+Verify: `npm run verify` -> 760 pass, 0 fail, exit 0 (+9 tests).
+Evidence: EVD-010.
+Surprises: THREE of my own defects surfaced by this packet's tests and scans: a
+  paraphrased license header that the old substring scan could not see (fixed by making
+  HC-T03 byte-identical), a future-schema downgrade bug, and an unmanaged-clock token.
+  The verifier is doing exactly what the doctrine says it should. Also: paths.ts's
+  header block is 17 lines with a blank separator before the closing */ — index it
+  precisely, never by eye.
+Next: WP-017 (ingestion scanner)
