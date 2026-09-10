@@ -457,7 +457,8 @@
       "evidence": [
         "EVD-039"
       ],
-      "notes": "usage sidecar: buffered in-session, one SESSION_END flush, additive merge; SKILL.md never rewritten by use"
+      "notes": "usage sidecar: buffered in-session, one SESSION_END flush, additive merge; SKILL.md never rewritten by use",
+      "commit": "ea62f84"
     },
     "WP-047": {
       "status": "PENDING"
