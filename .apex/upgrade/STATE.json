@@ -381,7 +381,8 @@
       "evidence": [
         "EVD-032"
       ],
-      "notes": "CLI discover/browse/read/scroll with provenance; historical-record framing"
+      "notes": "CLI discover/browse/read/scroll with provenance; historical-record framing",
+      "commit": "be5da80"
     },
     "WP-040": {
       "status": "PENDING"
