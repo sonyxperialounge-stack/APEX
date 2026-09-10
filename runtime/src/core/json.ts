@@ -522,7 +522,11 @@ export async function withCrossProcessLock<T>(
       }
       break
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err
+      const code = (err as NodeJS.ErrnoException).code
+      // EPERM/EACCES on exclusive-create is a Windows TRANSIENT (antivirus/indexer
+      // holding the new file): retry with the same bounded backoff, never a hard fail —
+      // a spurious EPERM under 20-way contention must not fail a correct run.
+      if (code !== "EEXIST" && code !== "EPERM" && code !== "EACCES") throw err
 
       const age = now() - started
       if (age >= timeoutMs) {

@@ -244,21 +244,36 @@ export class Recall {
     return stale
   }
 
-  // ── REC-006 — mirror to the host's native memory file ─────────────────────
+  // ── REC-006 — mirror to the host's native memory file (14 §5–§6, WP-028) ────
 
   /**
    * Mirrors stable facts into AGENTS.md / CLAUDE.md so they load for free every session.
-   * The user's own content is preserved: only the APEX block between markers is replaced.
+   *
+   * 14 §5 rules, enforced here:
+   *   - the target must be EXPLICIT — never auto-discovered, and the caller reads
+   *     config.mirror.enabled (off by default, 44 §3): this method never guesses a host;
+   *   - personal facts (User preferences) are NEVER mirrored — the project file may be
+   *     committed and shared (PMEM-T03);
+   *   - user-authored content OUTSIDE the generated block is preserved byte-for-byte;
+   *   - the block carries a revision attribute; a user-edited block is treated as drift
+   *     and REPORTED for safe reconciliation, never silently kept or deleted around.
    */
-  async mirrorToHost(target = "AGENTS.md"): Promise<{ written: boolean; preservedBytes: number }> {
+  async mirrorToHost(
+    target: string,
+    opts: { revision?: number } = {},
+  ): Promise<{ written: boolean; preservedBytes: number; drift: boolean; reason?: string }> {
+    if (!target || !target.trim()) {
+      return { written: false, preservedBytes: 0, drift: false, reason: "mirror requires an explicit target file (14 §5)" }
+    }
     const facts = await this.read()
     const stable = facts.filter((f) => f.section !== "User preferences")
-    if (!stable.length) return { written: false, preservedBytes: 0 }
+    if (!stable.length) return { written: false, preservedBytes: 0, drift: false, reason: "nothing stable to mirror" }
 
-    const START = "<!-- APEX:MEMORY:START -->"
+    const START = "<!-- APEX:MEMORY:START"
     const END = "<!-- APEX:MEMORY:END -->"
+    const revAttr = opts.revision !== undefined ? ` revision=${opts.revision}` : ""
     const block = [
-      START,
+      `${START}${revAttr} -->`,
       "## Project notes (maintained by APEX — edit .apex/MEMORY.md instead)",
       ...MEMORY_SECTIONS.filter((s) => s !== "User preferences")
         .map((section) => {
@@ -271,14 +286,18 @@ export class Recall {
 
     const file = path.join(this.root, target)
     const current = (await readTextOrNull(file)) ?? ""
-    const preservedBytes = current.replace(new RegExp(`${START}[\\s\\S]*?${END}`), "").length
+    const blockRe = new RegExp(`${START.replace(/[/:]/g, "\\$&")}[^>]*-->[\\s\\S]*?${END.replace(/[/:]/g, "\\$&")}`)
+    const existingBlock = blockRe.exec(current)?.[0] ?? ""
+    // Drift: an existing block without a revision attribute was hand-touched (14 §6).
+    const drift = existingBlock !== "" && !/revision=\d+/.test(existingBlock)
 
-    const next = current.includes(START)
-      ? current.replace(new RegExp(`${START}[\\s\\S]*?${END}`), block)
+    const preservedBytes = current.replace(blockRe, "").length
+    const next = existingBlock !== ""
+      ? current.replace(blockRe, block)
       : `${current.trimEnd()}\n\n${block}\n`.trimStart()
 
     await writeText(file, next)
-    return { written: true, preservedBytes }
+    return { written: true, preservedBytes, drift }
   }
 
   // ── REC-007 — size discipline ─────────────────────────────────────────────

@@ -43,3 +43,13 @@ list. Protects HC-004/REQ-SEC-005 (license header integrity) — a mechanical ch
 cannot catch its own violation class is worse than a strict one. Recorded here per the
 blast-radius rule; also moved toIsoString into core/ids.ts (its Files list) for the same
 packet's MOD-T03 compliance.
+
+## D-006 — Lock EPERM/EACCES transient retry (2026-09-10, WP-028)
+
+The 20-process race (MEM-CON-T01) failed twice across the build with EPERM opening the
+lock file on Windows — antivirus/indexer contention on exclusive-create. The lock treated
+any non-EEXIST error as fatal. Fix inside json.ts (WP-028's commit, though json.ts is not
+in that packet's Files list): EPERM/EACCES now retry with the existing bounded jittered
+backoff. Protects 12 §4's "never hangs, never fails spuriously" intent — a transient OS
+refusal is not a lock verdict. The stale policy, timeout and never-steal properties are
+unchanged (a retry is just another attempt). Race suite verified stable 3x consecutive.

@@ -442,3 +442,25 @@ Surprises: Recall.relevant returns "[Section] text" strings — my bridge matche
   block to recall.ts (reverted immediately) — the no-markers rule exists for exactly this
   class of slip; the tree never saw it committed.
 Next: WP-028 (host instruction mirror)
+
+---
+
+## WP-028 — Host instruction mirror · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/recall.ts (mirrorToHost upgraded), ~runtime/test/engines/recall-council.test.ts (+5),
+  ~runtime/src/core/json.ts (EPERM/EACCES transient retry in lock acquisition)
+Decision: mirrorToHost now REQUIRES an explicit target (14 §5: never auto-discovered,
+  off by default — config.mirror.enabled lands in WP-074); personal facts excluded at
+  the source (filter, not redaction); block carries revision=N; hand-edits inside the
+  block surface as drift:true for safe reconciliation. User content outside the block
+  is byte-preserved. The pre-existing REC-006 tests pass unchanged (explicit targets
+  were already their shape).
+  ALSO (recorded here, in DECISIONS D-006): hardened withCrossProcessLock's EPERM/
+  EACCES handling — Windows AV/indexer transients under 20-way contention caused two
+  flaky failures of the MEM-CON-T01 race across the build; those codes now retry with
+  the bounded backoff. Race suite verified 3x consecutive.
+Verify: `npm run verify` -> 855 pass, 0 fail, exit 0.
+Evidence: EVD-022.
+Surprises: the race flake was a real robustness gap in MY lock code, not test noise —
+  second occurrence forced the proper root-cause (recovery ladder works).
+Next: WP-029 (memory user surface)

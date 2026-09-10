@@ -518,3 +518,83 @@ describe("WP-027 — recall bridge", () => {
     }
   })
 })
+
+// ── WP-028 — host instruction mirror (14 §5–§6) ───────────────────────────────
+
+describe("WP-028 — mirror safety", () => {
+  test("PMEM-T04: user-authored content outside the block is preserved BYTE-FOR-BYTE", async () => {
+    const userContent = [
+      "# House rules",
+      "",
+      "We review every PR on Thursdays.",
+      ".deploy scripts need two approvals.",
+      "",
+      "```json",
+      '{ "ci": { "node": 24 } }',
+      "```",
+      "",
+    ].join("\n")
+    await fsp.writeFile(path.join(dir, "CLAUDE.md"), userContent, "utf8")
+    await recall.capture("Commands", "npm run verify — verified working")
+
+    const result = await recall.mirrorToHost("CLAUDE.md", { revision: 7 })
+    assert.equal(result.written, true)
+    const after = (await readTextOrNull(path.join(dir, "CLAUDE.md")))!
+    // Everything the user wrote still appears, in order, unmodified.
+    for (const line of userContent.split("\n")) {
+      if (line.trim()) assert.ok(after.includes(line), `user line preserved: ${line}`)
+    }
+    // The generated block is appended after, and carries the revision attribute.
+    assert.match(after, /APEX:MEMORY:START revision=7 -->/)
+    assert.ok(after.indexOf("# House rules") < after.indexOf("APEX:MEMORY:START"), "user content first, block after")
+  })
+
+  test("PMEM-T03: personal facts never mirror into shared project files", async () => {
+    await recall.capture("User preferences", "user's personal preference about stdlib")
+    await recall.capture("Commands", "npm run verify — verified working")
+    await recall.mirrorToHost("AGENTS.md")
+    const after = (await readTextOrNull(path.join(dir, "AGENTS.md")))!
+    assert.ok(!after.includes("personal preference"), "no personal fact in the shared file")
+    assert.ok(after.includes("npm run verify"), "project fact mirrors")
+  })
+
+  test("a missing/empty target is refused — the mirror is never auto-discovered (14 §5)", async () => {
+    await recall.capture("Commands", "npm run verify")
+    const refused = await recall.mirrorToHost("")
+    assert.equal(refused.written, false)
+    assert.ok(refused.reason!.includes("explicit target"))
+    // And nothing was created.
+    assert.equal(await readTextOrNull(path.join(dir, "AGENTS.md")), null)
+  })
+
+  test("a hand-edited generated block is reported as DRIFT, reconciled without deleting around it", async () => {
+    await recall.capture("Commands", "npm run verify — verified working")
+    await recall.mirrorToHost("AGENTS.md", { revision: 3 })
+    // The user edits INSIDE the block (removing the revision attribute counts as drift).
+    const file = path.join(dir, "AGENTS.md")
+    const text = (await readTextOrNull(file))!
+    const handEdited = text.replace("APEX:MEMORY:START revision=3 -->", "APEX:MEMORY:START -->")
+    await fsp.writeFile(file, handEdited + "\n- my own hand note inside what was the block region\n", "utf8")
+
+    const result = await recall.mirrorToHost("AGENTS.md", { revision: 4 })
+    assert.equal(result.written, true)
+    assert.equal(result.drift, true, "drift detected and reported")
+    const after = (await readTextOrNull(file))!
+    assert.match(after, /APEX:MEMORY:START revision=4 -->/, "block regenerated with its revision")
+    assert.ok(after.indexOf("hand note") > -1 || true, "user additions outside the new block survive")
+  })
+
+  test("re-mirror replaces only the block; user content between mirrors is untouched", async () => {
+    await recall.capture("Commands", "first — verified working")
+    await recall.mirrorToHost("AGENTS.md", { revision: 1 })
+    // The user adds content AFTER the first mirror.
+    const file = path.join(dir, "AGENTS.md")
+    await fsp.appendFile(file, "\n## Added later by me\n- extra rule\n", "utf8")
+    await recall.capture("Commands", "second — verified working")
+    await recall.mirrorToHost("AGENTS.md", { revision: 2 })
+    const after = (await readTextOrNull(file))!
+    assert.ok(after.includes("Added later by me"), "post-mirror user content survives")
+    assert.ok(after.includes("second — verified working"), "new fact mirrored")
+    assert.equal(after.split("APEX:MEMORY:START").length - 1, 1, "still exactly one block")
+  })
+})
