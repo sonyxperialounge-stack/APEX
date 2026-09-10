@@ -745,3 +745,22 @@ Surprises: my SKSEC-T02 assertion tried to make the OLD hash's grant vanish from
   even though callers pass trusted dirs — defence in depth for a store whose whole
   job is distrust.
 Next: WP-043 — conditional activation.
+
+## WP-043 — Conditional activation · DONE · 2026-09-11
+
+Files: +runtime/src/engines/skill-activation.ts (124), +runtime/test/engines/skill-activation.test.ts (8)
+Decision: skillApplicable(skill, env) answers ONE question: should this skill
+  auto-select here, now? Resolution order per 54 §5: lifecycle -> platform ->
+  requires -> fallbackFor -> requiresEnvironment. An inapplicable skill is
+  searchable:true with a REASON — suppressed, never hidden (SKL-T03). fallbackFor
+  hides only when ALL declared fallbacks are available (SKL-T06). requiresEnvironment
+  probes PRESENCE only (SKL-T07/SEC-T09): the env is a boolean probe the caller
+  injects; this engine never touches values. Trust is deliberately outside the
+  signature — activation policy layers it on top (REQ-SKL-002), so this function
+  cannot smuggle a skill past the trust store.
+Verify: `npm run verify` -> 935 pass, 0 fail, 0 cancelled, exit 0 (24.0s).
+Evidence: EVD-036.
+Surprises: `with` is a reserved word in strict-mode TS (my variable name broke the
+  parse); renamed to `having`. The readonly-tuple .includes() narrowing error is
+  a known TS shape — comparing the union directly avoids it without a cast.
+Next: WP-044 — learning extractor.
