@@ -34,6 +34,7 @@ import {
 } from "../core/json.ts"
 import { toIsoString, newId, projectKey } from "../core/ids.ts"
 import { event } from "../core/log.ts"
+import { redact } from "../core/redact.ts"
 import { ARCHIVE_EVENT_TYPES, SESSION_STATUSES } from "../core/types.ts"
 import type { ArchiveEvent, SessionRecordV1 } from "../core/types.ts"
 
@@ -50,7 +51,7 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
   appendSession(session: Omit<SessionRecordV1, "schemaVersion" | "status" | "id" | "taskIds"> & Partial<Pick<SessionRecordV1, "id" | "taskIds">> & { status?: SessionRecordV1["status"] }): Promise<string>
   closeSession(id: string, status?: SessionRecordV1["status"]): Promise<void>
   listSessions(query?: SessionQuery): Promise<SessionRecordV1[]>
-  appendEvent(ev: Omit<ArchiveEvent, "schemaVersion" | "id" | "timestamp" | "redactionApplied"> & Partial<Pick<ArchiveEvent, "id" | "timestamp" | "redactionApplied">>): Promise<string>
+  persistEvent(ev: Omit<ArchiveEvent, "schemaVersion" | "id" | "timestamp" | "redactionApplied"> & Partial<Pick<ArchiveEvent, "id" | "timestamp">>): Promise<string>
   readEvents(sessionId: string): Promise<ArchiveEvent[]>
   eventCount(sessionId: string): Promise<number>
   readonly dir: string
@@ -113,7 +114,7 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
       return out
     },
 
-    async appendEvent(ev): Promise<string> {
+    async persistEvent(ev): Promise<string> {
       if (!ARCHIVE_EVENT_TYPES.includes(ev.type)) {
         throw new ApexError(
           `Unknown archive event type "${ev.type}". Legal: ${ARCHIVE_EVENT_TYPES.join(", ")}.`,
@@ -121,6 +122,8 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
         )
       }
       const id = ev.id || newId("EVT", { now })
+      // Redaction chokepoint (15 §5, ARC-T04): every persist path sanitises before
+      // writing. No caller may bypass it — redactionApplied is always true here.
       const record: ArchiveEvent = {
         schemaVersion: 1,
         id,
@@ -131,9 +134,9 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
         hostLabel: ev.hostLabel,
         modelLabel: ev.modelLabel,
         type: ev.type,
-        text: ev.text,
+        text: ev.text !== undefined ? redact(ev.text) : undefined,
         refs: ev.refs,
-        redactionApplied: ev.redactionApplied ?? true,
+        redactionApplied: true,
       }
       const file = path.join(eventsDir, `${ev.sessionId}.jsonl`)
       await withCrossProcessLock(lockFile, "archive-event-append", async () => {

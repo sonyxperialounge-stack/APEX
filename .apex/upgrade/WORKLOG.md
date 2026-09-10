@@ -524,3 +524,25 @@ Surprises: typecheck failed — `appendSession` kept `id`/`taskIds` required aft
   (per-file) but `15 §3` + the done-when require `events/quarantine.jsonl` (shared); added
   `appendText` to json.ts and redirected in `readEvents`.
 Next: WP-031 — redaction chokepoint.
+
+---
+
+## WP-031 — Redaction chokepoint · DONE · 2026-09-10
+
+Files: ~runtime/src/stores/archive-store.ts (appendEvent→persistEvent + redact),
+  ~runtime/src/core/json.ts (appendText), ~runtime/test/stores/archive-store.test.ts (+2 tests)
+Decision: `persistEvent` is the sole public event-append path; it calls `redact()` from
+  core/redact.ts on the text field before building the record, and sets
+  `redactionApplied: true` unconditionally (caller can no longer disable it). The old
+  `appendEvent` name is removed from the public API — no caller may bypass the chokepoint
+  (15 §5). `readJsonlSafe`'s per-file quarantine is supplemented by the shared
+  `events/quarantine.jsonl` via `appendText` in json.ts (42 §4).
+Verify: `npm run verify` -> 871 pass, 0 fail, exit 0 (+2 new tests; was 869).
+Evidence: EVD-026.
+Surprises: typecheck failed on the WP-030 `appendEvent` signature — `id` and `taskIds` were
+  kept required by `Omit`; fixed with `Partial<Pick<>>` on WP-030. The WP-031 rename to
+  `persistEvent` and removal of `redactionApplied` from the input type was clean. The
+  quarantine redirect needed `appendText` in json.ts (no existing text-append helper).
+  Source-scan test for "one append call site" required extracting the function body
+  rather than counting file-wide (appendSession also calls appendJsonl for sessions).
+Next: WP-032 — resume capsule.

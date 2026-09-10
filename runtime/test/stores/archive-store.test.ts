@@ -23,6 +23,7 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { openArchiveStore } from "../../src/stores/archive-store.ts"
 import { ApexError } from "../../src/core/errors.ts"
 import { setLogDir } from "../../src/core/log.ts"
@@ -79,15 +80,15 @@ describe("WP-030 archive store", () => {
   test("events append/read/list round-trip per session", async () => {
     const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
     const ses = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z" })
-    const e1 = await store.appendEvent({ sessionId: ses, type: "user_message", text: "read START-HERE.md and begin" })
-    const e2 = await store.appendEvent({
+    const e1 = await store.persistEvent({ sessionId: ses, type: "user_message", text: "read START-HERE.md and begin" })
+    const e2 = await store.persistEvent({
       sessionId: ses,
       type: "verification",
       text: "npm run verify -> 865 pass, 0 fail, exit 0",
       refs: ["VER-024"],
       modelLabel: "some-model",
     })
-    await store.appendEvent({ sessionId: ses, type: "requirement_transition", text: "REQ-084 -> VERIFIED_COMPLETE" })
+    await store.persistEvent({ sessionId: ses, type: "requirement_transition", text: "REQ-084 -> VERIFIED_COMPLETE" })
 
     const events = await store.readEvents(ses)
     assert.equal(events.length, 3)
@@ -99,7 +100,7 @@ describe("WP-030 archive store", () => {
 
     // A second session's events are separate files.
     const ses2 = await store.appendSession({ startedAt: "2026-09-10T02:00:00.000Z" })
-    await store.appendEvent({ sessionId: ses2, type: "handoff", text: "resuming from capsule" })
+    await store.persistEvent({ sessionId: ses2, type: "handoff", text: "resuming from capsule" })
     assert.equal(await store.eventCount(ses2), 1)
     assert.equal(await store.eventCount(ses), 3)
   })
@@ -107,7 +108,7 @@ describe("WP-030 archive store", () => {
   test("an unknown event type is refused with a named error", async () => {
     const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
     await assert.rejects(
-      store.appendEvent({ sessionId: "SES-x", type: "vibes" as never, text: "x" }),
+      store.persistEvent({ sessionId: "SES-x", type: "vibes" as never, text: "x" }),
       (e: unknown) => e instanceof ApexError && e.code === "ARCHIVE_EVENT_MALFORMED",
     )
   })
@@ -115,8 +116,8 @@ describe("WP-030 archive store", () => {
   test("malformed lines quarantine to events/quarantine.jsonl and reads survive (Done-when)", async () => {
     const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
     const ses = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z" })
-    await store.appendEvent({ sessionId: ses, type: "user_message", text: "good event" })
-    await store.appendEvent({ sessionId: ses, type: "decision", text: "another good one" })
+    await store.persistEvent({ sessionId: ses, type: "user_message", text: "good event" })
+    await store.persistEvent({ sessionId: ses, type: "decision", text: "another good one" })
 
     // Corrupt the second line on disk (torn write shape).
     const file = path.join(archiveDir, "events", `${ses}.jsonl`)
@@ -132,5 +133,36 @@ describe("WP-030 archive store", () => {
     assert.equal(events[0]!.text, "good event")
     const quarantine = await fsp.readFile(path.join(archiveDir, "events", "quarantine.jsonl"), "utf8")
     assert.ok(quarantine.includes("tampered after checksum"), "the raw malformed line is preserved in quarantine")
+  })
+
+  test("ARC-T04: secret-bearing tool output is redacted before persist", async () => {
+    const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
+    const ses = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z" })
+    const secret = "sk-ant-api03-AAaa11BBbb22CCcc33DDdd44EEee55"
+    const eid = await store.persistEvent({
+      sessionId: ses,
+      type: "tool_result",
+      text: `config resolved with Bearer ${secret} — retrying`,
+    })
+    const events = await store.readEvents(ses)
+    assert.equal(events.length, 1)
+    assert.equal(events[0]!.id, eid)
+    assert.ok(!events[0]!.text!.includes(secret), "the live secret was redacted before persistence")
+    assert.ok(events[0]!.text!.includes("[REDACTED]"), "redaction marker present")
+    assert.equal(events[0]!.redactionApplied, true, "the record truthfully records redaction")
+  })
+
+  test("ARC-T04 companion: source scan proves exactly one event-append call site", async () => {
+    // 15 §5: no caller may bypass persistEvent. The source must expose persistEvent,
+    // not appendEvent, and the persistEvent body must contain exactly one appendJsonl call.
+    const here = path.dirname(fileURLToPath(import.meta.url))
+    const src = await fsp.readFile(path.resolve(here, "../../src/stores/archive-store.ts"), "utf8")
+    assert.ok(src.includes("persistEvent"), "persistEvent is the redaction chokepoint")
+    assert.ok(!src.includes("appendEvent"), "appendEvent removed — no bypass path exists")
+    // Extract the persistEvent function body and count appendJsonl calls within it.
+    const idx = src.indexOf("async persistEvent(ev)")
+    const body = src.slice(idx, src.indexOf("\n    },", idx))
+    const appends = body.match(/\bappendJsonl\b/g)
+    assert.equal(appends?.length ?? 0, 1, "persistEvent contains exactly one appendJsonl call")
   })
 })
