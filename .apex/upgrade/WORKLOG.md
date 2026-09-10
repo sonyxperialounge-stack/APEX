@@ -584,3 +584,25 @@ Surprises: the "all terms present scores 50" test initially used a query that wa
   present but non-contiguous. The score-sorting test confirmed exact phrase outranks term
   match. No issues with Devanagari NFC normalisation — it round-trips correctly.
 Next: WP-034 — derived index and rebuild.
+
+## WP-034 — Derived index and rebuild · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/archive-index.ts (searchEntries extracted + persisted index),
+  ~runtime/test/engines/archive-index.test.ts (+7)
+Decision: openArchiveIndex(source) wraps the canonical store behind a structural
+  ArchiveSource. The persisted index (sessions/index/index.json) carries its OWN
+  schemaVersion (INDEX_SCHEMA_VERSION=1), a source fingerprint (sessionId -> event
+  count), and flat IndexEntries. health() classifies OK/MISSING/CORRUPT/STALE/FUTURE;
+  search() uses the index only when OK and degrades to the canonical scan otherwise —
+  the index is an accelerator, never a second truth (16 §1). reindex() is the only
+  write path (SESSION_END/DOCTOR own it, 46 §2) and REFUSES to overwrite a future
+  schema with ApexError SCHEMA_FUTURE_VERSION (C-021). One searchEntries() serves both
+  paths so ranking can never disagree.
+Verify: `npm run verify` -> 887 pass, 0 fail, 0 cancelled, exit 0 (19.4s).
+Evidence: EVD-029.
+Surprises: the stale-index test's first query ("canonical events") shares the trigrams
+  eve/ven/ent with unrelated text, so weak n-gram hits (score 1) are legitimate; the
+  assertion now checks the UNSEEN event is found and ranks first (exact phrase, 100)
+  instead of asserting a clean hit list. writeJson needed readTextOrNull+JSON.parse on
+  read since json.ts has no readJson — kept to existing primitives per 42 §4.
+Next: WP-035 — retention, prune, export.

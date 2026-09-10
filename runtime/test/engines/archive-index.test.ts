@@ -24,7 +24,8 @@ import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { openArchiveStore } from "../../src/stores/archive-store.ts"
-import { buildSearchIndex } from "../../src/engines/archive-index.ts"
+import { buildSearchIndex, openArchiveIndex, INDEX_SCHEMA_VERSION } from "../../src/engines/archive-index.ts"
+import { ApexError } from "../../src/core/errors.ts"
 import { setLogDir } from "../../src/core/log.ts"
 
 let dir: string
@@ -166,5 +167,153 @@ describe("WP-033 archive search (SRCH-T01/T02)", () => {
     const before = await idx.search({ query: "event", before: "2026-09-10T11:00:00.000Z" })
     assert.equal(before.length, 1)
     assert.equal(before[0]!.eventId, events[0]!.id, "before filter excludes later")
+  })
+})
+
+describe("WP-034 derived index and rebuild (ARC-T05/SRCH-T05, 16 §1/§3)", () => {
+  async function seed(): Promise<ReturnType<typeof openArchiveStore>> {
+    const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
+    const ses = await store.appendSession({
+      startedAt: "2026-09-10T00:00:00.000Z",
+      projectKey: "prj_1111111111111111",
+    })
+    await store.persistEvent({ sessionId: ses, type: "user_message", text: "rebuild the derived index" })
+    await store.persistEvent({ sessionId: ses, type: "decision", text: "canonical events stay authoritative" })
+    await store.persistEvent({ sessionId: ses, type: "verification", text: "the suite is green" })
+    return store
+  }
+
+  test("reindex writes a versioned derived index over canonical events", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+
+    const report = await idx.reindex()
+    assert.equal(report.rebuilt, true)
+    assert.equal(report.entries, 3, "one entry per text-bearing event")
+    assert.equal(report.sessions, 1)
+
+    const raw = JSON.parse(await fsp.readFile(idx.indexFile, "utf8")) as Record<string, unknown>
+    assert.equal(raw.schemaVersion, INDEX_SCHEMA_VERSION, "index declares its own schema version")
+    assert.equal(raw.eventCount, 3)
+    assert.equal(typeof raw.generatedAt, "string")
+
+    const health = await idx.health()
+    assert.equal(health.status, "OK")
+  })
+
+  test("a healthy index answers the same query as the canonical scan", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+
+    const scanned = await idx.search({ query: "derived index" })
+    await idx.reindex()
+    const indexed = await idx.search({ query: "derived index" })
+
+    assert.deepEqual(
+      indexed.map((h) => h.eventId),
+      scanned.map((h) => h.eventId),
+      "index and scan agree — the index is an accelerator, not a second truth",
+    )
+    assert.ok(indexed.length > 0)
+  })
+
+  test("ARC-T05/SRCH-T05: deleting the index loses no data and search still works", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+    await idx.reindex()
+    const before = await idx.search({ query: "canonical events" })
+    assert.ok(before.length > 0, "precondition: the phrase is findable")
+
+    await fsp.rm(idx.indexFile, { force: true })
+    assert.equal((await idx.health()).status, "MISSING")
+
+    const afterDelete = await idx.search({ query: "canonical events" })
+    assert.deepEqual(
+      afterDelete.map((h) => h.eventId),
+      before.map((h) => h.eventId),
+      "search degrades to the canonical scan — no data is lost with the index",
+    )
+
+    const report = await idx.reindex()
+    assert.equal(report.rebuilt, true)
+    assert.equal((await idx.health()).status, "OK", "the index is rebuilt from canonical events")
+  })
+
+  test("a corrupt index is detected, never fatal, and repairable", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+    await idx.reindex()
+
+    await fsp.writeFile(idx.indexFile, "{ this is not json", "utf8")
+    const health = await idx.health()
+    assert.equal(health.status, "CORRUPT")
+    assert.ok(health.status === "CORRUPT" && health.reason.length > 0, "the reason is stated")
+
+    const hits = await idx.search({ query: "canonical events" })
+    assert.ok(hits.length > 0, "a corrupt index falls back to the scan rather than throwing")
+
+    await idx.reindex()
+    assert.equal((await idx.health()).status, "OK")
+  })
+
+  test("a stale index is detected and search still sees the newest events", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+    await idx.reindex()
+
+    const sessions = await store.listSessions()
+    await store.persistEvent({
+      sessionId: sessions[0]!.id,
+      type: "handoff",
+      text: "a brand new event the index has never seen",
+    })
+
+    const health = await idx.health()
+    assert.equal(health.status, "STALE", "the source fingerprint moved")
+
+    // The n-gram fallback legitimately gives weak hits (score 1) to unrelated text that
+    // shares trigrams — "canonical events" contains "eve"/"ven"/"ent". What matters is
+    // that the event the stale index never saw is found, and ranks first.
+    const hits = await idx.search({ query: "brand new event" })
+    assert.ok(hits.length >= 1, "a stale index must not hide canonical events")
+    assert.equal(hits[0]!.score, 100, "the unseen event is the exact-phrase match")
+    assert.ok(hits[0]!.snippet.includes("brand new event"), "the top hit is the new event")
+  })
+
+  test("a future index schema is never overwritten or downgraded (C-021)", async () => {
+    const store = await seed()
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+    await idx.reindex()
+
+    const future = { schemaVersion: INDEX_SCHEMA_VERSION + 99, generatedAt: "2099-01-01T00:00:00.000Z", eventCount: 0, sources: {}, entries: [] }
+    await fsp.writeFile(idx.indexFile, JSON.stringify(future), "utf8")
+
+    const health = await idx.health()
+    assert.equal(health.status, "FUTURE")
+
+    await assert.rejects(
+      () => idx.reindex(),
+      (err: unknown) => err instanceof ApexError && err.code === "SCHEMA_FUTURE_VERSION",
+      "reindex refuses to overwrite a future index",
+    )
+
+    const stillThere = JSON.parse(await fsp.readFile(idx.indexFile, "utf8")) as Record<string, unknown>
+    assert.equal(stillThere.schemaVersion, INDEX_SCHEMA_VERSION + 99, "the future index is untouched")
+
+    const hits = await idx.search({ query: "canonical events" })
+    assert.ok(hits.length > 0, "search still works via the canonical scan")
+  })
+
+  test("the persisted index round-trips Devanagari (SRCH-T02)", async () => {
+    const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
+    const ses = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z" })
+    await store.persistEvent({ sessionId: ses, type: "user_message", text: "परीक्षण सफल रहा" })
+
+    const idx = openArchiveIndex(store, { now: () => 1725964800000 })
+    await idx.reindex()
+
+    const hits = await idx.search({ query: "परीक्षण" })
+    assert.equal(hits.length, 1, "Devanagari survives the JSON round-trip and NFC normalisation")
+    assert.ok(hits[0]!.snippet.includes("परीक्षण"))
   })
 })
