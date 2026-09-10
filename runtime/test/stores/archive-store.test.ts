@@ -16,7 +16,7 @@
 
  */
 
-/** WP-030 — archive types and store: sessions + events append/read/list, quarantine (15 §3). */
+/** WP-030/031/032 — archive types, store, redaction chokepoint, resume capsule (15 §§2–5). */
 
 import { test, describe, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url"
 import { openArchiveStore } from "../../src/stores/archive-store.ts"
 import { ApexError } from "../../src/core/errors.ts"
 import { setLogDir } from "../../src/core/log.ts"
+import { validateResumeCapsule } from "../../src/engines/task-contract.ts"
 
 let dir: string
 let archiveDir: string
@@ -164,5 +165,44 @@ describe("WP-030 archive store", () => {
     const body = src.slice(idx, src.indexOf("\n    },", idx))
     const appends = body.match(/\bappendJsonl\b/g)
     assert.equal(appends?.length ?? 0, 1, "persistEvent contains exactly one appendJsonl call")
+  })
+
+  test("ARC-T01: file-capable L0 produces a usable resume capsule", async () => {
+    const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
+    const taskIds = ["TASK-000000001-aaaaaa"]
+    const ses = await store.appendSession({
+      startedAt: "2026-09-10T00:00:00.000Z",
+      projectKey: "prj_3333333333333333",
+      taskIds,
+    })
+    await store.persistEvent({ sessionId: ses, type: "requirement_transition", text: "REQ-001 -> OPEN" })
+    await store.persistEvent({ sessionId: ses, type: "requirement_transition", text: "REQ-002 -> OPEN" })
+    await store.persistEvent({ sessionId: ses, type: "requirement_transition", text: "REQ-002 -> VERIFIED_COMPLETE" })
+    await store.persistEvent({
+      sessionId: ses, type: "verification", text: "npm run verify -> 871 pass, 0 fail", refs: ["EVD-026"],
+    })
+    await store.persistEvent({ sessionId: ses, type: "failure", text: "torn write recovery bug" })
+    await store.persistEvent({ sessionId: ses, type: "handoff", text: "continue with WP-032" })
+
+    const capsule = await store.buildResumeCapsule(ses)
+    assert.ok(capsule, "a file-capable L0 produces a capsule, not null")
+    assert.equal(capsule!.schemaVersion, 1)
+    assert.equal(capsule!.taskId, "TASK-000000001-aaaaaa")
+    assert.equal(capsule!.projectFingerprint, "prj_3333333333333333")
+    assert.deepEqual(capsule!.openRequirementIds, ["REQ-001"], "REQ-001 stays open")
+    assert.deepEqual(capsule!.verifiedRequirementIds, ["REQ-002"], "REQ-002 verified (latest transition wins)")
+    assert.equal(capsule!.blocker, "torn write recovery bug")
+    assert.equal(capsule!.nextSafeAction, "continue with WP-032")
+    assert.deepEqual(capsule!.evidenceIds, ["EVD-026"])
+
+    // The capsule must pass structural validation.
+    assert.ok(validateResumeCapsule(capsule), "capsule validates structurally")
+  })
+
+  test("ARC-T02: chat-only L0 (no sessions) reports archive unavailable", async () => {
+    const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
+    // No session written — simulates a chat-only L0 with no file backing.
+    const capsule = await store.buildResumeCapsule()
+    assert.equal(capsule, null, "no session history → durable archive unavailable")
   })
 })

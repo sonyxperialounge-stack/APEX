@@ -36,7 +36,7 @@ import { toIsoString, newId, projectKey } from "../core/ids.ts"
 import { event } from "../core/log.ts"
 import { redact } from "../core/redact.ts"
 import { ARCHIVE_EVENT_TYPES, SESSION_STATUSES } from "../core/types.ts"
-import type { ArchiveEvent, SessionRecordV1 } from "../core/types.ts"
+import type { ArchiveEvent, SessionRecordV1, ResumeCapsuleV1 } from "../core/types.ts"
 
 export interface ArchiveStoreOptions {
   now?: () => number
@@ -54,6 +54,7 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
   persistEvent(ev: Omit<ArchiveEvent, "schemaVersion" | "id" | "timestamp" | "redactionApplied"> & Partial<Pick<ArchiveEvent, "id" | "timestamp">>): Promise<string>
   readEvents(sessionId: string): Promise<ArchiveEvent[]>
   eventCount(sessionId: string): Promise<number>
+  buildResumeCapsule(sessionId?: string): Promise<ResumeCapsuleV1 | null>
   readonly dir: string
 } {
   const now = opts.now ?? Date.now
@@ -166,6 +167,59 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
 
     async eventCount(sessionId): Promise<number> {
       return (await this.readEvents(sessionId)).length
+    },
+
+    async buildResumeCapsule(sessionId?: string): Promise<ResumeCapsuleV1 | null> {
+      // L0 chat-only: no sessions recorded → durable archive unavailable (15 §4, ARC-T02).
+      const sessions = await readSessions()
+      if (sessions.length === 0) return null
+
+      // Use the named session, else the most recent CLOSED one, else the latest.
+      let session: SessionRecordV1 | undefined
+      if (sessionId) {
+        session = sessions.find((s) => s.id === sessionId)
+      }
+      if (!session) {
+        session = [...sessions].reverse().find((s) => s.status === "CLOSED") ??
+          sessions[sessions.length - 1]
+      }
+      if (!session) return null
+
+      const events = await this.readEvents(session.id)
+
+      // Walk in order; the latest transition wins for each requirement (15 §6:
+      // history is evidence, not authority — but the final state is the capsule).
+      const reqVerified = new Map<string, boolean>()
+      const evidenceIds = new Set<string>()
+      let blocker: string | undefined
+      let nextSafeAction: string | undefined
+      for (const ev of events) {
+        if (ev.refs) for (const ref of ev.refs) evidenceIds.add(ref)
+        if (ev.type === "requirement_transition" && ev.text) {
+          const m = ev.text.match(/(REQ-\d+)\s*->\s*(\w+)/)
+          if (m) reqVerified.set(m[1]!, m[2] === "VERIFIED_COMPLETE")
+        }
+        if (ev.type === "failure" && ev.text) blocker = ev.text
+        if (ev.type === "handoff" && ev.text) nextSafeAction = ev.text
+      }
+
+      const openRequirementIds: string[] = []
+      const verifiedRequirementIds: string[] = []
+      for (const [id, verified] of reqVerified) {
+        ;(verified ? verifiedRequirementIds : openRequirementIds).push(id)
+      }
+
+      return {
+        schemaVersion: 1,
+        taskId: session.taskIds[0],
+        projectFingerprint: session.projectKey,
+        observedAt: toIsoString(now()),
+        openRequirementIds,
+        verifiedRequirementIds,
+        blocker,
+        nextSafeAction,
+        evidenceIds: [...evidenceIds],
+      }
     },
   }
 }

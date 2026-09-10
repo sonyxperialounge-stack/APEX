@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "3",
-  "currentPacket": "WP-032",
+  "currentPacket": "WP-033",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -329,10 +329,18 @@
       "status": "PENDING"
     },
     "WP-032": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T18:45:00.000Z",
+      "finishedAt": "2026-09-10T19:10:00.000Z",
+      "commit": "pending",
+      "evidence": [
+        "EVD-027"
+      ],
+      "notes": "+2 tests; 873 pass total; resume capsule + chat-only null"
     },
     "WP-033": {
-      "status": "PENDING"
+      "status": "IN_PROGRESS",
+      "startedAt": "2026-09-10T19:10:00.000Z"
     },
     "WP-034": {
       "status": "PENDING"

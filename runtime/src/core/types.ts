@@ -459,3 +459,16 @@ export interface SessionRecordV1 {
   model?: string
   status: SessionStatus
 }
+
+/** Compact resume pointer for a prior session (15 §2, 41 §9). */
+export interface ResumeCapsuleV1 {
+  schemaVersion: 1
+  taskId?: string
+  projectFingerprint?: string
+  observedAt: string
+  openRequirementIds: string[]
+  verifiedRequirementIds: string[]
+  blocker?: string
+  nextSafeAction?: string
+  evidenceIds: string[]
+}

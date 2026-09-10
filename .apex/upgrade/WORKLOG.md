@@ -546,3 +546,22 @@ Surprises: typecheck failed on the WP-030 `appendEvent` signature — `id` and `
   Source-scan test for "one append call site" required extracting the function body
   rather than counting file-wide (appendSession also calls appendJsonl for sessions).
 Next: WP-032 — resume capsule.
+
+---
+
+## WP-032 — Resume capsule · DONE · 2026-09-10
+
+Files: +runtime/src/engines/task-contract.ts (stub), +runtime/test/stores/archive-store.test.ts (+2),
+  ~runtime/src/stores/archive-store.ts (buildResumeCapsule), ~runtime/src/core/types.ts (ResumeCapsuleV1)
+Decision: `buildResumeCapsule(sessionId?)` returns null when no sessions exist (chat-only L0,
+  ARC-T02/REQ-ARC-004); otherwise assembles a ResumeCapsuleV1 from the latest session's events:
+  requirement transitions parsed by latest-state-wins, evidence IDs from refs, blocker from
+  failure events, nextSafeAction from handoff events (ARC-T01/REQ-ARC-001). `task-contract.ts`
+  is a stub (`validateResumeCapsule` only) — full TaskContract lifecycle deferred to WP-060
+  per 47 §1. No `new Date`/`Math.random` in store (injected `now`, `toIsoString`).
+Verify: `npm run verify` -> 873 pass, 0 fail, exit 0 (+2 new tests; was 869 after WP-031).
+Evidence: EVD-027.
+Surprises: none — the resume logic maps cleanly onto existing event types and the
+  readSessions/readEvents primitives. `validateResumeCapsule` needed `as unknown as`
+  intermediate cast for the Record→ResumeCapsuleV1 narrowing.
+Next: WP-033 — deterministic search.
