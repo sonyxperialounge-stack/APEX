@@ -652,3 +652,26 @@ Surprises: appendSession's input type keeps startedAt REQUIRED (only id/taskIds 
   verdict is real and unchanged. Used a python heredoc for multi-edit patches again
   after one Edit call hit a stale-read guard mid-flight.
 Next: WP-037 — archive user surface.
+
+## WP-037 — Archive user surface · DONE · 2026-09-10
+
+Files: +runtime/src/cli/archive-cli.ts, +runtime/test/cli/archive-cli.test.ts (5),
+  ~runtime/src/cli/index.ts (archive case + usage line)
+Decision: CLI-first per the packet (16 §5 shapes): discover (query search, provenance
+  per hit — session id, timestamp, snippet, sourcePath), browse (recent sessions,
+  project-key filter), read (one session's events oldest-first), scroll (20-event
+  window around --around N, clamped at both ends). All output framed as historical
+  record, never current truth (15 §6). Reads never mutate; every hit carries its
+  source path. discover filters score<10 (trigram noise) at the user surface only —
+  the raw search surface still returns everything.
+Verify: `npm run verify` -> 906 pass, 0 fail, 0 cancelled, exit 0 (23.2s).
+Evidence: EVD-032.
+Surprises: three in one packet. (1) The index's n-gram fallback scores 1 on
+  trigram coincidences ("quantum flux capacitor" matched "fix the torn write bug"
+  via cap/api/eve overlaps) — legitimate for recall, noise at the user surface;
+  filtered at the CLI, not in the engine. (2) My positional() parser first let the
+  --project flag VALUE leak into the query text; fixed with a closed FLAGS set
+  (--project/-p included — main() passes argv through, the sub-CLI re-parses).
+  (3) The scroll clamping test expected 13..32 but honest math at index 31 gives
+  22..32 — the clamp was right, my expectation was wrong.
+Next: PHASE 3 COMPLETE (WP-030..WP-037 all DONE). Phase 4 (skills) at WP-040.

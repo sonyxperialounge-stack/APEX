@@ -41,6 +41,7 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
   apex-agent doctor [--project <path>] [--repair]           what is installed, what is broken, how to fix it
   apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, inspect, add,
                                                              correct, retract, approve, reject, export, disable
+  apex-agent archive <sub> [args] [--project <path>]       session archive: discover, browse, read, scroll
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
   apex-agent gate [--project <path>]                     run the completion gate
@@ -210,6 +211,17 @@ export async function main(argv: string[]): Promise<void> {
       const restArgs = rest.slice(1)
       const { runMemoryCli } = await import("./memory-cli.ts")
       await runMemoryCli({ sub, args: restArgs, json: args.json, projectRoot })
+      return
+    }
+
+    case "archive": {
+      // WP-037 — the archive user surface (16 §5): discover / browse / read / scroll
+      // over the durable session archive, always with provenance.
+      const rest = argv.slice(1)
+      const sub = rest[0] ?? "browse"
+      const restArgs = rest.slice(1)
+      const { runArchiveCli } = await import("./archive-cli.ts")
+      await runArchiveCli({ sub, args: restArgs, json: args.json, projectRoot })
       return
     }
 
