@@ -319,7 +319,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T18:45:00.000Z",
       "finishedAt": "2026-09-10T19:00:00.000Z",
-      "commit": "pending",
+      "commit": "d0c2b6c"
       "evidence": [
         "EVD-026"
       ],
