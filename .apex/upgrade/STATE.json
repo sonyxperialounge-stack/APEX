@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "3",
-  "currentPacket": "WP-033",
+  "currentPacket": "WP-034",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -335,8 +335,18 @@
       "notes": "+2 tests; 873 pass total; resume capsule + chat-only null"
     },
     "WP-033": {
+      "status": "DONE",
+      "startedAt": "2026-09-10T19:10:00.000Z",
+      "finishedAt": "2026-09-10T19:20:00.000Z",
+      "commit": "pending",
+      "evidence": [
+        "EVD-028"
+      ],
+      "notes": "+7 tests; 880 pass total; deterministic search with NFC + Devanagari"
+    },
+    "WP-034": {
       "status": "IN_PROGRESS",
-      "startedAt": "2026-09-10T19:10:00.000Z"
+      "startedAt": "2026-09-10T19:20:00.000Z"
     },
     "WP-034": {
       "status": "PENDING"

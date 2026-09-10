@@ -13,17 +13,17 @@ Where the build stopped, and the single next action. Read after `EXECUTE.md`,
 
 ## Single next action
 
-Start **WP-031 — Redaction chokepoint**. Per `49`: read docs `15 §5`, `30 §2`.
-Files: `~runtime/src/stores/archive-store.ts`. Done-when: a single `persistEvent` path
-that sanitises before writing; `ARC-T04` passes; source scan proves exactly one append
-call site for events. WP-030 DONE — archive types, sessions, events, quarantine all green
-(869 pass, 0 fail, EVD-025).
+Start **WP-034 — Derived index and rebuild**. Per `49`: read docs `16 §1`, `16 §3`.
+Files: `~runtime/src/engines/archive-index.ts`.
+Done-when: deleting the index loses no data and search still works. WP-030..033 DONE
+(archive types, redaction chokepoint, resume capsule, deterministic search —
+880 pass, 0 fail, EVD-028).
 
 ## Pointers
 
 - Plan: `D:/APEX/army-update-plan/` (EXECUTE.md is the work order; 49 = packets).
 - Machine truth: `.apex/upgrade/STATE.json` (92 packets, deps, statuses).
-- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..027`.
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..028`.
 - Lessons that WILL bite again (from WORKLOG Surprises):
   - write big code/test blobs with the file tool + concatenate; bash heredocs truncate.
   - spawn children via `--input-type=module -e "import; call()"`; direct `node file.ts`

@@ -565,3 +565,22 @@ Surprises: none — the resume logic maps cleanly onto existing event types and 
   readSessions/readEvents primitives. `validateResumeCapsule` needed `as unknown as`
   intermediate cast for the Record→ResumeCapsuleV1 narrowing.
 Next: WP-033 — deterministic search.
+
+---
+
+## WP-033 — Deterministic search · DONE · 2026-09-10
+
+Files: +runtime/src/engines/archive-index.ts, +runtime/test/engines/archive-index.test.ts
+Decision: `buildSearchIndex(events)` produces a pure in-memory SearchIndex with a `search()`
+  method. Scoring (16 §2): exact phrase (100) > all terms (50) > partial terms (10+n) >
+  n-gram overlap (1). Unicode normalisation via NFC+lowercase preserves Devanagari (SRCH-T02,
+  zero false positives on non-Latin per 30 §9). Filters: projectKey, sessionId, types,
+  after/before timestamps, limit. No disk writes, no timers, no random — zero-dependency
+  baseline, swappable for SQLite/FTS later (16 §3).
+Verify: `npm run verify` -> 880 pass, 0 fail, exit 0 (+7 new tests; was 873 after WP-031).
+Evidence: EVD-028.
+Surprises: the "all terms present scores 50" test initially used a query that was an exact
+  phrase in the text (scoring 100 instead of 50); fixed by reordering terms so they're
+  present but non-contiguous. The score-sorting test confirmed exact phrase outranks term
+  match. No issues with Devanagari NFC normalisation — it round-trips correctly.
+Next: WP-034 — derived index and rebuild.
