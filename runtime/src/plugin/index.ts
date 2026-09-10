@@ -42,8 +42,10 @@ import type { ApexConfig, Operation, VerificationRecord } from "../core/types.ts
 import { log, event } from "../core/log.ts"
 import { redact } from "../core/redact.ts"
 import { BlockedError } from "../core/errors.ts"
-import { safeProjectRoot } from "../core/paths.ts"
+import { safeProjectRoot, apexHome } from "../core/paths.ts"
+import { projectKey } from "../core/ids.ts"
 import { TOOLS, callTool } from "../mcp/tools.ts"
+import { openArchiveCapture } from "../engines/archive-capture.ts"
 
 export const HOOK_NAMES = [
   "experimental.chat.system.transform",
@@ -133,6 +135,12 @@ export interface Engines {
   recall: Recall
   /** tool.execute.before records intent; tool.execute.after consumes it. */
   intents: Map<string, { op: Operation; tool: string; reqId: string | null }>
+  /**
+   * L2 archive capture (WP-036, 15 §4). Best-effort: null when the durable archive
+   * is unavailable — a capture failure must never cost the host session.
+   */
+  capture: ReturnType<typeof openArchiveCapture> | null
+  archiveSessionId: string | null
 }
 
 export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
@@ -140,6 +148,18 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
   await ledger.init({ projectRoot })
   const cfg = await ledger.loadConfig()
   const recall = new Recall(projectRoot, ledger)
+
+  // L2 archive capture (WP-036): host hook events, labelled with the host. Best-effort —
+  // an unavailable global home costs the archive, never the session.
+  let capture: Engines["capture"] = null
+  let archiveSessionId: string | null = null
+  try {
+    capture = openArchiveCapture(path.join(apexHome().path, "archive"), { hostLabel: "opencode", level: 2 })
+    archiveSessionId = await capture.session({ projectKey: projectKeyFor(projectRoot) })
+  } catch {
+    capture = null
+  }
+
   return {
     cfg,
     ledger,
@@ -148,6 +168,17 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     cortex: new Cortex(ledger, recall),
     recall,
     intents: new Map(),
+    capture,
+    archiveSessionId,
+  }
+}
+
+/** A stable, non-secret project key for archive scoping (15 §7). */
+function projectKeyFor(projectRoot: string): string | undefined {
+  try {
+    return projectKey(projectRoot)
+  } catch {
+    return undefined
   }
 }
 
@@ -249,6 +280,18 @@ export function toolBefore(e: Engines) {
 
     // 4 — record the intent so a crash mid-operation is still legible
     e.intents.set(input.callID, { op, tool: input.tool, reqId })
+
+    // WP-036 — L2 capture: the tool call, as the host observed it. Factual summary
+    // only, never a transcript claim (15 §4).
+    if (e.capture && e.archiveSessionId) {
+      await e.capture.toolCall({
+        sessionId: e.archiveSessionId,
+        tool: input.tool,
+        summary: op.path ?? op.command ?? input.tool,
+        ok: true, // before-hook: the call has not failed yet; outcome lands in toolAfter
+      })
+    }
+
     return { blocked: false, message: decision.reason, snapshotId }
   }
 }
@@ -320,6 +363,20 @@ export function toolAfter(e: Engines) {
       await e.recall.captureFromEvent({ kind: "tool_missing", tool: missing.command.split(" ")[0] ?? "" })
     }
 
+    // WP-036 — L2 capture: every verification record links to its ledger V- id via
+    // refs (the done-when). A capture failure costs an event, never the session.
+    if (e.capture && e.archiveSessionId) {
+      for (const r of records) {
+        await e.capture.verification({
+          sessionId: e.archiveSessionId,
+          text: `${r.type} ${r.result}${r.reason ? ` — ${r.reason}` : ""}`,
+          refs: [r.id],
+          command: r.command,
+          exitCode: r.exitCode,
+        })
+      }
+    }
+
     await e.ledger.appendProgress({
       reqId: intent.reqId ?? "",
       what: `${intent.tool} ${intent.op.path}`,
@@ -373,6 +430,15 @@ export function onEvent(e: Engines) {
   return async (input: { event: { type: string; properties?: Record<string, unknown> } }): Promise<EventAction> => {
     const type = input.event?.type ?? ""
     const props = input.event?.properties ?? {}
+
+    // WP-036 — L2 capture: host hook events, under the host's label (15 §4).
+    if (e.capture && e.archiveSessionId && type !== "") {
+      await e.capture.hostHook({
+        sessionId: e.archiveSessionId,
+        hook: type,
+        detail: JSON.stringify(props).slice(0, 400),
+      })
+    }
 
     switch (type) {
       case "session.error":

@@ -543,3 +543,97 @@ describe("PLG-002/PLG-004 — a deliberate block propagates, a failure does not"
     assert.equal(result?.blocked, false)
   })
 })
+
+// ── WP-036 — L2 event capture (15 §4) ────────────────────────────────────────
+
+describe("WP-036 — L1/L2 event capture", () => {
+  test("an L1 verification event links to its V- id (Done-when)", async () => {
+    // The capture engine IS the L1 surface's recording path; the done-when is proven
+    // here from the L2 wiring: toolAfter records verifications with their V- ids.
+    const { openArchiveCapture } = await import("../../src/engines/archive-capture.ts")
+    const { openArchiveStore } = await import("../../src/stores/archive-store.ts")
+    const capture = openArchiveCapture(path.join(dir, "archive"), { hostLabel: "opencode", level: 2 })
+    const sessionId = await capture.session({ projectKey: "prj_8888888888888888" })
+    assert.ok(sessionId)
+
+    const evId = await capture.verification({
+      sessionId,
+      text: "unit node --test — PASS",
+      refs: ["V-0007"],
+      command: "npm run test:unit",
+      exitCode: 0,
+    })
+    assert.ok(evId)
+
+    const store = openArchiveStore(path.join(dir, "archive"), {})
+    const events = await store.readEvents(sessionId!)
+    const ver = events.find((x) => x.id === evId)
+    assert.ok(ver, "verification event persisted at the L2 surface")
+    assert.deepEqual(ver!.refs, ["V-0007"], "links to its V- id — the WP-036 done-when")
+    assert.equal(ver!.hostLabel, "opencode")
+  })
+
+  test("toolAfter captures verification records with refs to their V- ids", async () => {
+    // Wire an archive into the engines bundle the way bootstrapEngines does when a
+    // global home exists, then run a real edit through toolBefore/toolAfter.
+    const { openArchiveCapture } = await import("../../src/engines/archive-capture.ts")
+    const { openArchiveStore } = await import("../../src/stores/archive-store.ts")
+    const archiveDir = path.join(dir, "archive")
+    const capture = openArchiveCapture(archiveDir, { hostLabel: "opencode", level: 2 })
+    const sessionId = await capture.session({ projectKey: "prj_8888888888888888" })
+    assert.ok(sessionId)
+    e.capture = capture
+    e.archiveSessionId = sessionId
+
+    const file = await write("src/captured.js", "export const y = 2\n")
+    const before = await toolBefore(e)({ tool: "edit", callID: "call-cap-1" }, { args: { filePath: file } })
+    assert.equal(before.blocked, false)
+    await toolAfter(e)({ tool: "edit", callID: "call-cap-1" }, { output: "" })
+
+    const store = openArchiveStore(archiveDir, {})
+    const events = await store.readEvents(sessionId!)
+    const toolEvents = events.filter((x) => x.type === "tool_call")
+    assert.ok(toolEvents.length >= 1, "the tool call was captured")
+    const verEvents = events.filter((x) => x.type === "verification")
+    assert.ok(verEvents.length >= 1, "the verification cascade was captured")
+    // Done-when, at the wired surface: every captured verification carries a V- ref.
+    for (const v of verEvents) {
+      assert.ok(v.refs!.every((r) => /^V-\d+$/.test(r)), `verification ${v.id} links to its V- id`)
+    }
+  })
+
+  test("onEvent captures host hook events under the host label", async () => {
+    const { openArchiveCapture } = await import("../../src/engines/archive-capture.ts")
+    const { openArchiveStore } = await import("../../src/stores/archive-store.ts")
+    const archiveDir = path.join(dir, "archive")
+    const capture = openArchiveCapture(archiveDir, { hostLabel: "opencode", level: 2 })
+    const sessionId = await capture.session({})
+    assert.ok(sessionId)
+    e.capture = capture
+    e.archiveSessionId = sessionId
+
+    await onEvent(e)({
+      event: { type: "session.error", properties: { sessionID: "ses_abc" } },
+    })
+
+    const store = openArchiveStore(archiveDir, {})
+    const events = await store.readEvents(sessionId!)
+    const hookEvent = events.find((x) => x.type === "failure")
+    assert.ok(hookEvent, "session.error landed as a failure event")
+    assert.ok(hookEvent!.text!.includes("session.error"), "the hook name is preserved")
+    assert.equal(hookEvent!.hostLabel, "opencode", "L2 events carry the host label")
+  })
+
+  test("capture degrades honestly when the archive is unavailable", async () => {
+    // A null capture (no global home) must not change hook behaviour at all.
+    e.capture = null
+    e.archiveSessionId = null
+    const file = await write("src/plain.js", "export const z = 3\n")
+    const before = await toolBefore(e)({ tool: "edit", callID: "call-cap-2" }, { args: { filePath: file } })
+    assert.equal(before.blocked, false, "the hook still runs without an archive")
+    const after = await toolAfter(e)({ tool: "edit", callID: "call-cap-2" }, { output: "" })
+    // The package.json fixture's test script genuinely passes, so the fast tier
+    // verified — the verdict is real, and unchanged by the missing archive.
+    assert.equal(after.verified, true, "toolAfter still returns its real verdict without an archive")
+  })
+})

@@ -36,9 +36,13 @@ import { Recall, MEMORY_SECTIONS, type MemorySection } from "../engines/recall.t
 import { NullHostClient } from "../host/types.ts"
 import { UserDecisionRequired } from "../core/errors.ts"
 import { RealCommandRunner } from "../core/exec.ts"
-import { REQ_STATUSES, VERIFY_TYPES, type ReqStatus, type VerificationRecord, type VerifyType } from "../core/types.ts"
+import { REQ_STATUSES, VERIFY_TYPES, type ReqStatus, type VerificationRecord, type VerifyType, type ArchiveEvent } from "../core/types.ts"
 import { ApexError } from "../core/errors.ts"
 import { log } from "../core/log.ts"
+import { openArchiveCapture } from "../engines/archive-capture.ts"
+import { openArchiveStore } from "../stores/archive-store.ts"
+import { buildSearchIndex } from "../engines/archive-index.ts"
+import { apexHome } from "../core/paths.ts"
 
 export interface ToolDefinition {
   name: string
@@ -352,6 +356,58 @@ export const TOOLS: ToolDefinition[] = [
       type: "object",
       properties: { taskId: str("The id returned by the async call.") },
       required: ["taskId"],
+    },
+  },
+  {
+    name: "apex_archive_record",
+    description:
+      "Record an event in the durable session archive (15 §4). L1 captures ONLY what the " +
+      "MCP binding can observe: tool calls, verifications, requirement transitions and " +
+      "explicit messages passed through this tool. This is NOT full transcript capture.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["tool_call", "verification", "requirement_transition", "user_message", "assistant_message"],
+          description: "What kind of event this is.",
+        },
+        sessionId: str("The archive session id, from apex_archive_session."),
+        text: str("The factual event text — a summary, never a full transcript claim."),
+        refs: strArray("Evidence ids this event links to (V-… verification record ids)."),
+        tool: str("For kind=tool_call: the tool name."),
+        ok: { type: "boolean", description: "For kind=tool_call: whether the call succeeded." },
+        command: str("For kind=verification: the command that ran."),
+        exitCode: { type: "number", description: "For kind=verification: the literal exit code." },
+      },
+      required: ["kind", "text"],
+    },
+  },
+  {
+    name: "apex_archive_session",
+    description:
+      "Open a session in the durable archive and return its id. Subsequent " +
+      "apex_archive_record calls reference this id.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectKey: str("The project this session belongs to, if any."),
+        taskIds: strArray("Task ids this session works on."),
+      },
+    },
+  },
+  {
+    name: "apex_archive_search",
+    description:
+      "Search the durable session archive for prior work (16 §2). Returns hits with " +
+      "provenance — session id, timestamp, snippet — never silently promoted to current truth.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: str("The search text."),
+        limit: { type: "number", description: "Maximum hits to return." },
+      },
+      required: ["query"],
     },
   },
 ]
@@ -822,6 +878,81 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
       return json({ ok: result.written, section, reason: result.reason || undefined })
     }
 
+    case "apex_archive_session": {
+      const capture = openCaptureFor(root)
+      const sessionId = await capture.session({
+        projectKey: (args.projectKey as string) || undefined,
+        taskIds: (args.taskIds as string[]) ?? [],
+      })
+      if (sessionId === null) {
+        return text("REJECTED: the durable archive is unavailable — no session was opened. Capture is best-effort; the session continues without it.")
+      }
+      return json({ sessionId, note: "Record events with apex_archive_record. This is L1 capture: tool calls, verifications, requirement transitions, explicit messages — never a full transcript." })
+    }
+
+    case "apex_archive_record": {
+      const capture = openCaptureFor(root)
+      const sessionId = String(args.sessionId ?? "")
+      const kind = String(args.kind ?? "")
+      const textBody = String(args.text ?? "")
+      if (!sessionId || !textBody) {
+        return text("REJECTED: sessionId and text are required — an event without both is not a record.")
+      }
+
+      let eventId: string | null = null
+      switch (kind) {
+        case "tool_call":
+          eventId = await capture.toolCall({
+            sessionId, tool: String(args.tool ?? "unknown"), summary: textBody, ok: args.ok !== false,
+          })
+          break
+        case "verification":
+          eventId = await capture.verification({
+            sessionId, text: textBody, refs: (args.refs as string[]) ?? [], command: String(args.command ?? ""), exitCode: (args.exitCode as number) ?? null,
+          })
+          break
+        case "requirement_transition": {
+          const m = /(\S+)\s*->\s*(\S+)/.exec(textBody)
+          if (!m) {
+            return text("REJECTED: a requirement_transition text must look like \"REQ-001 -> VERIFIED_COMPLETE\".")
+          }
+          eventId = await capture.requirementTransition({
+            sessionId, reqId: m[1]!, to: m[2]!, evidence: (args.refs as string[] | undefined)?.[0],
+          })
+          break
+        }
+        case "user_message":
+          eventId = await capture.message({ sessionId, role: "user", text: textBody })
+          break
+        case "assistant_message":
+          eventId = await capture.message({ sessionId, role: "assistant", text: textBody })
+          break
+        default:
+          return text(`REJECTED: unknown archive event kind "${kind}".`)
+      }
+
+      if (eventId === null) {
+        return text("REJECTED: the event could not be persisted to the archive. Nothing was recorded; do not claim otherwise.")
+      }
+      return json({ eventId, kind, recorded: true })
+    }
+
+    case "apex_archive_search": {
+      const store = openArchiveStore(archiveDirFor(root), {})
+      const sessions = await store.listSessions()
+      const events: ArchiveEvent[] = []
+      for (const s of sessions) events.push(...(await store.readEvents(s.id)))
+      const index = buildSearchIndex(events)
+      const hits = await index.search({
+        query: String(args.query ?? ""),
+        limit: (args.limit as number) ?? 20,
+      })
+      return json({
+        hits,
+        note: "Historical record — evidence of what a prior session did, not current truth (15 §6).",
+      })
+    }
+
     default:
       return text(`REJECTED: unknown tool "${name}". Available: ${TOOLS.map((t) => t.name).join(", ")}`)
   }
@@ -906,6 +1037,29 @@ export async function runGate(ledger: Ledger): Promise<{
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * The archive directory for a project root: global home `archive/` when a home is
+ * resolvable, else the project's own `.apex/archive` (15 §4 — L1 capture is
+ * best-effort and must never make the tool unusable).
+ */
+function archiveDirFor(root: string): string {
+  try {
+    const home = apexHome()
+    return path.join(home.path, "archive")
+  } catch {
+    return path.join(root, ".apex", "archive")
+  }
+}
+
+let captureCache: { root: string; capture: ReturnType<typeof openArchiveCapture> } | null = null
+
+function openCaptureFor(root: string): ReturnType<typeof openArchiveCapture> {
+  if (captureCache?.root === root) return captureCache.capture
+  const capture = openArchiveCapture(archiveDirFor(root), { hostLabel: "mcp", level: 1 })
+  captureCache = { root, capture }
+  return capture
+}
 
 /**
  * The most recent record in a set. Verification ids are monotonic (V-001, V-002…), so

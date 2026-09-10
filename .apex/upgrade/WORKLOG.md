@@ -627,3 +627,28 @@ Surprises: my first test draft left dead placeholder lines (a find(async()=>fals
   Date.parse on the injected OLD timestamps works fine for age math; toIsoString(oldest)
   formats the reason string without any new Date() token in the store.
 Next: WP-036 — L1/L2 event capture.
+
+## WP-036 — L1/L2 event capture · DONE · 2026-09-10
+
+Files: +runtime/src/engines/archive-capture.ts, +runtime/test/engines/archive-capture.test.ts (5),
+  ~runtime/src/mcp/tools.ts (apex_archive_session/record/search + archiveDirFor/openCaptureFor),
+  ~runtime/src/plugin/index.ts (Engines.capture + toolBefore/toolAfter/onEvent wiring),
+  ~runtime/test/plugin/hooks.test.ts (+4)
+Decision: one capture engine serves both surfaces. openArchiveCapture(archiveDir,
+  {hostLabel, level}) wraps the archive store; every persist goes through persistEvent
+  (redaction chokepoint, 15 §5). Best-effort BY DESIGN: a failed capture returns null,
+  never throws at the host session. L1 gets apex_archive_session/record/search MCP
+  tools (record kinds: tool_call, verification, requirement_transition, explicit
+  messages — the tool descriptions state "NOT full transcript capture"). L2 wires
+  toolBefore (tool_call), toolAfter (every verification record with refs=[V- id] —
+  the done-when), onEvent (hostHook events under the host label). Archive dir =
+  global home archive/ when resolvable, else project .apex/archive fallback.
+Verify: `npm run verify` -> 901 pass, 0 fail, 0 cancelled, exit 0 (28.0s).
+Evidence: EVD-031.
+Surprises: appendSession's input type keeps startedAt REQUIRED (only id/taskIds got
+  Partial<Pick<>>) — capture passes toIsoString(now()) explicitly. The degrade-
+  honestly test first asserted verified=false, but the fixture's test script
+  genuinely passes, so the fast tier REALLY verifies; the assertion now checks the
+  verdict is real and unchanged. Used a python heredoc for multi-edit patches again
+  after one Edit call hit a stale-read guard mid-flight.
+Next: WP-037 — archive user surface.

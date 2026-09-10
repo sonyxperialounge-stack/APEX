@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T17:16:28.080Z",
+  "updatedAt": "2026-09-10T17:40:12.872Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "3",
-  "currentPacket": "WP-036",
+  "currentPacket": "WP-037",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -365,7 +365,13 @@
       "commit": "2a3cace"
     },
     "WP-036": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T17:40:12.871Z",
+      "finishedAt": "2026-09-10T17:40:12.872Z",
+      "evidence": [
+        "EVD-031"
+      ],
+      "notes": "capture engine + L1 MCP tools (apex_archive_*) + L2 hook wiring; verifications link V- ids"
     },
     "WP-037": {
       "status": "PENDING"
