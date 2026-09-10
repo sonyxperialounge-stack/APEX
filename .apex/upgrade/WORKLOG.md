@@ -407,3 +407,21 @@ Verify: `npm run verify` -> 838 pass, 0 fail, exit 0.
 Evidence: EVD-019.
 Surprises: none — the pure-function shape made the fixtures straightforward.
 Next: WP-026 (Cortex integration)
+
+---
+
+## WP-026 — Cortex integration · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/cortex.ts, ~runtime/test/engines/cortex.test.ts (+8)
+Decision: the old `memory` section renamed to `projectMemory` and two new sections
+  (corrections, globalMemory) inserted AFTER rules (42 §7) — memory drops first under
+  budget, safety never. The frozen snapshot lives on the Cortex instance: first assemble
+  freezes, later store writes are invisible mid-session, the overlay carries live
+  corrections (13 §3). Every durable block is wrapped in the fixed 48 §4 APEX_DATA
+  framing; the rename of the section is a rename, not a behaviour change — existing
+  COR tests prove the assembly unchanged.
+Verify: `npm run verify` -> 846 pass, 0 fail, exit 0.
+Evidence: EVD-020.
+Surprises: none — the section-bucket architecture made the extension mechanical, and
+  the pre-existing 25 cortex tests passing unchanged is the no-regression proof.
+Next: WP-027 (recall bridge)

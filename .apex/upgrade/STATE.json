@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T10:21:37.262Z",
+  "updatedAt": "2026-09-10T10:35:31.861Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "2",
-  "currentPacket": "WP-026",
+  "currentPacket": "WP-027",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -255,7 +255,14 @@
       "status": "PENDING"
     },
     "WP-026": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T10:21:37.262Z",
+      "finishedAt": "2026-09-10T10:35:31.860Z",
+      "commit": null,
+      "evidence": [
+        "EVD-020"
+      ],
+      "notes": "+8 tests; CTX-T03..T06 green; frozen snapshot + overlay live"
     },
     "WP-026b": {
       "status": "PENDING"
