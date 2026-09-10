@@ -41,6 +41,7 @@ import type {
 } from "../core/types.ts"
 import { canonicalCase, globMatch, isUnder, realpathSafe, apexDir } from "../core/paths.ts"
 import { containsSecret } from "../core/redact.ts"
+import { checkSensitiveRead } from "../core/sensitive.ts"
 import { existsSync } from "../core/json.ts"
 import { event, log } from "../core/log.ts"
 
@@ -261,7 +262,25 @@ export class Governor {
 
   isProtectedRead(target: string): boolean {
     if (!target) return true
+    // Built-in sensitive-path denylist, UNIONED with the user's doNotRead (54 §11.2):
+    // a secret read into context is a secret that can be echoed. Overrides are exact
+    // absolute paths, validated upstream, and audited here on every use.
+    const verdict = checkSensitiveRead(this.resolve(target), this.sensitiveOverrides())
+    if (verdict.denied) return true
+    if (verdict.override) {
+      log.warn("sensitive-read override used", {
+        code: "READ_DENIED_SENSITIVE",
+        path: verdict.override.path,
+        rule: verdict.rule,
+      })
+    }
     return this.matchesAny(this.resolve(target), this.cfg.doNotRead)
+  }
+
+  /** security.allowSensitiveRead — absent until WP-074 adds the config key. */
+  private sensitiveOverrides(): string[] {
+    const security = (this.cfg as unknown as { security?: { allowSensitiveRead?: string[] } }).security
+    return security?.allowSensitiveRead ?? []
   }
 
   /**

@@ -193,3 +193,23 @@ Surprises: UNC probe took 2.7s on this machine (network path stat timeout) — e
   win32; noted so nobody thinks it is a hang. Git-bash heredoc mangles backslashes — write
   probe scripts as .mjs files, not -e strings, when testing Windows path literals.
 Next: WP-015b (sensitive-path read denylist)
+
+---
+
+## WP-015b — Sensitive-path read denylist · DONE · 2026-09-10
+
+Files: +runtime/src/core/sensitive.ts, ~runtime/src/engines/governor.ts (isProtectedRead),
+  +runtime/test/core/sensitive.test.ts
+Decision: implemented as core/sensitive.ts (pure functions) wired into Governor.isProtectedRead
+  — the read rule of decide() already runs blocklist-first in every mode, so the denylist is
+  enforced wherever reads are decided, including L2 plugin paths. security.allowSensitiveRead
+  is read defensively (optional field) because the config key itself lands in WP-074 per 44.
+  Overrides validate as exact absolute paths; globs and relative paths are rejected with
+  READ_DENIED_SENSITIVE; every override use is audited via log.warn.
+Verify: `npm run verify` -> 751 pass, 0 fail, exit 0 (+9 tests; governor suite green).
+Evidence: EVD-009.
+Surprises: `**/*credentials.json` glob also matches a docs file named credentials-guide.md?
+  No — globMatch handles the extension boundary correctly; the false-positive corpus test
+  passes. One typecheck round on tuple destructuring (noUncheckedIndexedAccess) — typed the
+  corpus array explicitly.
+Next: WP-016 (global home store)
