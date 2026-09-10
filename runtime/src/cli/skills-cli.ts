@@ -29,6 +29,7 @@ import { openSkillCatalog } from "../stores/skill-catalog.ts"
 import { openSkillForge } from "../engines/skill-forge.ts"
 import { openUsageSidecar } from "../stores/skill-usage.ts"
 import { openGlobalHome } from "../stores/global-home.ts"
+import { openBundledSync } from "../stores/bundled-sync.ts"
 import { lintSkill } from "../engines/skill-linter.ts"
 import { newId, toIsoString } from "../core/ids.ts"
 import { say } from "../core/log.ts"
@@ -48,6 +49,9 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
   const skillsRoot = home.subdir("skills")
   const catalog = openSkillCatalog(skillsRoot)
   const forge = openSkillForge(home.resolution.path, {})
+  // The bundled-skill manifest + seed-version source, for `reset` (54 §7, WP-049b).
+  const bundled = openBundledSync(skillsRoot)
+  const bundledPayload = (await import("./payload-root.ts")).payloadSkillsRoot()
 
   const flag = (name: string): string | undefined => {
     const i = args.indexOf(name)
@@ -262,6 +266,26 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
       return
     }
 
+    case "reset": {
+      const name = positional()[0]
+      if (!name) return usageSkills()
+      const restore = flag("--restore") !== undefined
+      const out = await bundled.reset(name, { restore, payloadSkillsRoot: bundledPayload })
+      if (json) {
+        process.stderr.write(JSON.stringify(out, null, 2) + "\n")
+        return
+      }
+      if (!out.known) {
+        say(`\n${name} is not a bundled skill — nothing was reset. (Bundled skills: the shipped seed library.)`)
+        process.exitCode = 1
+        return
+      }
+      say(out.restored
+        ? `Reset ${name} — the local copy was replaced by the shipped original (byte-for-byte).`
+        : `Reset ${name} — its manifest entry is cleared; the next sync restores the shipped original.`)
+      return
+    }
+
     default:
       usageSkills()
       process.exitCode = 1
@@ -302,6 +326,8 @@ apex-agent skills <sub> [args]
   retire <name>                 archive a shipped skill (never deletes)
   pin <name>                    protect a shipped skill from staleness and archival
   unpin <name>                  lift the protection
+  reset <name> [--restore]      clear a bundled skill's manifest entry; --restore
+                                replaces the local copy with the shipped original
 
 Skills are future instruction: promotion needs evidence, or your explicit
 override — recorded as unverified, and demoted on its first real failure.

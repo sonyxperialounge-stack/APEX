@@ -522,7 +522,14 @@
       "commit": "204aa94"
     },
     "WP-049b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T00:00:00.000Z",
+      "finishedAt": "2026-09-11T00:00:00.000Z",
+      "evidence": [
+        "EVD-048"
+      ],
+      "notes": "seed skill library (6 BUILTIN), non-clobbering payload sync, reset --restore",
+      "commit": "PENDING"
     },
     "WP-049c": {
       "status": "PENDING"

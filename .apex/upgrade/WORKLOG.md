@@ -1042,3 +1042,27 @@ Evidence: EVD-047.
 Surprises: the CORE-005 source-scan test exists precisely to catch this class of drift —
   the scan refused the direct write before the full suite ever had to.
 Next: WP-049b (seed skill library + non-clobbering sync).
+## WP-049b — seed skill library + non-clobbering sync (DONE)
+
+Date: 2026-09-11
+Packet: WP-049b (54 §7, SKL-T08/T09/T10, PKG-T09)
+Files: +runtime/payload/skills/** (six BUILTIN seeds), +runtime/src/stores/bundled-sync.ts,
+  +runtime/src/cli/payload-root.ts, ~runtime/src/cli/skills-cli.ts (reset), 
+  ~runtime/scripts/sync-payload.mjs (preserve payload/skills/**),
+  +runtime/test/stores/bundled-sync.test.ts (5), ~runtime/test/cli/skills-cli.test.ts (+1),
+  ~runtime/test/cli/payload.test.ts (PKG-T09), +.apex/upgrade/EVIDENCE/EVD-048.md
+Decision: 54 §7 was a MISSING SUBSYSTEM (zero skills shipped). Implemented end to end:
+  the six seed skills, the bundled-sync store (content-hash vs manifest origin hash;
+  unchanged replaced / edited skipped+reported / missing restored; audit-logged;
+  chokepoint writes), reset/reset --restore, sync-payload preservation, plus the
+  SKL-T08/T09/T10/PKG-T09 tests. Root-cause fixes: (1) write-a-skill's "no bypass
+  instructions" tripped the linter's bypass regex — reworded to "enforcement-evading";
+  (2) the idempotence assertion was wrong (identical second sync writes nothing by
+  design) — the test now proves idempotence, then an upstream bump replaces untouched
+  copies while the edited one stays skipped; (3) two seed skills referenced runtime/
+  paths that do not ship — the payload link-integrity test caught the dead references.
+Verify: `npm run verify` -> 997 pass, 0 fail, exit 0 (37.7s).
+Evidence: EVD-048.
+Surprises: the payload link-integrity test that once caught dead links in the doctrine
+  caught the same class of bug in the new seed skills — the check generalises.
+Next: WP-049c (bundles, 3-body limit, skills run/pin CLI).

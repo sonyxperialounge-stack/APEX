@@ -210,4 +210,23 @@ describe("WP-049 skills CLI (18 §5)", () => {
     assert.notEqual(pin.code, 0)
     assert.match(pin.out, /No shipped skill named no-such-skill/)
   })
+
+  test("reset --restore replaces a bundled skill's local copy with the shipped original", async () => {
+    // Seed the bundled manifest the way an install does: sync once from the real payload.
+    const { openBundledSync } = await import("../../src/stores/bundled-sync.ts") as typeof import("../../src/stores/bundled-sync.ts")
+    const skillsRoot = path.join(home, "skills")
+    const payloadSkills = path.resolve(HERE, "../../payload/skills")
+    const store = openBundledSync(skillsRoot)
+    await store.sync(payloadSkills)
+
+    const target = path.join(skillsRoot, "engineering", "verify-cascade", "SKILL.md")
+    const original = await fsp.readFile(target, "utf8")
+    await fsp.writeFile(target, "locally hacked", "utf8")
+
+    const reset = runSkills(["reset", "verify-cascade", "--restore"])
+    assert.equal(reset.code, 0, reset.out)
+    assert.match(reset.out, /Reset verify-cascade/)
+    const after = await fsp.readFile(target, "utf8")
+    assert.equal(after, original, "the local copy is restored byte-for-byte")
+  })
 })

@@ -20,6 +20,13 @@ const PAYLOAD = path.join(RUNTIME, "payload")
 const COPY_DIRS = ["core", "adapters", "templates"]
 const COPY_FILES = ["START-HERE.md", "README.md", "EXAMPLES.md", "LEGAL-NOTICE.md"]
 
+/**
+ * Verbatim payload subdirectories that are AUTHORED here (not copied from the project):
+ * the seed skill library (54 §7) and the host companions. They are preserved across a
+ * rebuild, never clobbered by a copy from the project root.
+ */
+const PRESERVE_DIRS = ["skills", "opencode"]
+
 /** Present only in the repository, never in the shipped package. */
 export const NOT_SHIPPED = ["install", "build", "runtime", ".github"]
 
@@ -73,11 +80,23 @@ function rewriteAll(dir) {
   }
 }
 
+/** The authored (non-copied) payload subdirectories, preserved across the rebuild. */
+function preserve(entries) {
+  return entries
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((n) => PRESERVE_DIRS.includes(n))
+}
+
 function main() {
-  // `payload/opencode/` holds host companions authored here, not copied from the project
-  // root — preserve it across a rebuild.
-  const companions = path.join(PAYLOAD, "opencode")
-  const keep = fs.existsSync(companions) ? fs.readdirSync(companions) : null
+  // `payload/opencode/` and `payload/skills/` hold content authored here, not copied
+  // from the project root — preserve them across a rebuild.
+  const keep = fs.existsSync(PAYLOAD)
+    ? (() => {
+        const entries = fs.readdirSync(PAYLOAD, { withFileTypes: true })
+        return preserve(entries).map((n) => path.join(PAYLOAD, n))
+      })()
+    : []
 
   for (const dir of COPY_DIRS) {
     const from = path.join(PROJECT, dir)
@@ -92,7 +111,8 @@ function main() {
 
   rewriteAll(PAYLOAD)
 
-  if (keep) console.log(`payload/opencode preserved (${keep.length} entries)`)
+  if (keep)
+    console.log(`payload preserved (${keep.length} authored dirs: ${keep.map((p) => path.basename(p)).join(", ")})`)
   console.log("payload synced and rewritten for shipping, from", path.relative(process.cwd(), PROJECT))
 }
 

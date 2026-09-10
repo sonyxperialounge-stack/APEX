@@ -115,6 +115,16 @@ describe("payload integrity", () => {
     }
   })
 
+  test("PKG-T09: payload sync covers payload/skills/** (the seed library, 54 §7)", () => {
+    const seeds = walk(path.join(PAYLOAD, "skills"))
+    assert.ok(seeds.length >= 6, `expected at least six seed SKILL.mds, found ${seeds.length}`)
+    for (const file of seeds) {
+      const rel = path.relative(PAYLOAD, file).split(path.sep).join("/")
+      assert.ok(rel.startsWith("skills/"), `${rel} must live under payload/skills/**`)
+      assert.ok(file.endsWith(".md"), `${rel} must be markdown`)
+    }
+  })
+
   test("the payload names no machine-specific path", () => {
     const offenders: string[] = []
     for (const { rel, text } of FILES) {
