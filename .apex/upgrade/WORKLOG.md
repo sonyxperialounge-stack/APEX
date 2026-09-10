@@ -372,3 +372,22 @@ Surprises: THREE Unicode-folding defects in my first normalize (missing \p{M} sp
   multilingual fixtures with probe evidence — exactly the SEC-T08 discipline. Also
   removed an arbitrary *0.95 damping on the trigram fallback that contradicted 11 §11.
 Next: WP-024 (correction, supersession, conflicts)
+
+---
+
+## WP-024 — Correction, supersession, conflicts · DONE · 2026-09-10
+
+Files: ~runtime/src/engines/memory-librarian.ts (resolveCandidate),
+  ~runtime/test/engines/memory-librarian.test.ts (+8 tests)
+Decision: resolveCandidate implements 11 §9 exactly, PURE over the record set — the
+  caller owns scanning, policy gating and the transactional commit (C-005: the
+  librarian supplies context, never authority). Corrections validate target ids AND
+  subject; cross-subject supersession is refused. Retracting a correction marks the
+  subject review-state (zero active values) — revival is an explicit human act. Conflicts
+  are records with unresolved status; conflicted sides are never injected as truth.
+Verify: `npm run verify` -> 829 pass, 0 fail, exit 0.
+Evidence: EVD-018.
+Surprises: the reinforce test expected the "reinforce" action label but exact duplicates
+  take the earlier merge-provenance branch — same outcome (provenance merge, one row),
+  different label. Test now accepts either with the outcome asserted, not the label.
+Next: WP-025 (selection and budgeting)

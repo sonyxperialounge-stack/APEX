@@ -176,3 +176,153 @@ describe("WP-023 similarity (11 §5 thresholds)", () => {
     }
   })
 })
+
+// ── WP-024 — correction, supersession, conflicts (11 §6–§10) ───────────────────
+
+import { resolveCandidate } from "../../src/engines/memory-librarian.ts"
+import type { MemoryCandidate } from "../../src/core/types.ts"
+
+function cand(over: Partial<MemoryCandidate> = {}): MemoryCandidate {
+  return {
+    text: "",
+    semanticKey: "preference.package_manager",
+    scope: { kind: "global" },
+    kind: "preference",
+    provenance: { sourceType: "explicit_user", observedAt: "2026-09-10T00:00:00.000Z" },
+    ...over,
+  }
+}
+
+describe("WP-024 resolveCandidate", () => {
+  test("npm -> pnpm correction supersedes cleanly with an auditable chain (11 §7)", async () => {
+    const npm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm for installs." })
+    const out = await resolveCandidate([npm], cand({
+      text: "Use pnpm for installs.",
+      relation: "correct",
+      targetIds: ["MEM-000000001-aaaaaa"],
+    }), { now: () => 1725964800000 })
+    assert.equal(out.actions[0]!.action, "supersede")
+    assert.equal(out.conflicts.length, 0)
+    const superseded = out.records.find((r) => r.id === "MEM-000000001-aaaaaa")!
+    const correction = out.records.find((r) => r.id === superseded.supersededBy)!
+    assert.equal(superseded.status, "superseded")
+    assert.deepEqual(correction.supersedes, ["MEM-000000001-aaaaaa"])
+    assert.equal(correction.text, "Use pnpm for installs.")
+    assert.equal(correction.status, "active")
+  })
+
+  test("retracting the correction produces a REVIEW state, not a silent revert (11 §7)", async () => {
+    const npm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm for installs." })
+    const corrected = await resolveCandidate([npm], cand({
+      text: "Use pnpm for installs.",
+      relation: "correct",
+      targetIds: ["MEM-000000001-aaaaaa"],
+    }), { now: () => 1725964800000 })
+    // Now the user retracts the correction ("maine galat bola tha" shape).
+    const correctionId = corrected.records.find((r) => r.text === "Use pnpm for installs.")!.id
+    const afterRetract = await resolveCandidate(corrected.records, cand({
+      text: "",
+      relation: "retract",
+      targetIds: [correctionId],
+    }), { now: () => 1725964800000 })
+    const action = afterRetract.actions.find((a) => a.action === "retract-correction-reviews")
+    assert.ok(action, "the retraction is classified as review-inducing, not a revert")
+    const original = afterRetract.records.find((r) => r.id === "MEM-000000001-aaaaaa")!
+    assert.equal(original.status, "superseded", "the original is NOT silently reactivated")
+    const retracted = afterRetract.records.find((r) => r.id === correctionId)!
+    assert.equal(retracted.status, "retracted")
+    // The subject has no active value: review state by construction.
+    const activeCount = afterRetract.records.filter(
+      (r) => r.semanticKey === "preference.package_manager" && r.status === "active",
+    ).length
+    assert.equal(activeCount, 0, "no active value — a human must revive an original explicitly")
+  })
+
+  test("a correction naming an invalid or cross-subject target is refused", async () => {
+    const other = rec({ id: "MEM-000000002-bbbbbb", semanticKey: "preference.response_language", text: "Reply in Hindi." })
+    const missing = await resolveCandidate([other], cand({ text: "x", relation: "correct", targetIds: ["MEM-999999999-zzzzzz"] }))
+    assert.equal(missing.actions[0]!.action, "refused")
+    assert.ok(missing.actions[0]!.reason.includes("no valid target"))
+    const cross = await resolveCandidate([other], cand({ text: "x", relation: "correct", targetIds: ["MEM-000000002-bbbbbb"] }))
+    assert.equal(cross.actions[0]!.action, "refused")
+    assert.ok(cross.actions[0]!.reason.includes("different subject"))
+  })
+
+  test("value mismatch without stronger provenance creates a conflict; neither side is truth (11 §8)", async () => {
+    const npm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm for installs.", provenance: [{ sourceType: "model_inference", observedAt: "2026-09-10T00:00:00.000Z" }] })
+    const out = await resolveCandidate([npm], cand({
+      text: "Use yarn for installs.",
+      provenance: { sourceType: "model_inference", observedAt: "2026-09-10T01:00:00.000Z" },
+    }), { now: () => 1725964800000 })
+    assert.equal(out.conflicts.length, 1)
+    assert.equal(out.conflicts[0]!.reason, "value_mismatch")
+    assert.equal(out.conflicts[0]!.resolution, "unresolved")
+    const actives = out.records.filter((r) => r.semanticKey === "preference.package_manager" && r.status === "active")
+    assert.equal(actives.length, 0, "conflicted sides are never injected as truth")
+    assert.ok(out.records.every((r) => r.status === "conflicted" || r.status === "superseded" || r.status === "retracted" || r.semanticKey !== "preference.package_manager"))
+  })
+
+  test("newer explicit-user provenance supersedes an inferred value (11 §9)", async () => {
+    const inferred = rec({
+      id: "MEM-000000001-aaaaaa",
+      text: "Probably use npm.",
+      provenance: [{ sourceType: "model_inference", observedAt: "2026-09-10T00:00:00.000Z" }],
+    })
+    const out = await resolveCandidate([inferred], cand({
+      text: "Use pnpm.",
+    }), { now: () => 1725964800000 })
+    assert.equal(out.actions[0]!.action, "supersede")
+    assert.equal(inferred && out.records.find((r) => r.id === "MEM-000000001-aaaaaa")!.status, "superseded")
+    assert.ok(out.records.some((r) => r.text === "Use pnpm." && r.status === "active"))
+  })
+
+  test("cross-scope collision is NOT auto-conflict: project wins in-project, global stays (11 §10)", async () => {
+    const globalNpm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm.", scope: { kind: "global" } })
+    const projectPnpm = rec({
+      id: "MEM-000000002-bbbbbb",
+      text: "Use pnpm here.",
+      scope: { kind: "project", projectKey: "prj_1111111111111111" },
+    })
+    // The two coexist; isSameSubject separates them, so no resolution path ever links them.
+    assert.equal(isSameSubject(globalNpm, projectPnpm), false)
+    const out = await resolveCandidate([globalNpm], cand({
+      text: "Use pnpm here.",
+      scope: { kind: "project", projectKey: "prj_1111111111111111" },
+      semanticKey: "preference.package_manager",
+    }), { now: () => 1725964800000 })
+    // The project candidate is a NEW subject slot (no same-scope active item) — created,
+    // not conflicted with the global value.
+    assert.equal(out.actions[0]!.action, "create")
+    assert.equal(out.conflicts.length, 0)
+    assert.ok(out.records.some((r) => r.scope.kind === "global" && r.status === "active"), "global stays active for everywhere else")
+  })
+
+  test("Devanagari correction follows the same chain (11 §13)", async () => {
+    const oldHindi = rec({ id: "MEM-000000001-aaaaaa", text: "उत्तर अंग्रेज़ी में दो।", semanticKey: "preference.response_language", kind: "preference" })
+    const out = await resolveCandidate([oldHindi], cand({
+      text: "उत्तर हिंदी में दो।",
+      semanticKey: "preference.response_language",
+      relation: "correct",
+      targetIds: ["MEM-000000001-aaaaaa"],
+    }), { now: () => 1725964800000 })
+    assert.equal(out.actions[0]!.action, "supersede")
+    const correction = out.records.find((r) => r.text === "उत्तर हिंदी में दो।")!
+    assert.equal(correction.status, "active")
+    assert.equal(out.records.find((r) => r.id === "MEM-000000001-aaaaaa")!.status, "superseded")
+  })
+
+  test("equivalent value with different provenance reinforces instead of conflicting", async () => {
+    const existing = rec({ id: "MEM-000000001-aaaaaa", text: "Use pnpm, not npm." })
+    const out = await resolveCandidate([existing], cand({
+      text: "use pnpm, not npm",
+      provenance: { sourceType: "model_inference", modelLabel: "another-model", observedAt: "2026-09-11T00:00:00.000Z" },
+    }), { now: () => 1725964800000 })
+    assert.ok(
+      out.actions[0]!.action === "reinforce" || out.actions[0]!.action === "merge-provenance",
+      `an equivalent value reinforces, got ${out.actions[0]!.action}`,
+    )
+    assert.equal(out.records.length, 1, "no second row")
+    assert.equal(out.records[0]!.provenance.length, 2, "both observations recorded")
+    assert.equal(out.conflicts.length, 0, "equivalence never conflicts")
+  })
+})

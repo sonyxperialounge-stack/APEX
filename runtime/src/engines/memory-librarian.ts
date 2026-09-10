@@ -175,3 +175,222 @@ export function isSameSubject(a: Pick<MemoryRecordV1, "scope" | "kind" | "semant
   }
   return true
 }
+
+// ── Corrections, supersession, conflicts (11 §6–§10) — WP-024 ──────────────────
+
+import { newId as makeId, toIsoString as isoNow } from "../core/ids.ts"
+import type { MemoryCandidate, ConflictRecord } from "../core/types.ts"
+
+export interface ResolveOutcome {
+  /** The full record set after resolution — the caller commits it transactionally. */
+  records: MemoryRecordV1[]
+  /** What happened, in order, for the audit trail. */
+  actions: Array<{ action: string; id?: string; reason: string }>
+  /** Conflicts created (unresolved) — never injected as truth while unresolved. */
+  conflicts: ConflictRecord[]
+}
+
+export interface ResolveOptions {
+  now?: () => number
+}
+
+/**
+ * The 11 §9 resolution algorithm, pure over the record set (the caller owns scanning,
+ * policy gating, and the transactional commit):
+ *
+ *   exact-duplicate merge -> explicit correction supersession -> same-key check ->
+ *   reinforce / supersede / conflict. A retraction of a CORRECTION does not
+ *   reactivate the superseded original (11 §7): the subject drops to review state
+ *   until a human revives it.
+ */
+export async function resolveCandidate(
+  records: MemoryRecordV1[],
+  candidate: MemoryCandidate,
+  opts: ResolveOptions = {},
+): Promise<ResolveOutcome> {
+  const now = opts.now ?? Date.now
+  const actions: ResolveOutcome["actions"] = []
+  const conflicts: ConflictRecord[] = []
+  let next = [...records]
+  const subject = { scope: candidate.scope, kind: candidate.kind, semanticKey: candidate.semanticKey }
+  const sameSubject = next.filter((r) => isSameSubject(r, subject) && r.status !== "retracted")
+
+  // Exact duplicate? Merge provenance only.
+  const exact = sameSubject.find(
+    (r) => normalizeMemoryText(r.text) === normalizeMemoryText(candidate.text),
+  )
+  if (exact && candidate.relation !== "retract" && candidate.relation !== "correct") {
+    const refreshed = mergeExactDuplicate(exact, candidate.text, candidate.provenance, isoNow(now()))
+    if (refreshed) {
+      next = next.map((r) => (r.id === exact.id ? refreshed : r))
+      actions.push({ action: "merge-provenance", id: exact.id, reason: "exact duplicate: provenance refreshed, no second truth row" })
+      return { records: next, actions, conflicts }
+    }
+  }
+
+  // Explicit correction with valid target? Supersede transactionally (11 §7 chain).
+  if (candidate.relation === "correct") {
+    const targets = (candidate.targetIds ?? [])
+      .map((id) => next.find((r) => r.id === id))
+      .filter((r): r is MemoryRecordV1 => Boolean(r))
+    if (targets.length === 0) {
+      actions.push({ action: "refused", reason: "correction names no valid target id — MEMORY_TARGET_NOT_FOUND (45 §2.3)" })
+      return { records: next, actions, conflicts }
+    }
+    for (const target of targets) {
+      if (!isSameSubject(target, subject)) {
+        actions.push({ action: "refused", reason: `target ${target.id} is a different subject — correction refuses cross-subject supersession` })
+        return { records: next, actions, conflicts }
+      }
+    }
+    const correctionId = makeId("MEM", { now })
+    const correction: MemoryRecordV1 = {
+      schemaVersion: 1,
+      id: correctionId,
+      scope: candidate.scope,
+      kind: candidate.kind,
+      semanticKey: candidate.semanticKey,
+      text: candidate.text,
+      status: "active",
+      confidence: 0.9,
+      provenance: [candidate.provenance],
+      createdAt: isoNow(now()),
+      updatedAt: isoNow(now()),
+      scanner: { verdict: "allow", reasons: [] },
+      revision: 1,
+      supersedes: targets.map((t) => t.id),
+    }
+    next = next.map((r) =>
+      targets.some((t) => t.id === r.id)
+        ? { ...r, status: "superseded", supersededBy: correctionId, updatedAt: isoNow(now()), revision: r.revision + 1 }
+        : r,
+    )
+    next.push(correction)
+    actions.push({ action: "supersede", id: correctionId, reason: `explicit correction supersedes ${targets.map((t) => t.id).join(", ")} (11 §7 chain)` })
+    return { records: next, actions, conflicts }
+  }
+
+  // Explicit retraction.
+  if (candidate.relation === "retract") {
+    const targets = (candidate.targetIds ?? [])
+      .map((id) => next.find((r) => r.id === id))
+      .filter((r): r is MemoryRecordV1 => Boolean(r))
+    if (targets.length === 0) {
+      actions.push({ action: "refused", reason: "retraction names no valid target id" })
+      return { records: next, actions, conflicts }
+    }
+    for (const target of targets) {
+      next = next.map((r) => (r.id === target.id ? { ...r, status: "retracted", updatedAt: isoNow(now()), revision: r.revision + 1 } : r))
+      if (target.supersedes && target.supersedes.length > 0) {
+        // Retracting a CORRECTION: originals are NOT auto-reactivated (11 §7). The
+        // subject drops to review; only a human revives an original.
+        actions.push({
+          action: "retract-correction-reviews",
+          id: target.id,
+          reason: "correction retracted; superseded originals NOT auto-reactivated — subject in review state (11 §7)",
+        })
+      } else {
+        actions.push({ action: "retract", id: target.id, reason: "explicit retraction" })
+      }
+    }
+    return { records: next, actions, conflicts }
+  }
+
+  // New / reinforce with a same-key active item.
+  if (sameSubject.length > 0) {
+    const equivalent = sameSubject.find((r) => classifyPair(r.text, candidate.text).cls === "equivalent")
+    if (equivalent) {
+      const refreshed = mergeExactDuplicate(equivalent, candidate.text, candidate.provenance, isoNow(now()))
+      if (refreshed) {
+        next = next.map((r) => (r.id === equivalent.id ? refreshed : r))
+        actions.push({ action: "reinforce", id: equivalent.id, reason: "equivalent value reinforced with new provenance" })
+        return { records: next, actions, conflicts }
+      }
+    }
+    // Stronger EXPLICIT provenance? Supersede (11 §9: explicit user outranks).
+    const candidateIsExplicit = candidate.provenance.sourceType === "explicit_user"
+    const existingHasExplicit = sameSubject.some((r) => r.provenance.some((p) => p.sourceType === "explicit_user"))
+    if (candidateIsExplicit && !existingHasExplicit) {
+      const replacementId = makeId("MEM", { now })
+      const replacement: MemoryRecordV1 = {
+        schemaVersion: 1,
+        id: replacementId,
+        scope: candidate.scope,
+        kind: candidate.kind,
+        semanticKey: candidate.semanticKey,
+        text: candidate.text,
+        status: "active",
+        confidence: 0.85,
+        provenance: [candidate.provenance],
+        createdAt: isoNow(now()),
+        updatedAt: isoNow(now()),
+        scanner: { verdict: "allow", reasons: [] },
+        revision: 1,
+        supersedes: sameSubject.map((r) => r.id),
+      }
+      next = next.map((r) =>
+        sameSubject.some((s) => s.id === r.id)
+          ? { ...r, status: "superseded", supersededBy: replacementId, updatedAt: isoNow(now()), revision: r.revision + 1 }
+          : r,
+      )
+      next.push(replacement)
+      actions.push({ action: "supersede", id: replacementId, reason: "newer explicit-user provenance outranks the existing value (11 §9)" })
+      return { records: next, actions, conflicts }
+    }
+    // Otherwise: create a conflict; neither side is injected as truth.
+    const conflict: ConflictRecord = {
+      schemaVersion: 1,
+      id: makeId("MCF", { now }),
+      semanticKey: candidate.semanticKey,
+      scope: candidate.scope,
+      itemIds: [...sameSubject.map((r) => r.id)],
+      detectedAt: isoNow(now()),
+      reason: "value_mismatch",
+      resolution: "unresolved",
+    }
+    conflicts.push(conflict)
+    const conflicted: MemoryRecordV1 = {
+      schemaVersion: 1,
+      id: makeId("MEM", { now }),
+      scope: candidate.scope,
+      kind: candidate.kind,
+      semanticKey: candidate.semanticKey,
+      text: candidate.text,
+      status: "conflicted",
+      confidence: 0.5,
+      provenance: [candidate.provenance],
+      createdAt: isoNow(now()),
+      updatedAt: isoNow(now()),
+      scanner: { verdict: "allow", reasons: [] },
+      revision: 1,
+    }
+    next = next.map((r) =>
+      sameSubject.some((s) => s.id === r.id)
+        ? { ...r, status: "conflicted", updatedAt: isoNow(now()), revision: r.revision + 1 }
+        : r,
+    )
+    next.push(conflicted)
+    actions.push({ action: "conflict", id: conflict.id, reason: "value mismatch without stronger explicit provenance — both sides recorded, neither injected as truth (11 §8)" })
+    return { records: next, actions, conflicts }
+  }
+
+  // Plain new fact.
+  const fresh: MemoryRecordV1 = {
+    schemaVersion: 1,
+    id: makeId("MEM", { now }),
+    scope: candidate.scope,
+    kind: candidate.kind,
+    semanticKey: candidate.semanticKey,
+    text: candidate.text,
+    status: "active",
+    confidence: 0.7,
+    provenance: [candidate.provenance],
+    createdAt: isoNow(now()),
+    updatedAt: isoNow(now()),
+    scanner: { verdict: "allow", reasons: [] },
+    revision: 1,
+  }
+  next.push(fresh)
+  actions.push({ action: "create", id: fresh.id, reason: "new subject slot" })
+  return { records: next, actions, conflicts }
+}
