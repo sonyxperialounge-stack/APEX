@@ -401,7 +401,8 @@
       "evidence": [
         "EVD-034"
       ],
-      "notes": "3-level disclosure: catalog store (index/body/resource) + Cortex skills section, budget-guarded"
+      "notes": "3-level disclosure: catalog store (index/body/resource) + Cortex skills section, budget-guarded",
+      "commit": "2369444"
     },
     "WP-041b": {
       "status": "PENDING"
