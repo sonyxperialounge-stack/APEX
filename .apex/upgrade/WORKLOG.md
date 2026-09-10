@@ -764,3 +764,28 @@ Surprises: `with` is a reserved word in strict-mode TS (my variable name broke t
   parse); renamed to `having`. The readonly-tuple .includes() narrowing error is
   a known TS shape — comparing the union directly avoids it without a cast.
 Next: WP-044 — learning extractor.
+
+## WP-044 — Learning extractor · DONE · 2026-09-11
+
+Files: +runtime/src/engines/learning-extractor.ts (154),
+  +runtime/test/engines/learning-extractor.test.ts (7),
+  ~runtime/src/core/types.ts (LearningCandidateV1, 17 §4 schema)
+Decision: extractCandidates is the READ-ONLY front half of the learning loop —
+  gate.passed=false returns [] (LRNT-T01: the Gate precedes procedural learning);
+  lessons are redact()-stripped, scanned (deny -> dropped, review -> riskFlag),
+  classified fact/skill/none per 17 §5 heuristics (ordered-actions/recovery -> skill;
+  bare toolchain statements -> none). FailureContext rides as riskFlags with a
+  causality-proven/correlated marker — never learned as a rule (17 §6). Subagent
+  proposals carry a parent-review flag; the extractor has NO write path at all
+  (source-scan asserted in the test). Ids use the SKL- prefix (LRN not registered
+  in ID_PREFIXES — SKL is the learning-candidate namespace).
+Verify: `npm run verify` -> 942 pass, 0 fail, 0 cancelled, exit 0 (26.7s).
+Evidence: EVD-037.
+Surprises: the LEDGER, not my seed helper, taught the legal ladder twice: NOT_STARTED
+  -> VERIFIED_COMPLETE is illegal, and VERIFIED_COMPLETE without a PASSING
+  verification record linked to the requirement is refused outright. The seed now
+  walks IN_PROGRESS -> IMPLEMENTED_NOT_VERIFIED -> addVerification(PASS) ->
+  VERIFIED_COMPLETE — the discipline the product preaches, enforced on its own test
+  fixtures. Also: newId is entropy-unique even on a fixed clock (correct!), so
+  LRNT-T05 asserts deterministic CONTENT, not ids.
+Next: WP-045 — skill forge lifecycle.

@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T19:28:56.881Z",
+  "updatedAt": "2026-09-10T19:48:17.382Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "4",
-  "currentPacket": "WP-044",
+  "currentPacket": "WP-045",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -431,7 +431,13 @@
       "commit": "7f98482"
     },
     "WP-044": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T19:32:24.227Z",
+      "finishedAt": "2026-09-10T19:48:17.381Z",
+      "evidence": [
+        "EVD-037"
+      ],
+      "notes": "LRNT-T01..T05: gate-gated extraction, fact/skill/none classify, failure as riskFlags, no store writes"
     },
     "WP-045": {
       "status": "PENDING"

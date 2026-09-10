@@ -473,6 +473,30 @@ export interface ResumeCapsuleV1 {
   evidenceIds: string[]
 }
 
+// ── Self-learning candidates (17 §4) ──────────────────────────────────────────
+
+/** A learning candidate — proposed knowledge, never promoted truth (17 §2). */
+export interface LearningCandidateV1 {
+  schemaVersion: 1
+  id: string
+  /** "skill" candidates become forge input; "fact" goes to the memory librarian; "none" is dropped. */
+  type: "fact" | "skill" | "none"
+  scope: "global" | "project"
+  title: string
+  /** One-paragraph reusable statement — lessons, not raw session logs (18 §7). */
+  summary: string
+  sourceSessionId?: string
+  /** Verification evidence backing the candidate — empty means unverified. */
+  evidenceIds: string[]
+  requirementIds: string[]
+  createdAt: string
+  /** Who proposed it: the parent agent, a subagent, or the user. */
+  proposer: "parent" | "subagent" | "user"
+  /** Why this was extracted (17 §3 triggers and 17 §7 signals, named). */
+  confidenceSignals: string[]
+  riskFlags: string[]
+}
+
 // ── Retention, prune and export (16 §§6–8) ─────────────────────────────────────
 
 /**
