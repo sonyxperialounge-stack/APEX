@@ -414,7 +414,8 @@
       "evidence": [
         "EVD-035"
       ],
-      "notes": "hash-bound trust grants, deny never overridable, no self-trust, no execution path"
+      "notes": "hash-bound trust grants, deny never overridable, no self-trust, no execution path",
+      "commit": "e5e7598"
     },
     "WP-042b": {
       "status": "PENDING"
