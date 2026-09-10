@@ -5,28 +5,30 @@ Where the build stopped, and the single next action. Read after `EXECUTE.md`,
 
 ## State
 
-- Branch `upgrade/army-v4`, one commit ahead of baseline `7c217ec`.
-- Phase 0 complete: **phase0: PASSED** (see STATE.json). WP-001..WP-006 all DONE.
-- Baseline: 671/671 tests green, exit 0 (EVD-001). Zero failures, nothing to classify.
-- Upgrade Ledger open at `.apex/`: 112 requirement rows seeded from `50` + `54 §22`;
-  REQ-084 (= REQ-PROD-001) VERIFIED_COMPLETE via V-001; 111 NOT_STARTED.
-- `npm run verify` in `runtime/` was green at last run and the tree has not touched
-  runtime sources yet.
+- Branch `upgrade/army-v4`, ~30 commits ahead of baseline 7c217ec.
+- Phases 0–2 COMPLETE (WP-001..006, WP-010..019, WP-015b, WP-020..029, WP-025b).
+- Phase 3 in progress: WP-030 (archive types and store) is the current packet.
+- Suite at last verify: 865 pass, 0 fail, exit 0 (EVD-024). Node v24.16.0, win32 x64.
+- All Phase 2 packets have commit shas + evidence ids + worklog entries (BLD-T04/05).
 
 ## Single next action
 
-Start **WP-010 — ID generation** (Phase 1, first packet). Per `49`:
-read docs `43 §7` and `47 §4.1`, create `runtime/src/core/ids.ts` + `runtime/test/core/ids.test.ts`
-(+ additive types in `src/core/types.ts` only if needed), implement `newId`, `isValidId`,
-`projectKey` with injected clock and RNG; then run `npm run verify` in `runtime/` and record
-EVD-003 → V-002 → worklog → STATE.json DONE → commit `WP-010 id generation`.
+Start **WP-030 — Archive types and store**. Per `49`: read docs `15 §3`, `28 §6`
+(SessionRecordV1/ArchiveEventV1 are already in the plan excerpt in the WP-028 worklog
+context — re-read the section), create `runtime/src/stores/archive-store.ts` +
+`runtime/test/stores/archive-store.test.ts`, additive `~src/core/types.ts`. Done-when:
+append/read/list round-trip; malformed events quarantine to `events/quarantine.jsonl`.
 
 ## Pointers
 
-- Plan package: `D:/APEX/army-update-plan/` (EXECUTE.md there is the work order).
-- Build state: `.apex/upgrade/STATE.json` (packets, deps, status) — the machine truth.
-- Evidence: `.apex/upgrade/EVIDENCE/EVD-001.md` (baseline verify), `EVD-002.md` (ledger).
-- Frozen: `.apex/upgrade/BASELINE.md`, `.apex/upgrade/NO-REGRESSION.md`.
-- Watch out: every new `.ts` file needs the byte-identical license header (HC-004); all
-  disk writes go through `src/core/json.ts` (HC-002); no `enum`/param-properties/`namespace`
-  (HC-001); root doctrine edits require `npm run sync:payload` in the same commit (HC-010).
+- Plan: `D:/APEX/army-update-plan/` (EXECUTE.md is the work order; 49 = packets).
+- Machine truth: `.apex/upgrade/STATE.json` (92 packets, deps, statuses).
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..024`.
+- Lessons that WILL bite again (from WORKLOG Surprises):
+  - write big code/test blobs with the file tool + concatenate; bash heredocs truncate.
+  - spawn children via `--input-type=module -e "import; call()"`; direct `node file.ts`
+    spawns silently drop argv in this sandbox.
+  - new-file headers: splice the 17-line canonical from an existing store file.
+  - `node:test` timeout goes in `test(name, {timeout}, fn)`.
+  - stores must not contain `new Date(`/`Math.random(` tokens — use injected clock
+    and `toIsoString` from core/ids.ts.
