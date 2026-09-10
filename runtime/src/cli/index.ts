@@ -39,6 +39,8 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
   apex-agent attach [--host <name>] [--all-hosts]        install into ONE host (the deepest available)
   apex-agent detach [--host <name>]                      remove cleanly, restoring your original config
   apex-agent doctor [--project <path>] [--repair]           what is installed, what is broken, how to fix it
+  apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, inspect, add,
+                                                             correct, retract, approve, reject, export, disable
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
   apex-agent gate [--project <path>]                     run the completion gate
@@ -197,6 +199,17 @@ export async function main(argv: string[]): Promise<void> {
       for (const failure of result.failures) say(`  · ${failure}`)
       say("")
       if (!result.passed) process.exitCode = 1
+      return
+    }
+
+    case "memory": {
+      // WP-029 — the memory user surface (10 §12): every durable-personal-memory
+      // operation reachable without editing internal files by hand.
+      const rest = argv.slice(1)
+      const sub = rest[0] ?? "list"
+      const restArgs = rest.slice(1)
+      const { runMemoryCli } = await import("./memory-cli.ts")
+      await runMemoryCli({ sub, args: restArgs, json: args.json, projectRoot })
       return
     }
 

@@ -464,3 +464,22 @@ Evidence: EVD-022.
 Surprises: the race flake was a real robustness gap in MY lock code, not test noise —
   second occurrence forced the proper root-cause (recovery ladder works).
 Next: WP-029 (memory user surface)
+
+---
+
+## WP-029 — Memory user surface · DONE · 2026-09-10
+
+Files: +runtime/src/cli/memory-cli.ts, ~runtime/src/cli/index.ts (memory case + usage),
+  +runtime/test/cli/memory-cli.test.ts
+Decision: CLI-first per the packet. The memory surface composes the existing engines
+  (store, librarian resolveCandidate, scanner) — no new write paths, no second policy.
+  disable writes memory.useGlobal=false via mergeConfigFile (INS-003 non-destructive
+  merge). MCP tools deliberately deferred to WP-072 (needs WP-053's disclosure budget).
+Verify: `npm run verify` -> 862 pass, 0 fail, exit 0 (+7 CLI end-to-end tests).
+Evidence: EVD-023.
+Surprises: spawned `node script.ts` argv vanishing silently in this environment took
+  three probe rounds to isolate — the -e-import pattern from WP-012 is the portable
+  one; recorded for every future CLI test. Also caught a python heredoc escaping bug
+  (join newline) by the loader refusing the file — cheap lesson, keep writing test
+  files with the file tool.
+Next: WP-025b (hot-view overflow -> consolidation candidate) — the last Phase 2 packet.
