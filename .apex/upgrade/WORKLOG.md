@@ -606,3 +606,24 @@ Surprises: the stale-index test's first query ("canonical events") shares the tr
   instead of asserting a clean hit list. writeJson needed readTextOrNull+JSON.parse on
   read since json.ts has no readJson — kept to existing primitives per 42 §4.
 Next: WP-035 — retention, prune, export.
+
+## WP-035 — Retention, prune, export · DONE · 2026-09-10
+
+Files: ~runtime/src/stores/archive-store.ts (prune, export), ~runtime/src/core/types.ts
+  (RetentionPolicy, PruneCandidate, PruneReport, ExportFilter, ExportReport),
+  ~runtime/test/stores/archive-store.test.ts (+5)
+Decision: prune calculates candidates FIRST (16 §7) — only CLOSED/ABORTED sessions
+  past eventsMaxAgeDays qualify; a session carrying verification events (refs) or a
+  pinned id is moved to refused[] with its protecting rule and kept. Real run deletes
+  event files + rewrites sessions.jsonl inside the lock; dry-run only reports.
+  Idempotent: the pruned file is gone, so the next run finds nothing. Export honours
+  scope (sessionIds/projectKey filter), applies redact() AGAIN on export text (16 §8),
+  and never silently includes unscoped sessions. Types live in core/types.ts per 28.
+Verify: `npm run verify` -> 892 pass, 0 fail, 0 cancelled, exit 0 (22.4s).
+Evidence: EVD-030.
+Surprises: my first test draft left dead placeholder lines (a find(async()=>false)
+  and a void old1) — caught on read-back and removed; tests now derive the
+  evidence/candidate session ids from real recorded content instead of position.
+  Date.parse on the injected OLD timestamps works fine for age math; toIsoString(oldest)
+  formats the reason string without any new Date() token in the store.
+Next: WP-036 — L1/L2 event capture.

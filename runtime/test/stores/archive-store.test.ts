@@ -206,3 +206,131 @@ describe("WP-030 archive store", () => {
     assert.equal(capsule, null, "no session history → durable archive unavailable")
   })
 })
+
+describe("WP-035 retention, prune, export (SRCH-T03/T04, 16 §§6–8)", () => {
+  // Clock: 2026-09-10. Old sessions' events timestamped 2026-01-01 (~252 days old);
+  // fresh events land at the store's default (injected clock) timestamp.
+  const NOW = 1789065600000 // 2026-09-10T00:00:00Z
+  const OLD = "2026-01-01T00:00:00.000Z"
+
+  async function seedPrunable(): Promise<ReturnType<typeof openArchiveStore>> {
+    const store = openArchiveStore(archiveDir, { now: () => NOW })
+    // Old, closed, NO verification refs — the only legal prune shape.
+    const old1 = await store.appendSession({ startedAt: OLD, projectKey: "prj_4444444444444444" })
+    await store.persistEvent({ sessionId: old1, type: "user_message", text: "old session one", timestamp: OLD })
+    await store.closeSession(old1)
+    // Old, closed, WITH verification evidence — must be refused (SRCH-T04).
+    const evid = await store.appendSession({ startedAt: OLD })
+    await store.persistEvent({
+      sessionId: evid, type: "verification", text: "suite green", refs: ["VER-001"], timestamp: OLD,
+    })
+    await store.closeSession(evid)
+    // Old but still OPEN — never a candidate.
+    const open = await store.appendSession({ startedAt: OLD })
+    await store.persistEvent({ sessionId: open, type: "user_message", text: "still open", timestamp: OLD })
+    // Fresh + closed — inside the window.
+    const fresh = await store.appendSession({ startedAt: "2026-09-09T00:00:00.000Z" })
+    await store.persistEvent({ sessionId: fresh, type: "user_message", text: "recent", timestamp: "2026-09-09T00:00:00.000Z" })
+    await store.closeSession(fresh)
+    return store
+  }
+
+  test("SRCH-T03: prune dry-run changes nothing", async () => {
+    const store = await seedPrunable()
+    const report = await store.prune({ eventsMaxAgeDays: 180 }, true)
+
+    assert.equal(report.dryRun, true)
+    assert.equal(report.candidates.length, 1, "only the old evidence-free closed session is a candidate")
+    assert.equal(report.candidates[0]!.reason.includes("CLOSED"), true)
+    assert.ok(report.candidates[0]!.eventCount >= 1)
+    assert.equal(report.sessionsBefore, 4)
+    assert.equal(report.sessionsAfter, 4, "dry-run: nothing changes")
+    assert.equal(report.eventsAfter, report.eventsBefore, "dry-run: nothing changes")
+
+    // The disk is untouched: all four sessions and their events still read.
+    const sessions = await store.listSessions()
+    assert.equal(sessions.length, 4)
+    let total = 0
+    for (const s of sessions) total += await store.eventCount(s.id)
+    assert.equal(total, report.eventsBefore)
+  })
+
+  test("SRCH-T04: prune never removes verification evidence (refused + protected)", async () => {
+    const store = await seedPrunable()
+    const report = await store.prune({ eventsMaxAgeDays: 180 }, false)
+
+    const refusedIds = report.refused.map((r) => r.sessionId)
+    // The evidence session is the one whose events reference VER-001.
+    let evidenceSessionId = ""
+    for (const s of await store.listSessions()) {
+      const evs = await store.readEvents(s.id)
+      if (evs.some((e) => e.refs?.includes("VER-001"))) evidenceSessionId = s.id
+    }
+    assert.ok(refusedIds.includes(evidenceSessionId), "the evidence session is refused with a reason")
+    assert.ok(report.refused.find((r) => r.sessionId === evidenceSessionId)!.reason.includes("verification evidence"))
+
+    // Its events survive a real prune.
+    const evs = await store.readEvents(evidenceSessionId)
+    assert.ok(evs.some((e) => e.refs?.includes("VER-001")), "verification ledger intact after prune")
+    assert.ok((await store.listSessions()).some((s) => s.id === evidenceSessionId))
+  })
+
+  test("prune is idempotent: a second run finds no candidates", async () => {
+    const store = await seedPrunable()
+    const first = await store.prune({ eventsMaxAgeDays: 180 }, false)
+    assert.equal(first.candidates.length, 1)
+    assert.equal(first.sessionsAfter, 3)
+    assert.equal(first.eventsAfter, first.eventsBefore - first.candidates[0]!.eventCount)
+
+    const second = await store.prune({ eventsMaxAgeDays: 180 }, false)
+    assert.equal(second.candidates.length, 0, "already pruned — nothing left to candidate")
+    assert.equal(second.sessionsAfter, second.sessionsBefore)
+  })
+
+  test("pinned sessions are protected regardless of age", async () => {
+    const store = await seedPrunable()
+    // Pin the only legal candidate; the run must refuse it and delete nothing.
+    let candidateId = ""
+    for (const s of await store.listSessions()) {
+      const evs = await store.readEvents(s.id)
+      if (s.startedAt === OLD && s.status === "CLOSED" && !evs.some((e) => e.refs?.length)) candidateId = s.id
+    }
+    const report = await store.prune({ eventsMaxAgeDays: 180, pinnedSessions: [candidateId] }, false)
+    assert.equal(report.candidates.length, 0, "the pinned session is not a candidate")
+    assert.ok(report.refused.some((r) => r.sessionId === candidateId && r.reason.includes("pinned")))
+    assert.equal((await store.listSessions()).length, 4, "nothing was deleted")
+    assert.ok(await store.readEvents(candidateId).then((e) => e.length >= 1), "pinned events survive")
+  })
+
+  test("export applies redaction again and honours scope (16 §8)", async () => {
+    const store = openArchiveStore(archiveDir, { now: () => NOW })
+    const secret = "sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    const ses = await store.appendSession({
+      startedAt: "2026-09-10T00:00:00.000Z", projectKey: "prj_5555555555555555",
+    })
+    await store.persistEvent({ sessionId: ses, type: "user_message", text: `key was ${secret}` })
+    await store.persistEvent({ sessionId: ses, type: "decision", text: "export only selected scopes" })
+    const other = await store.appendSession({
+      startedAt: "2026-09-10T01:00:00.000Z", projectKey: "prj_6666666666666666",
+    })
+    await store.persistEvent({ sessionId: other, type: "user_message", text: "private to another project" })
+
+    const target = path.join(dir, "export.json")
+    const report = await store.export({ projectKey: "prj_5555555555555555" }, target)
+
+    assert.equal(report.sessions, 1, "only the scoped session is exported")
+    assert.equal(report.events, 2)
+    assert.equal(report.redactionApplied, true)
+
+    const doc = JSON.parse(await fsp.readFile(target, "utf8")) as {
+      redactionApplied: boolean
+      sessions: Array<{ session: { projectKey?: string }; events: Array<{ text?: string }> }>
+    }
+    assert.equal(doc.redactionApplied, true)
+    assert.equal(doc.sessions.length, 1)
+    assert.equal(doc.sessions[0]!.session.projectKey, "prj_5555555555555555")
+    const exportedText = doc.sessions[0]!.events.map((e) => e.text ?? "").join(" ")
+    assert.ok(!exportedText.includes(secret), "no secret in the export — redacted again on export")
+    assert.ok(!exportedText.includes("private to another project"), "unscoped sessions are not silently included")
+  })
+})

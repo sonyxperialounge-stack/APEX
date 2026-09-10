@@ -36,7 +36,10 @@ import { toIsoString, newId, projectKey } from "../core/ids.ts"
 import { event } from "../core/log.ts"
 import { redact } from "../core/redact.ts"
 import { ARCHIVE_EVENT_TYPES, SESSION_STATUSES } from "../core/types.ts"
-import type { ArchiveEvent, SessionRecordV1, ResumeCapsuleV1 } from "../core/types.ts"
+import type {
+  ArchiveEvent, SessionRecordV1, ResumeCapsuleV1,
+  RetentionPolicy, PruneReport, PruneCandidate, ExportFilter, ExportReport,
+} from "../core/types.ts"
 
 export interface ArchiveStoreOptions {
   now?: () => number
@@ -47,6 +50,9 @@ export interface SessionQuery {
   status?: SessionRecordV1["status"]
 }
 
+/** A day in milliseconds — the only unit RetentionPolicy speaks (16 §6). */
+const DAY_MS = 86_400_000
+
 export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions = {}): {
   appendSession(session: Omit<SessionRecordV1, "schemaVersion" | "status" | "id" | "taskIds"> & Partial<Pick<SessionRecordV1, "id" | "taskIds">> & { status?: SessionRecordV1["status"] }): Promise<string>
   closeSession(id: string, status?: SessionRecordV1["status"]): Promise<void>
@@ -55,6 +61,8 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
   readEvents(sessionId: string): Promise<ArchiveEvent[]>
   eventCount(sessionId: string): Promise<number>
   buildResumeCapsule(sessionId?: string): Promise<ResumeCapsuleV1 | null>
+  prune(policy: RetentionPolicy, dryRun?: boolean): Promise<PruneReport>
+  export(filter: ExportFilter, target: string): Promise<ExportReport>
   readonly dir: string
 } {
   const now = opts.now ?? Date.now
@@ -220,6 +228,118 @@ export function openArchiveStore(archiveDir: string, opts: ArchiveStoreOptions =
         nextSafeAction,
         evidenceIds: [...evidenceIds],
       }
+    },
+
+    async prune(policy, dryRun = false): Promise<PruneReport> {
+      const sessions = await readSessions()
+
+      // Calculate candidates first (16 §7): nothing is touched until every session
+      // has been classified as candidate, protected-evidence, pinned, or kept.
+      const pinned = new Set(policy.pinnedSessions ?? [])
+      const candidates: PruneCandidate[] = []
+      const refused: Array<{ sessionId: string; reason: string }> = []
+      const kept: SessionRecordV1[] = []
+      const cutoff = policy.eventsMaxAgeDays !== undefined ? now() - policy.eventsMaxAgeDays * DAY_MS : undefined
+
+      let eventsBefore = 0
+      for (const s of sessions) eventsBefore += await this.eventCount(s.id)
+
+      for (const s of sessions) {
+        const events = await this.readEvents(s.id)
+        const timestamps = events.map((e) => Date.parse(e.timestamp)).filter((n) => !Number.isNaN(n))
+        const oldest = timestamps.length > 0 ? Math.min(...timestamps) : undefined
+
+        const isOld = cutoff !== undefined && (s.status === "CLOSED" || s.status === "ABORTED") &&
+          oldest !== undefined && oldest < cutoff
+        if (!isOld) {
+          kept.push(s)
+          continue
+        }
+
+        if (events.some((e) => e.type === "verification" && e.refs && e.refs.length > 0)) {
+          refused.push({ sessionId: s.id, reason: "session carries verification evidence (VER- refs)" })
+          kept.push(s)
+          continue
+        }
+        if (pinned.has(s.id)) {
+          refused.push({ sessionId: s.id, reason: "session is pinned" })
+          kept.push(s)
+          continue
+        }
+
+        candidates.push({
+          sessionId: s.id,
+          reason: `session ${s.status}, oldest event ${oldest !== undefined ? toIsoString(oldest) : "unknown"} older than ${policy.eventsMaxAgeDays}d`,
+          eventCount: events.length,
+          oldestEventAt: oldest !== undefined ? toIsoString(oldest) : undefined,
+        })
+      }
+
+      if (!dryRun && candidates.length > 0) {
+        // Idempotent by construction: the event file is removed, so a second run
+        // finds nothing; the sessions file is rewritten via the framed-JSONL path.
+        await withCrossProcessLock(lockFile, "archive-prune", async () => {
+          for (const c of candidates) {
+            await fsp.rm(path.join(eventsDir, `${c.sessionId}.jsonl`), { force: true })
+          }
+          await rewriteJsonl(sessionsFile, kept)
+        })
+        event("archive.pruned", { sessions: candidates.length, dryRun: false })
+      } else if (dryRun) {
+        event("archive.pruned", { sessions: candidates.length, dryRun: true })
+      }
+
+      let sessionsAfter = sessions.length
+      let eventsAfter = eventsBefore
+      if (!dryRun && candidates.length > 0) {
+        sessionsAfter = kept.length
+        eventsAfter = 0
+        for (const s of kept) eventsAfter += await this.eventCount(s.id)
+      }
+
+      return {
+        dryRun,
+        candidates,
+        sessionsBefore: sessions.length,
+        eventsBefore,
+        sessionsAfter,
+        eventsAfter,
+        refused,
+      }
+    },
+
+    async export(filter, target): Promise<ExportReport> {
+      const sessions = await readSessions()
+      const selected = sessions.filter((s) => {
+        if (filter.sessionIds && !filter.sessionIds.includes(s.id)) return false
+        if (filter.projectKey && s.projectKey !== filter.projectKey) return false
+        return true
+      })
+
+      // Redaction is applied again on export (16 §8) — the chokepoint already
+      // sanitised at persist time, but an export must assume it re-reads
+      // anything, including hand-repaired files.
+      const payload: Array<{ session: SessionRecordV1; events: ArchiveEvent[] }> = []
+      let events = 0
+      for (const s of selected) {
+        const evs = await this.readEvents(s.id)
+        events += evs.length
+        payload.push({
+          session: s,
+          events: evs.map((e) => ({ ...e, text: e.text !== undefined ? redact(e.text) : undefined })),
+        })
+      }
+
+      const doc = {
+        schemaVersion: 1 as const,
+        exportedAt: toIsoString(now()),
+        redactionApplied: true,
+        sessions: payload,
+      }
+      await writeJson(target, doc)
+      event("archive.exported", { sessions: selected.length, events, target })
+
+      return { target, sessions: selected.length, events, redactionApplied: true }
     },
   }
 }

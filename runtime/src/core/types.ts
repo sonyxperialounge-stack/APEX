@@ -472,3 +472,50 @@ export interface ResumeCapsuleV1 {
   nextSafeAction?: string
   evidenceIds: string[]
 }
+
+// ── Retention, prune and export (16 §§6–8) ─────────────────────────────────────
+
+/**
+ * Retention policy shape (16 §6). Age-based candidates only ever consider CLOSED or
+ * ABORTED sessions; every other protection (evidence, pinned) is enforced by the
+ * prune contract, not by the caller's arithmetic.
+ */
+export interface RetentionPolicy {
+  /** Sessions older than this many days become prune candidates. */
+  eventsMaxAgeDays?: number
+  /** Sessions never considered for deletion, regardless of age. */
+  pinnedSessions?: string[]
+}
+
+/** One row of a prune report — the unit of "calculate first, never guess". */
+export interface PruneCandidate {
+  sessionId: string
+  reason: string
+  eventCount: number
+  oldestEventAt?: string
+}
+
+export interface PruneReport {
+  dryRun: boolean
+  /** Candidate deletions, calculated before anything is touched (16 §7). */
+  candidates: PruneCandidate[]
+  sessionsBefore: number
+  eventsBefore: number
+  sessionsAfter: number
+  eventsAfter: number
+  /** Names of candidates protected from deletion, with the protecting rule. */
+  refused: Array<{ sessionId: string; reason: string }>
+}
+
+export interface ExportFilter {
+  sessionIds?: string[]
+  projectKey?: string
+}
+
+export interface ExportReport {
+  /** Absolute path of the written export document. */
+  target: string
+  sessions: number
+  events: number
+  redactionApplied: boolean
+}
