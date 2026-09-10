@@ -42,6 +42,7 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
   apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, inspect, add,
                                                              correct, retract, approve, reject, export, disable
   apex-agent archive <sub> [args] [--project <path>]       session archive: discover, browse, read, scroll
+  apex-agent skills <sub> [args] [--project <path>]       skills: search, view, stage, pending, promote, retire
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
   apex-agent gate [--project <path>]                     run the completion gate
@@ -222,6 +223,17 @@ export async function main(argv: string[]): Promise<void> {
       const restArgs = rest.slice(1)
       const { runArchiveCli } = await import("./archive-cli.ts")
       await runArchiveCli({ sub, args: restArgs, json: args.json, projectRoot })
+      return
+    }
+
+    case "skills": {
+      // WP-049 — the skills user surface (18 §5): search / view / stage / promote /
+      // retire, every write through the forge's gates.
+      const rest = argv.slice(1)
+      const sub = rest[0] ?? "search"
+      const restArgs = rest.slice(1)
+      const { runSkillsCli } = await import("./skills-cli.ts")
+      await runSkillsCli({ sub, args: restArgs, json: args.json, projectRoot })
       return
     }
 

@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T20:37:44.130Z",
+  "updatedAt": "2026-09-10T20:50:24.861Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -17,8 +17,8 @@
       "exit": 0
     }
   },
-  "currentPhase": "4",
-  "currentPacket": "WP-049",
+  "currentPhase": "5",
+  "currentPacket": "WP-050",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -484,7 +484,13 @@
       "commit": "2f9d62a"
     },
     "WP-049": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T20:40:36.678Z",
+      "finishedAt": "2026-09-10T20:50:24.860Z",
+      "evidence": [
+        "EVD-042"
+      ],
+      "notes": "skills CLI (gates intact), core/15-SKILLS.md doctrine, payload ships it"
     },
     "WP-049b": {
       "status": "PENDING"

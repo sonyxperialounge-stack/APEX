@@ -879,3 +879,24 @@ Surprises: the heredoc backslash trap bit a THIRD time (\ -> \ in regex
   isLegalStaging() predicate checked BEFORE either violation rule. LESSON
   REINFORCED: source files through the file tool, heredocs only for prose.
 Next: WP-049 — skill user surface (CLI).
+
+## WP-049 — Skill user surface · DONE · 2026-09-11 · PHASE 4 COMPLETE
+
+Files: +runtime/src/cli/skills-cli.ts (search/view/stage/pending/promote/retire),
+  +runtime/test/cli/skills-cli.test.ts (5), ~runtime/src/cli/index.ts (skills case
+  + usage), +core/15-SKILLS.md (doctrine: format, 3 disclosure levels, when the
+  model consults, earning gates, honesty rules), ~START-HERE.md (doctrine table row)
+Decision: the CLI is a keyboard onto the forge's gates, not a side door — stage
+  REFUSES lint errors/securityFlags up front (nothing reaches pending), promote
+  surfaces the insufficient-evidence remedy (--user-override, recorded as
+  unverified), retire archives with the path printed and the no-delete policy
+  stated. 15-SKILLS.md written in the 12-MEMORY voice: when the model consults a
+  skill (session start index, before repeating work, on failure, never silently),
+  how a skill is earned, and the prompt-injection-attic failure mode it prevents.
+  Payload sync carries it (15-SKILLS.md ships with 01..13).
+Verify: `npm run verify` -> 970 pass, 0 fail, 0 cancelled, exit 0 (32.3s).
+Evidence: EVD-042.
+Surprises: none — the surface composes WP-040..047 machinery directly. The
+  retire subcommand prints the archive path RELATIVE to the skills root so the
+  user sees "skills/.archive/<name>-<ts>" not an opaque absolute path.
+Next: PHASE 4 COMPLETE (WP-040..WP-049 all DONE). Phase 5 (capabilities) at WP-050.
