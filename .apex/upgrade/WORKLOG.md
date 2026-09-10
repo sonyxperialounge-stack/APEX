@@ -172,3 +172,24 @@ Surprises: TypeScript control-flow analysis narrows a closure-written variable t
   Cost me three typecheck round-trips; second failure per the ladder made me probe TS in
   isolation instead of guessing again.
 Next: WP-015 (path and home resolution)
+
+---
+
+## WP-015 — Path and home resolution · DONE · 2026-09-10
+
+Files: ~runtime/src/core/paths.ts, +runtime/test/core/paths-home.test.ts
+Decision: apexHome REFUSES hard (HOME_UNSAFE_PATH) on root/system/drive-relative/empty
+  paths — no silent fallback, because a fallback writes where the user did not choose.
+  Degrades honestly on soft conditions: absent->VOLATILE, unwritable->READ_ONLY,
+  synced/networked/inside-project -> risks+warnings, never exceptions. apexHome creates
+  NOTHING (47 §4.4) — creation is WP-016's lock-guarded ensure(). Writability probe =
+  exclusive-create + delete of a hidden probe file, residue-free. Added two refusals the
+  plan text did not name but 09 §2 implies: drive-relative paths ("D:") and Windows
+  system-wide directories (C:\Windows etc).
+Verify: `npm run verify` -> 742 pass, 0 fail, exit 0 (+19 tests; existing 45 paths tests
+  still green — no regression).
+Evidence: EVD-008.
+Surprises: UNC probe took 2.7s on this machine (network path stat timeout) — expected on
+  win32; noted so nobody thinks it is a hang. Git-bash heredoc mangles backslashes — write
+  probe scripts as .mjs files, not -e strings, when testing Windows path literals.
+Next: WP-015b (sensitive-path read denylist)

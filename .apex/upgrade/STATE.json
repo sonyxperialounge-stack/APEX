@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T06:48:39.998Z",
+  "updatedAt": "2026-09-10T07:14:00.057Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "0",
-  "currentPacket": "WP-015",
+  "currentPacket": "WP-015b",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -132,7 +132,14 @@
       "notes": "+21 tests; planted-violation self-tests"
     },
     "WP-015": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T06:48:39.998Z",
+      "finishedAt": "2026-09-10T07:14:00.056Z",
+      "commit": null,
+      "evidence": [
+        "EVD-008"
+      ],
+      "notes": "+19 tests; drive-relative + system-dir refusals added"
     },
     "WP-015b": {
       "status": "PENDING"

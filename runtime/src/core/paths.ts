@@ -27,6 +27,7 @@
 import path from "node:path"
 import os from "node:os"
 import fs from "node:fs"
+import { ApexError } from "./errors.ts"
 
 export const IS_WINDOWS = process.platform === "win32"
 
@@ -230,4 +231,172 @@ export function findUp(start: string, marker: string): string | null {
     dir = parent
   }
   return null
+}
+
+// ── Global home resolution (09 §2, 30 §5, 43 §2, 47 §4.4) ─────────────────────
+
+export type HomeMode = "READ_WRITE" | "READ_ONLY" | "VOLATILE"
+export type HomeRisk = "NONE" | "SYNCED_OR_NETWORKED" | "INSIDE_PROJECT" | "OWNERSHIP_SUSPECT"
+
+export interface HomeResolution {
+  path: string
+  mode: HomeMode
+  risks: HomeRisk[]
+  source: "explicit" | "env" | "identity" | "default" | "portable"
+  warnings: string[]
+}
+
+/** Directory-name fragments that mark a synced or networked location (09 §2). */
+const SYNCED_MARKERS = [
+  "dropbox", "onedrive", "googledrive", "google drive", "icloud",
+  "box sync", "sugarsync", "owncloud", "nextcloud", "megasync",
+]
+
+/** Windows UNC roots and drive-mapped network shares are networked filesystems. */
+function looksNetworked(resolved: string): boolean {
+  const norm = resolved.replace(/\\/g, "/")
+  if (norm.startsWith("//") && !norm.startsWith("//?/")) return true // UNC share
+  return SYNCED_MARKERS.some((m) => canonicalCase(norm).includes(m))
+}
+
+/**
+ * Resolve the global home. NEVER creates a directory (47 §4.4) — creation is the
+ * lock-guarded `openGlobalHome` step. Resolution order (43 §2):
+ *   explicit argument -> APEX_HOME -> validated identity record -> platform default.
+ * ARMY_HOME is read as a deprecated alias for APEX_HOME only when APEX_HOME is unset,
+ * and its use is reported once per resolution.
+ *
+ * A home that fails hard validation (filesystem root, empty) is refused with
+ * HOME_UNSAFE_PATH — it never silently falls back, because a fallback would write
+ * somewhere the user did not choose. A home that is merely risky or unwritable
+ * degrades: READ_ONLY when present but not writable, VOLATILE when absent.
+ */
+export function apexHome(explicit?: string): HomeResolution {
+  const warnings: string[] = []
+  const risks: HomeRisk[] = []
+
+  let candidate: string
+  let source: HomeResolution["source"]
+  const explicitTrimmed = explicit?.trim() ?? ""
+  if (explicitTrimmed !== "") {
+    candidate = explicitTrimmed
+    source = "explicit"
+  } else if (explicit !== undefined) {
+    // An EXPLICIT empty argument is a misconfiguration, not an omission — refuse
+    // rather than silently defaulting to a place the user did not choose.
+    throw new ApexError(
+      "Global home is an empty path. Set APEX_HOME to a real directory.",
+      "HOME_UNSAFE_PATH",
+    )
+  } else if (process.env.APEX_HOME && process.env.APEX_HOME.trim() !== "") {
+    candidate = process.env.APEX_HOME.trim()
+    source = "env"
+  } else if (process.env.ARMY_HOME && process.env.ARMY_HOME.trim() !== "") {
+    // 43 §2 backward-compatibility clause: deprecated alias, reported, never migrated.
+    candidate = process.env.ARMY_HOME.trim()
+    source = "env"
+    warnings.push(
+      `ARMY_HOME is deprecated; set APEX_HOME instead. Using it for this session only — ` +
+        `nothing was moved or renamed on disk.`,
+    )
+  } else {
+    const state = userStateDir()
+    candidate = path.join(path.dirname(state), ".apex")
+    source = "default"
+  }
+
+  const resolved = path.resolve(candidate)
+  if (resolved.trim() === "") {
+    throw new ApexError("Global home is an empty path. Set APEX_HOME to a real directory.", "HOME_UNSAFE_PATH")
+  }
+  if (isFilesystemRoot(resolved)) {
+    throw new ApexError(
+      `Refusing filesystem root (${resolved}) as global home. Choose a directory under your profile.`,
+      "HOME_UNSAFE_PATH",
+    )
+  }
+  // Drive-relative forms ("D:", "C:.") resolve to the CWD on that drive — a silent
+  // scatter risk identical to a root. Refuse the shape before path.resolve amplifies it.
+  if (/^[a-zA-Z]:\.?$/.test(candidate) || (/^[a-zA-Z]:$/.test(candidate) && !candidate.endsWith(path.sep))) {
+    throw new ApexError(
+      `Refusing drive-relative path "${candidate}" as global home — it resolves to a drive's ` +
+        `current directory, not a chosen home.`,
+      "HOME_UNSAFE_PATH",
+    )
+  }
+  // System-wide directories are never personal homes (09 §2 Windows note).
+  if (IS_WINDOWS) {
+    const lowered = resolved.toLowerCase()
+    const sysDirs = [
+      "c:\\windows", "c:\\program files", "c:\\program files (x86)", "c:\\programdata",
+      "c:\\users\\public", "c:\\users\\all users",
+    ]
+    if (sysDirs.some((s) => lowered === s || lowered.startsWith(s + "\\"))) {
+      throw new ApexError(
+        `Refusing system-wide directory (${resolved}) as global home. Choose a directory under your own profile.`,
+        "HOME_UNSAFE_PATH",
+      )
+    }
+  }
+
+  if (looksNetworked(resolved)) {
+    risks.push("SYNCED_OR_NETWORKED")
+    warnings.push(
+      `Global home is in a synced or networked location (${resolved}). Atomic rename and ` +
+        `cross-process locks are NOT guaranteed there — structural writes need an atomicity probe first.`,
+    )
+  }
+
+  const cwd = path.resolve(process.cwd())
+  if (canonicalCase(resolved) === canonicalCase(cwd) || isUnder(resolved, cwd)) {
+    risks.push("INSIDE_PROJECT")
+    warnings.push(
+      `Global home resolves inside the current project (${cwd}). Personal memory will be ` +
+        `visible to this repository — pick a location outside any project.`,
+    )
+  }
+
+  let mode: HomeMode
+  if (!fs.existsSync(resolved)) {
+    mode = "VOLATILE"
+  } else {
+    // Writability probe without writing user-visible state: exclusive-create + delete
+    // of a probe file (09 §2). Failure => READ_ONLY, never an exception.
+    try {
+      const probe = path.join(resolved, `.apex-probe-${process.pid}-${Date.now()}`)
+      fs.closeSync(fs.openSync(probe, "wx"))
+      fs.unlinkSync(probe)
+      mode = "READ_WRITE"
+    } catch {
+      mode = "READ_ONLY"
+      warnings.push(`Global home is not writable in this process; global writes will be staged.`)
+    }
+  }
+
+  return { path: resolved, mode, risks, source, warnings }
+}
+
+/** A named subdirectory under a resolved home. Pure path math — no creation. */
+export function homeSubdir(res: HomeResolution, name: string): string {
+  if (!name.trim()) throw new ApexError("A home subdirectory needs a name.", "HOME_UNSAFE_PATH")
+  if (name.includes("..") || path.isAbsolute(name)) {
+    throw new ApexError(`Unsafe home subdirectory "${name}".`, "PATH_ESCAPE")
+  }
+  return path.join(res.path, name)
+}
+
+/**
+ * Containment (30 §5, 54 §11.3): `child` must resolve under `parent`. Throws
+ * PATH_ESCAPE naming both paths — a traversal from project-controlled text must never
+ * reach global home or anywhere outside its scope.
+ */
+export function assertContained(child: string, parent: string): void {
+  const c = path.resolve(child)
+  const p = path.resolve(parent)
+  if (!isUnder(c, p)) {
+    throw new ApexError(
+      `Path escape refused: "${child}" resolves to ${c}, outside the allowed root ${p}.`,
+      "PATH_ESCAPE",
+    )
+  }
 }
