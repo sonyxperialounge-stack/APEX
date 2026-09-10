@@ -275,7 +275,7 @@
       "status": "DONE",
       "startedAt": "2026-09-11T03:10:00.000Z",
       "finishedAt": "2026-09-11T03:55:00.000Z",
-      "commit": "PENDING",
+      "commit": "4fa7157",
       "evidence": [
         "EVD-044"
       ],
@@ -412,7 +412,14 @@
       "commit": "2369444"
     },
     "WP-041b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T03:55:00.000Z",
+      "finishedAt": "2026-09-11T04:25:00.000Z",
+      "commit": "PENDING",
+      "evidence": [
+        "EVD-045"
+      ],
+      "notes": "54 §5/§6 activation already present (SKL-T06/T07); added banned-env-name rejection + value drop + SEC-T09 sweep"
     },
     "WP-042": {
       "status": "DONE",

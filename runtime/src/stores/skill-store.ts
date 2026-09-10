@@ -112,6 +112,9 @@ function parseEnvList(value: string): SkillEnvRequirement[] | null {
   const items = inner.split(/\}\s*,/).map((s) => (s.endsWith("}") ? s : s + "}")).map((s) => s.trim())
   const out: SkillEnvRequirement[] = []
   for (const raw of items) {
+    // 54 §6 — the regex admits ONLY name/what/required. A declaration that smuggles
+    // a `value:` key fails to match and the whole entry is dropped: the parser keeps
+    // names, reasons and flags, and nothing else.
     const m = /^\{\s*name:\s*([A-Za-z_][A-Za-z0-9_]*)(?:\s*,\s*why:\s*([^,}]*?))?(?:\s*,\s*required:\s*(true|false))?\s*\}$/.exec(raw)
     if (!m) continue
     out.push({
@@ -121,6 +124,22 @@ function parseEnvList(value: string): SkillEnvRequirement[] | null {
     })
   }
   return out
+}
+
+/**
+ * Environment variable names APEX refuses to see DECLARED (54 §6): a provider
+ * credential pattern must never be reintroduced as a required-environment name —
+ * that would turn the declaration surface into a secret-collection surface.
+ * Deliberately conservative: any name containing one of these tokens is rejected.
+ */
+const BANNED_ENV_TOKENS = [
+  "KEY", "SECRET", "TOKEN", "PASSWORD", "PASSWD", "PASSPHRASE", "CREDENTIAL",
+  "ACCESS_KEY", "CLIENT_SECRET", "PRIVATE_KEY", "API_KEY", "APITOKEN", "AUTH", "BEARER",
+] as const
+
+export function bannedEnvToken(name: string): string | null {
+  const upper = name.toUpperCase()
+  return BANNED_ENV_TOKENS.find((t) => upper.includes(t)) ?? null
 }
 
 /**
@@ -287,6 +306,13 @@ export function parseSkillDocument(text: string): ParsedSkill {
       if (!/^[A-Z][A-Z0-9_]*$/.test(env.name)) {
         headerErrors.push(
           `invalid requiresEnvironment name "${env.name}" — UPPER_SNAKE environment variable names only (54 §6)`,
+        )
+      }
+      const banned = bannedEnvToken(env.name)
+      if (banned) {
+        headerErrors.push(
+          `requiresEnvironment name "${env.name}" looks like a credential (matches "${banned}") — ` +
+            `APEX refuses to declare provider secrets; only non-secret environment names are allowed (54 §6)`,
         )
       }
     }

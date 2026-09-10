@@ -92,6 +92,38 @@ describe("WP-040 frontmatter subset parser", () => {
     }
   })
 
+  test("WP-041b SEC-T09: a declared env `value:` is never parsed — names, reasons and flags only (54 §6)", () => {
+    const doc = validDoc({
+      requiresEnvironment:
+        "[{ name: DATABASE_URL, value: postgres://u:p@host/db, why: migration target, required: true }]",
+    })
+    const parsed = parseFrontmatter(doc)
+    // The whole entry is dropped: a declaration that smuggles a value is a collection
+    // attempt, and the parser keeps ONLY the three legal fields.
+    assert.deepEqual(parsed!.requiresEnvironment, [])
+  })
+
+  test("WP-041b SEC-T09: provider-credential env names are rejected at validation (54 §6)", () => {
+    const doc = validDoc({
+      requiresEnvironment: "[{ name: DATABASE_PASSWORD, required: true }]",
+    })
+    const out = parseSkillDocument(doc)
+    assert.ok(
+      out.headerErrors.some((m) => m.includes("DATABASE_PASSWORD") && m.includes("credential")),
+      `banned name is called out: ${out.headerErrors.join(" | ")}`,
+    )
+    // The healthiest ordinary name stays legal.
+    const healthy = parseSkillDocument(validDoc())
+    assert.equal(healthy.headerErrors.length, 0, "DATABASE_URL is not a credential name")
+  })
+
+  test("WP-041b SEC-T09: lintSkill surfaces the banned-name header failure as an error", () => {
+    const out = lintSkill(
+      validDoc({ requiresEnvironment: "[{ name: AWS_SECRET_ACCESS_KEY, required: true }]" }),
+    )
+    assert.ok(out.errors.some((m) => m.includes("AWS_SECRET_ACCESS_KEY")), `errors: ${out.errors.join(" | ")}`)
+  })
+
   test("a malformed skill fails with a specific message (Done-when)", () => {
     // No frontmatter at all — the most common authoring mistake.
     const noFm = "# Goal\njust a body\n"

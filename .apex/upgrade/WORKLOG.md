@@ -975,3 +975,25 @@ Surprises: archive-cli tests seed 33 events per session, so "add two fat events"
   the soft side, 50.1% refuses. closeSession is NOT idempotent (throws ILLEGAL_SESSION_CLOSE
   on a second call) — tests must not re-close a session the harness already closed.
 Next: WP-041b (fallbackFor + requiresEnvironment activation).
+
+## WP-041b — fallbackFor + requiresEnvironment activation · DONE · 2026-09-11
+
+Files: ~runtime/src/stores/skill-store.ts (bannedEnvToken, parseEnvList value-drop, header
+  validation), ~runtime/test/stores/skill-store.test.ts (+3)
+Decision: inspection found the 54 §5/§6 activation surface ALREADY implemented by the
+  WP-043/047 work (SKL-T06/T07 in skill-activation.test.ts), but WP-041b was still PENDING.
+  The missing enforcement was SEC-T09's "no value ever" guarantee: (1) a `value:` key in a
+  requiresEnvironment declaration is dropped whole by the parse regex — names, reasons and
+  the required flag are the ONLY legal fields; (2) banned provider-credential env names
+  (KEY/SECRET/TOKEN/PASSWORD/CREDENTIAL/ACCESS_KEY/CLIENT_SECRET/PRIVATE_KEY/API_KEY/AUTH/
+  BEARER as substring tokens) are rejected at validation with a named error, so the
+  declaration surface cannot become a secret-collection surface; (3) swept the whole src:
+  no process.env access anywhere in skill code, envPresent(name) is the only observable.
+Verify: `npm run verify` -> 985 pass, 0 fail, 0 cancelled, exit 0 (30.0s).
+Evidence: EVD-045.
+Surprises: the audit discipline paid off twice — a grep-pass missed the pre-existing
+  implementation (it lives in files closed by OTHER packets, not a WP-041b file), and my
+  first draft's explicit `value:`-scanner was dead code once I re-read the regex: it already
+  admits only the three legal fields, so a value-bearing entry never matches and is dropped.
+  The real guarantee is the REGEX, not an extra check — the extra check was removed.
+Next: WP-042b (source tiers, scan caching, deny never overridable).
