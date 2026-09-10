@@ -85,7 +85,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T05:50:28.681Z",
       "finishedAt": "2026-09-10T06:05:33.778Z",
-      "commit": null,
+      "commit": "1889525",
       "evidence": [
         "EVD-003"
       ],
