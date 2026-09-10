@@ -490,7 +490,8 @@
       "evidence": [
         "EVD-042"
       ],
-      "notes": "skills CLI (gates intact), core/15-SKILLS.md doctrine, payload ships it"
+      "notes": "skills CLI (gates intact), core/15-SKILLS.md doctrine, payload ships it",
+      "commit": "204aa94"
     },
     "WP-049b": {
       "status": "PENDING"
