@@ -304,3 +304,118 @@ export interface RunOptions {
 export interface CommandRunner {
   run(command: string, options?: RunOptions): Promise<CommandResult>
 }
+
+// ── Memory fabric (10 §3–§4, 28 §5, 11 §6, 12 §10) ────────────────────────────
+
+/** A memory fact belongs to the person (global) or one project (10 §3). */
+export const MEMORY_SCOPES = ["global", "project"] as const
+export type MemoryScopeKind = (typeof MEMORY_SCOPES)[number]
+
+export interface MemoryScope {
+  kind: MemoryScopeKind
+  /** Present exactly when kind === "project": the stable key of ONE project. */
+  projectKey?: string
+}
+
+export const MEMORY_STATUSES = [
+  "candidate", "active", "superseded", "conflicted", "stale", "retracted",
+] as const
+export type MemoryStatus = (typeof MEMORY_STATUSES)[number]
+
+/** What kind of durable fact this is (10 §3). */
+export const MEMORY_KINDS = [
+  "preference", "fact", "environment", "constraint", "relationship", "workflow_hint",
+] as const
+export type MemoryKind = (typeof MEMORY_KINDS)[number]
+
+/** Where a memory record came from. Model label is provenance, never authority. */
+export const PROVENANCE_SOURCE_TYPES = [
+  "explicit_user", "verified_event", "project_file", "session_archive", "model_inference",
+] as const
+export type ProvenanceSourceType = (typeof PROVENANCE_SOURCE_TYPES)[number]
+
+export interface MemoryProvenance {
+  sourceType: ProvenanceSourceType
+  sourceId?: string
+  observedAt: string
+  evidenceIds?: string[]
+  modelLabel?: string
+}
+
+/** The canonical memory record (10 §3 calls it MemoryItem; 28 §5 names the V1 file shape). */
+export interface MemoryRecordV1 {
+  schemaVersion: 1
+  id: string
+  scope: MemoryScope
+  kind: MemoryKind
+  /** lowercase dotted, e.g. preference.package_manager (43 §7). */
+  semanticKey: string
+  text: string
+  status: MemoryStatus
+  confidence: number
+  provenance: MemoryProvenance[]
+  createdAt: string
+  updatedAt: string
+  expiresAt?: string
+  /** Ids this record replaces (11 §7 supersession chain). */
+  supersedes?: string[]
+  supersededBy?: string
+  scanner: { verdict: "allow" | "review" | "deny"; reasons: string[] }
+  revision: number
+}
+
+/** Structured intent submitted to the store (11 §6). */
+export const MEMORY_RELATIONS = ["new", "reinforce", "correct", "retract"] as const
+export type MemoryRelation = (typeof MEMORY_RELATIONS)[number]
+
+export interface MemoryCandidate {
+  text: string
+  semanticKey: string
+  scope: MemoryScope
+  kind: MemoryKind
+  relation?: MemoryRelation
+  targetIds?: string[]
+  provenance: MemoryProvenance
+}
+
+/** A detected conflict between records sharing a semantic key (11 §8). */
+export const CONFLICT_REASONS = ["value_mismatch", "scope_collision", "ambiguous_correction"] as const
+export type ConflictReason = (typeof CONFLICT_REASONS)[number]
+
+export const CONFLICT_RESOLUTIONS = [
+  "unresolved", "user_selected", "newer_explicit_user", "retracted",
+] as const
+export type ConflictResolution = (typeof CONFLICT_RESOLUTIONS)[number]
+
+export interface ConflictRecord {
+  schemaVersion: 1
+  id: string
+  semanticKey: string
+  scope: MemoryScope
+  itemIds: string[]
+  detectedAt: string
+  reason: ConflictReason
+  resolution: ConflictResolution
+  winningItemId?: string
+  evidenceIds?: string[]
+}
+
+/** A staged global write awaiting approval (12 §10). Survives restart; revalidated on approval. */
+export const PENDING_TARGETS = ["memory", "skill"] as const
+export type PendingTarget = (typeof PENDING_TARGETS)[number]
+
+export const PENDING_OPERATIONS = ["create", "patch", "supersede", "retract", "delete"] as const
+export type PendingOperation = (typeof PENDING_OPERATIONS)[number]
+
+export interface PendingMutation {
+  id: string
+  target: PendingTarget
+  operation: PendingOperation
+  createdAt: string
+  source: string
+  gist: string
+  proposedPayload: unknown
+  baseRevision: number
+  scanner: { verdict: "allow" | "review" | "deny"; reasons: string[] }
+  requiredApproval: boolean
+}

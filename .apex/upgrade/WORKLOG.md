@@ -294,3 +294,22 @@ Surprises: my --repair gate required an OK/WARN resolve, silently excluding the 
   CRLF across files, so byte-identical header comparison must normalize newlines first
   (checked-out older files are CRLF; new ones are LF).
 Next: PHASE 1 COMPLETE. Phase 2 (memory fabric) begins at WP-020.
+
+---
+
+## WP-020 — Memory record types · DONE · 2026-09-10
+
+Files: ~runtime/src/core/types.ts (+memory fabric section),
+  +runtime/src/stores/memory-store.ts (record validator only, store I/O is WP-021),
+  +runtime/test/stores/memory-store.test.ts (types portion)
+Decision: 10 §3's field set with 28 §5's type name (precedence: WP names the deliverable;
+  04's architecture beats 28's ALL-CAPS vocabulary). All unions as const arrays + derived
+  types (HC-001). The record validator enforces scope-shape (project REQUIRES projectKey,
+  global FORBIDS it — C-020 bidirectional isolation starts at the type), scanner verdict,
+  revision integer, ISO timestamps, confidence [0,1], text bounds.
+Verify: `npm run verify` -> 797 pass, 0 fail, exit 0 (+8 tests).
+Evidence: EVD-014.
+Surprises: my semantic-key regex rejected `preference.package_manager` — the doc's own
+  example — because the character class lacked the underscore. The fixture caught it
+  before any store code depended on it.
+Next: WP-021 (memory store read/commit)
