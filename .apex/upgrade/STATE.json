@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T07:57:14.915Z",
+  "updatedAt": "2026-09-10T08:09:04.487Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "0",
-  "currentPacket": "WP-017",
+  "currentPacket": "WP-018",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -162,7 +162,14 @@
       "notes": "+9 tests; 3 self-defects caught+fixed; BOOT-T02 race green"
     },
     "WP-017": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T07:57:14.915Z",
+      "finishedAt": "2026-09-10T08:09:04.485Z",
+      "commit": null,
+      "evidence": [
+        "EVD-011"
+      ],
+      "notes": "+13 tests; SEC-T08 zero false positives on multilingual corpus"
     },
     "WP-018": {
       "status": "PENDING"

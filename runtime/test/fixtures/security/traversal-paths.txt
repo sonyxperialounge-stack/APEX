@@ -1,0 +1,3 @@
+../../.apex/config.json
+..\..\.apex/VERIFICATION.md
+~/.ssh/id_rsa

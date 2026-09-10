@@ -1,0 +1,10 @@
+नमस्ते, यह एक सामान्य हिंदी वाक्य है।
+मुझे कोड लिखना और टेस्ट चलाना अच्छा लगता है।
+Devanagari: क्षत्रिय, ज्ञान
+Japanese: これは普通の日本語の文章です。
+Emoji: 🚀 ✅ 🎉
+Code block:
+```ts
+const sum = (a: number, b: number): number => a + b
+```
+Hinglish: yaar, ye test pass ho gaya, badiya hai!

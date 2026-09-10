@@ -236,3 +236,23 @@ Surprises: THREE of my own defects surfaced by this packet's tests and scans: a
   header block is 17 lines with a blank separator before the closing */ — index it
   precisely, never by eye.
 Next: WP-017 (ingestion scanner)
+
+---
+
+## WP-017 — Ingestion scanner · DONE · 2026-09-10
+
+Files: ~runtime/src/core/redact.ts (scan() + SCAN_CONTEXTS + rules), +runtime/test/core/redact-scan.test.ts,
+  +runtime/test/fixtures/security/* (8 fake-secret corpus files)
+Decision: scan() added INSIDE redact.ts per 47 §4.5 — redact() unchanged as the write-path
+  filter; scan() is the read/ingest gate with context-scoped severities (memory/skill deny
+  injections; archive keeps history at review; extension manifests deny everything
+  dangerous). Bidi controls = deny, zero-width = review (30 §9 grading). Ordinary
+  non-Latin text can never trip any rule — all rules target control code points, secret
+  shapes, or imperative exfil/injection phrasing.
+Verify: `npm run verify` -> 773 pass, 0 fail, exit 0 (+13 tests).
+Evidence: EVD-011.
+Surprises: command-anchored rm -rf regexes (governor's shape) silently missed prose
+  mentions — the scanner sees PROSE, not command lines. Anchoring is input-class-dependent;
+  recorded so nobody "unifies" the two pattern lists naively. Also: fixtures live at
+  test/fixtures/security per 51 §1, not beside the test file — resolve with path.resolve("..", ...).
+Next: WP-018 (migration registry and journal)

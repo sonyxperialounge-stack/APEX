@@ -1,0 +1,2 @@
+This is a benign sentence with a zero width space​inside it.
+Also a BOM: ﻿ leading char.

