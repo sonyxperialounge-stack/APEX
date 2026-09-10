@@ -135,7 +135,7 @@
       "status": "DONE",
       "startedAt": "2026-09-10T06:48:39.998Z",
       "finishedAt": "2026-09-10T07:14:00.056Z",
-      "commit": null,
+      "commit": "6d32acc",
       "evidence": [
         "EVD-008"
       ],
