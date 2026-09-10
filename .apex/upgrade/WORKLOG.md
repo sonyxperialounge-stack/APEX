@@ -113,3 +113,23 @@ Verify: `npm run verify` -> 687 pass, 0 fail, exit 0 (+7 tests).
 Evidence: EVD-004.
 Surprises: none — 47 §4.2's contract is exact and matched the plan.
 Next: WP-012 (cross-process lock)
+
+---
+
+## WP-012 — Cross-process lock · DONE · 2026-09-10
+
+Files: ~runtime/src/core/json.ts, +runtime/test/core/json-lock.test.ts
+Decision: lock lives INSIDE json.ts per 42 §3/HC-009 — no new module, CORE-005 scan untouched.
+  Release is token-checked (a recovery successor's lock is never deleted by the old holder,
+  LOCK_NOT_OWNED). Stale policy = 12 §5 in full: same host + well-formed record + pid
+  demonstrably absent + age past staleAfterMs; pidAlive uses signal-0 probe (EPERM = alive).
+  Recovery audited via log.event("lock.stale_recovered"). Lock writes use fsp.open("wx")
+  exclusive-create + handle sync — inside the already-sanctioned json.ts.
+Verify: focused 8/8; `npm run verify` -> 695 pass, 0 fail, exit 0 (+8 tests).
+Evidence: EVD-005.
+Surprises: Windows dynamic import() of an absolute path needs a file:// URL
+  (ERR_UNSUPPORTED_ESM_URL_SCHEME) — child scripts take URLs for import specifiers but PLAIN
+  paths for function arguments; mixing them broke mkdir. Also spawnSync waits for exit, so a
+  "live holder" test must use async spawn — a spawnSync sleeper is indistinguishable from a
+  crashed writer. Both recorded here for the next Windows test author.
+Next: WP-013 (JSONL primitives)

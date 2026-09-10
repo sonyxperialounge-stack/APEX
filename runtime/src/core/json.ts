@@ -29,9 +29,11 @@
 
 import fs from "node:fs"
 import fsp from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import { ApexError } from "./errors.ts"
 import { redact, redactDeep } from "./redact.ts"
+import { event, log } from "./log.ts"
 
 /** Read a UTF-8 file, or null when it does not exist. BOM is stripped. */
 export async function readTextOrNull(file: string): Promise<string | null> {
@@ -300,4 +302,165 @@ export async function copyDir(from: string, to: string): Promise<string[]> {
 
 export function existsSync(p: string): boolean {
   return fs.existsSync(p)
+}
+
+// ── Cross-process lock (12 §3–§5) ────────────────────────────────────────────
+
+export interface LockOptions {
+  /** Give up and raise LOCK_TIMEOUT after this long contending. Default 5000. */
+  timeoutMs?: number
+  /**
+   * A lock older than this MAY be recovered — only under the full 12 §5 policy, never
+   * merely because it is old. Default 120000.
+   */
+  staleAfterMs?: number
+  now?: () => number
+  random?: () => number
+}
+
+export interface LockOwner {
+  token: string
+  pid: number
+  host: string
+  createdAt: string
+  purpose: string
+}
+
+function pidAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try {
+    // Signal 0 probes existence without signalling. EPERM means alive but owned by
+    // someone else — still alive. Windows throws ESRCH-ish for dead pids, and for
+    // pid reuse the token check below still guards the release path.
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM"
+  }
+}
+
+/**
+ * Cross-process exclusive lock around a critical section (12 §4, HC-009).
+ *
+ * Exclusive-create (`"wx"`) + owner record + bounded jittered backoff. Release is
+ * guaranteed: the unlock runs in a finally, and only removes the file when the token
+ * inside matches ours — a timeout successor must never delete a lock it does not own
+ * (LOCK_NOT_OWNED, 45 §2.2).
+ *
+ * Stale policy (12 §5): a lock is NOT stale merely because it is old. Recovery happens
+ * only when ALL of: same host, owner record well-formed, pid demonstrably absent, age
+ * past staleAfterMs. A lock held by a LIVE process is never stolen — Scenario F.
+ * Recovery is audited: the previous owner record is logged with LOCK_STALE_RECOVERED.
+ */
+export async function withCrossProcessLock<T>(
+  lockFile: string,
+  purpose: string,
+  fn: () => Promise<T>,
+  opts: LockOptions = {},
+): Promise<T> {
+  const timeoutMs = opts.timeoutMs ?? 5_000
+  const staleAfterMs = opts.staleAfterMs ?? 120_000
+  const now = opts.now ?? Date.now
+  const random = opts.random ?? Math.random
+  const token = `${now().toString(36)}-${process.pid.toString(36)}-${Math.floor(random() * 1e12).toString(36)}`
+  const owner: LockOwner = {
+    token,
+    pid: process.pid,
+    host: os.hostname(),
+    createdAt: new Date(now()).toISOString(),
+    purpose,
+  }
+
+  await fsp.mkdir(path.dirname(lockFile), { recursive: true })
+
+  const started = now()
+  let attempt = 0
+  let recoveredFrom: LockOwner | null = null
+
+  // Acquire. Every branch either owns the lock or throws — never hangs.
+  for (;;) {
+    try {
+      const handle = await fsp.open(lockFile, "wx")
+      try {
+        await handle.writeFile(JSON.stringify(owner), "utf8")
+        await handle.sync()
+      } finally {
+        await handle.close()
+      }
+      break
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err
+
+      const age = now() - started
+      if (age >= timeoutMs) {
+        throw new ApexError(
+          `Lock "${purpose}" on ${lockFile} not acquired within ${timeoutMs}ms. ` +
+            `Stage the mutation instead of hanging (LOCK_TIMEOUT).`,
+          "LOCK_TIMEOUT",
+        )
+      }
+
+      // Inspect the holder before sleeping (12 §4 step 3).
+      const existing = await readJson<LockOwner | null>(lockFile, null)
+      if (existing && typeof existing === "object" && typeof existing.token === "string") {
+        const lockAge = now() - Date.parse(existing.createdAt)
+        const wellFormed = Number.isInteger(existing.pid) && typeof existing.host === "string"
+        if (
+          wellFormed &&
+          lockAge >= staleAfterMs &&
+          existing.host === os.hostname() &&
+          !pidAlive(existing.pid)
+        ) {
+          // 12 §5 stale criteria ALL hold: same host, well-formed record, pid
+          // demonstrably absent, age beyond threshold. Recover, but audit it.
+          try {
+            const previous = await fsp.readFile(lockFile, "utf8")
+            await fsp.unlink(lockFile)
+            recoveredFrom = JSON.parse(previous) as LockOwner
+            // A crash between unlink and re-create is a lost lock, not a stolen one —
+            // the next exclusive-create decides ownership atomically. Loop retries.
+          } catch {
+            /* raced with another recoverer; the retry loop decides */
+          }
+          continue
+        }
+      }
+
+      // Bounded jittered backoff: 40ms * 2^attempt capped at 350ms, +0..30ms jitter.
+      const wait = Math.min(40 * 2 ** attempt, 350) + random() * 30
+      attempt += 1
+      await new Promise((resolve) => setTimeout(resolve, wait))
+    }
+  }
+
+  try {
+    return await fn()
+  } finally {
+    try {
+      const raw = await fsp.readFile(lockFile, "utf8")
+      const held = JSON.parse(raw) as LockOwner
+      if (held.token === token) {
+        await fsp.unlink(lockFile)
+      }
+      // A different token inside means a recovery happened while we ran: the file
+      // belongs to the successor. Leave it (LOCK_NOT_OWNED).
+    } catch {
+      /* already gone or unreadable: log, do not throw from finally (12 §4) */
+    }
+      if (recoveredFrom) {
+        // Audited recovery — informational, never fatal (45 §2.2). The previous
+        // owner record is preserved in the audit trail with its token redacted.
+        event("lock.stale_recovered", {
+          purpose,
+          lockFile: path.basename(lockFile),
+          previousOwner: {
+            pid: recoveredFrom.pid,
+            host: recoveredFrom.host,
+            createdAt: recoveredFrom.createdAt,
+            purpose: recoveredFrom.purpose,
+          },
+          code: "LOCK_STALE_RECOVERED",
+        })
+      }
+  }
 }
