@@ -702,3 +702,24 @@ Surprises: THREE tooling traps in one packet, all recorded for the next agent.
   (3) Backslash escaping in heredocs: \\ became \, mangling the temp-path regex —
   rebuilt it with new RegExp("...\\+") so the escape count is explicit.
 Next: WP-041 — progressive disclosure.
+
+## WP-041 — Progressive disclosure · DONE · 2026-09-10
+
+Files: +runtime/src/stores/skill-catalog.ts (184), +runtime/test/stores/skill-catalog.test.ts (5),
+  ~runtime/src/engines/cortex.ts (skills section + SECTION_ORDER + AssembleContext.skillIndex)
+Decision: skill-catalog.ts owns the 3 levels — readIndex (Level 0, headers only, malformed
+  skills stay visible with status=unparseable + their error), readBody/readSkill (Level 1),
+  readResource (Level 2, traversal-refusing, references/templates/scripts). Cortex gets a
+  `skills` section LAST in SECTION_ORDER (first to drop, COR-002) rendering metadata lines
+  only; the CALLER owns selection (engine purity — Cortex renders what it is given,
+  never reads the catalog itself). Absent root = empty index, not an error (18 §9).
+Verify: `npm run verify` -> 921 pass, 0 fail, 0 cancelled, exit 0 (24.1s).
+Evidence: EVD-034.
+Surprises: SKL-T01 first failed for a reason worth remembering — I passed a fake
+  `{} as Ledger` to the Cortex, which triled the COR-007 unreadable-ledger fallback and
+  the skills section never rendered. The Cortex reads config/requirements through a
+  REAL Ledger or it short-circuits; test now builds one via ledger.init(). Also:
+  200 skills x 100-char descriptions = ~6k tokens > the 3000 learned-context ceiling —
+  the Level-0 line caps description slices, and the fixture uses one-sentence
+  descriptions (18 §3's own requirement), which is the honest shape of a real catalog.
+Next: WP-042 — trust and scanning.

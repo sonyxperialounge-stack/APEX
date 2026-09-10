@@ -56,6 +56,7 @@ export const SECTION_ORDER = [
   "corrections",
   "projectMemory",
   "globalMemory",
+  "skills",
 ] as const
 
 export type SectionName = (typeof SECTION_ORDER)[number]
@@ -79,6 +80,13 @@ export interface AssembleContext {
   corrections?: Array<{ semanticKey: string; text: string }>
   /** Unresolved conflicts to render with the 11 §12 wording. */
   conflicts?: Array<{ semanticKey: string }>
+  /**
+   * WP-041 — the Level-0 skill index entries selected for this session. Metadata
+   * only (18 §5): bodies load at Level 1 on selection, references at Level 2.
+   * The caller (host adapter / MCP) OWNS selection; the Cortex renders what it
+   * is given, never reading the catalog itself — keeps this engine pure.
+   */
+  skillIndex?: Array<{ name: string; description: string; status: string }>
 }
 
 export interface AssembledPrompt {
@@ -155,6 +163,7 @@ export class Cortex {
       corrections: correctionsSection(ctx.corrections ?? [], ctx.conflicts ?? []),
       projectMemory: memorySection(memoryFacts),
       globalMemory: apexDataSection("global-memory", frozen.map((m) => m.text), ctx.conflicts ?? []),
+      skills: skillsSection(ctx.skillIndex ?? []),
     }
 
     // COR-002/003 — drop from the bottom of the priority list until it fits.
@@ -196,6 +205,21 @@ function header(level: 0 | 1 | 2): string {
 
 function render(head: string, keep: SectionName[], built: Record<SectionName, string>): string {
   return [head, "", ...keep.map((name) => built[name]).filter(Boolean)].join("\n").trimEnd() + "\n"
+}
+
+/**
+ * WP-041 — the Level-0 skill index block (18 §5). Metadata lines only: name,
+ * one-sentence description, status. A body never appears here, however large the
+ * catalog is — bodies are Level 1 and load only on selection (SKL-T01).
+ */
+function skillsSection(entries: Array<{ name: string; description: string; status: string }>): string {
+  const selectable = entries.filter((e) => e.status === "active" || e.status === "inactive")
+  if (selectable.length === 0) return ""
+  const lines = ["SKILLS — procedural memory available (metadata only; ask to load a body):"]
+  for (const e of selectable) {
+    lines.push(`  - ${e.name} [${e.status}] ${e.description.slice(0, 100)}`)
+  }
+  return lines.join("\n") + "\n"
 }
 
 function protectedSection(config: ApexConfig): string {

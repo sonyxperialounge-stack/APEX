@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-10T18:53:51.024Z",
+  "updatedAt": "2026-09-10T19:06:19.524Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "4",
-  "currentPacket": "WP-041",
+  "currentPacket": "WP-042",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -395,7 +395,13 @@
       "commit": "6ee26a6"
     },
     "WP-041": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-10T18:57:07.841Z",
+      "finishedAt": "2026-09-10T19:06:19.523Z",
+      "evidence": [
+        "EVD-034"
+      ],
+      "notes": "3-level disclosure: catalog store (index/body/resource) + Cortex skills section, budget-guarded"
     },
     "WP-041b": {
       "status": "PENDING"
