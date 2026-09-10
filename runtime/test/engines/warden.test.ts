@@ -3,7 +3,11 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Warden, renderPacket, detectEvasions, FAILURE_RESPONSE, type SubagentPacket, type FleetContext } from "../../src/engines/warden.ts"
+import {
+  Warden, renderPacket, detectEvasions, FAILURE_RESPONSE, validateChildResult,
+  type SubagentPacket, type FleetContext,
+} from "../../src/engines/warden.ts"
+const wardenModule = { validateChildResult }
 import { Ledger, DEFAULT_CONFIG } from "../../src/engines/ledger.ts"
 import { Governor } from "../../src/engines/governor.ts"
 import { NullHostClient, type HostClient, type ModelRef, type SessionRef } from "../../src/host/types.ts"
@@ -670,5 +674,79 @@ describe("no host available", () => {
   test("dispatch fails with a clear message rather than pretending", async () => {
     const w = new Warden(new NullHostClient(), ledger, new Governor(cfg), cfg)
     await assert.rejects(() => w.dispatch(packet()), /cannot spawn subagents/)
+  })
+})
+
+// ── WP-048 — subagent learning restriction (26 §§4–5, 7) ──────────────────────
+
+describe("WP-048 — children propose, parents promote (LRNT-T03, FLT-T02)", () => {
+  test("a child result with proposals returns them as PROPOSALS, never promoted", () => {
+    const home = path.join(dir, "globalhome")
+    const validated = validateChildResult(
+      {
+        taskId: "W-0001",
+        status: "COMPLETE",
+        claims: [{ text: "migrations are compatible", evidenceIds: ["VER-1"], confidence: "HIGH" }],
+        changedPaths: [],
+        proposedMemory: [{ text: "use pnpm in this project" }],
+        proposedSkills: [{ title: "verify-cascade", content: "---\nname: verify-cascade\n---\n# Goal\nx" }],
+        unresolved: [],
+      },
+      home,
+    )
+
+    assert.equal(validated.proposalCount, 2, "both proposals are counted")
+    assert.deepEqual(validated.globalWriteAttempts, [], "no global paths were touched")
+    // The proposals remain DATA on the result — there is no activation path here.
+    assert.equal(validated.result.proposedSkills!.length, 1)
+    assert.equal(validated.result.proposedMemory!.length, 1)
+  })
+
+  test("LRNT-T03/FLT-T02: a child claiming writes into global stores is FLAGGED, not trusted", () => {
+    const home = path.join(dir, "globalhome")
+    const validated = validateChildResult(
+      {
+        taskId: "W-0002",
+        status: "COMPLETE",
+        claims: [],
+        changedPaths: [
+          path.join(dir, "project", "src", "ok-file.ts"),
+          path.join(home, "skills", "engineering", "hacked", "SKILL.md"),
+          path.join(home, "memory", "memory.json"),
+        ],
+        unresolved: [],
+      },
+      home,
+    )
+
+    assert.equal(validated.globalWriteAttempts.length, 2, "both global writes are named")
+    assert.ok(validated.globalWriteAttempts.some((p) => p.includes("skills")))
+    assert.ok(validated.globalWriteAttempts.some((p) => p.includes("memory")))
+    // The project-local path is NOT a violation.
+    assert.ok(!validated.globalWriteAttempts.some((p) => p.includes("ok-file.ts")))
+  })
+
+  test("path-shape detection survives differently-spelled roots and pending quarantine", () => {
+    // Root spelled with backslashes; child reports forward slashes.
+    const home = path.join(dir, "globalhome")
+    const validated = validateChildResult(
+      {
+        taskId: "W-0003",
+        status: "COMPLETE",
+        claims: [],
+        changedPaths: [
+          home.split(path.sep).join("/") + "/trust/skills.json",
+          path.join(home, "skills", "pending", "legit-candidate.json"),
+        ],
+        unresolved: [],
+      },
+      home,
+    )
+
+    assert.ok(validated.globalWriteAttempts.some((p) => p.includes("trust/skills.json")), "trust writes are violations")
+    assert.ok(
+      !validated.globalWriteAttempts.some((p) => p.includes("pending")),
+      "staging a candidate in skills/pending/ is the LEGAL path, not a violation",
+    )
   })
 })

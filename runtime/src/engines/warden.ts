@@ -844,3 +844,84 @@ export function detectEvasions(diff: string): string[] {
   if (/^-.*\bassert\b/m.test(diff) && !/^\+.*\bassert\b/m.test(diff)) found.push("an assertion was removed without replacement")
   return found
 }
+
+// ── child learning restriction (26 §§4–5, 7; WP-048) ─────────────────────────
+
+/**
+ * What a child may hand back to the parent (26 §7). A child NEVER writes global
+ * state directly — its memory and skill contributions arrive as PROPOSALS the
+ * parent validates and promotes through the normal gates (forge, librarian).
+ */
+export interface ChildClaim {
+  text: string
+  evidenceIds: string[]
+  confidence: "HIGH" | "MEDIUM" | "LOW"
+}
+
+export interface DelegateResult {
+  taskId: string
+  status: "COMPLETE" | "BLOCKED" | "FAILED"
+  claims: ChildClaim[]
+  changedPaths: string[]
+  /** Proposed global memory — proposals only; the parent decides. */
+  proposedMemory?: Array<{ text: string }>
+  /** Proposed skills — candidates for SkillForge; never active on arrival. */
+  proposedSkills?: Array<{ title: string; content: string }>
+  unresolved: string[]
+}
+
+export interface ValidatedChildResult {
+  /** The result, with proposals quarantined and marked for parent review. */
+  result: DelegateResult
+  /** LRNT-T03/FLT-T02: paths the child must never touch, verified not-touched. */
+  globalWriteAttempts: string[]
+  /** Memory/skill proposals routed to the parent's promotion gates. */
+  proposalCount: number
+}
+
+/**
+ * Validate a child's return (26 §§4–5; REQ-SKL-010).
+ *
+ * The child contract is absolute: a subagent cannot directly write a global skill
+ * or memory record. Any proposal arrives here, is quarantined as a PROPOSAL, and
+ * the parent — and only the parent — walks it through the forge/lrarian gates.
+ * `changedPaths` naming global stores (global home skills/, memory/, trust/) is a
+ * violation report, not a write that happened; the parent must verify by evidence.
+ */
+export function validateChildResult(child: DelegateResult, globalHomeRoot: string): ValidatedChildResult {
+  const globalWriteAttempts: string[] = []
+  const normalizedRoot = globalHomeRoot.replace(/[\\/]+$/, "").replace(/\\/g, "/")
+
+  /** The legal staging seam: skills/pending/ is where child proposals GO. */
+  const isLegalStaging = (norm: string): boolean =>
+    /\/skills\/pending\//.test(norm)
+
+  for (const p of child.changedPaths) {
+    const norm = p.replace(/\\/g, "/")
+    if (isLegalStaging(norm)) continue
+    if (norm === normalizedRoot || norm.startsWith(`${normalizedRoot}/`)) {
+      globalWriteAttempts.push(p)
+      continue
+    }
+    // The store names are the tell even when the root is spelled differently.
+    if (/\/(skills|memory|trust)\//.test(norm)) {
+      if (!globalWriteAttempts.includes(p)) globalWriteAttempts.push(p)
+    }
+  }
+
+  const proposalCount =
+    (child.proposedMemory?.length ?? 0) + (child.proposedSkills?.length ?? 0)
+
+  return {
+    result: {
+      ...child,
+      // Proposals survive as data — but they are the PARENT'S input now, marked
+      // by shape: they leave the child as suggestions and enter promotion as
+      // candidates. The field names stay as 26 §7 defines them.
+      proposedMemory: child.proposedMemory?.map((m) => ({ ...m, text: m.text })),
+      proposedSkills: child.proposedSkills?.map((s) => ({ ...s })),
+    },
+    globalWriteAttempts,
+    proposalCount,
+  }
+}

@@ -857,3 +857,25 @@ Surprises: none — the packet wired cleanly onto the WP-040 parser, the WP-046
   is a named constant, not config magic; if 44 wants it configurable later,
   the seam is one parameter.
 Next: WP-048 — subagent learning restriction (warden).
+
+## WP-048 — Subagent learning restriction · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/warden.ts (+DelegateResult/ChildClaim types 26 §7,
+  +validateChildResult), ~runtime/test/engines/warden.test.ts (+3)
+Decision: children hand back DelegateResult (26 §7) — claims, changedPaths,
+  proposedMemory/proposedSkills as DATA. validateChildResult flags any changedPath
+  inside global home (skills/, memory/, trust/) as a globalWriteAttempt — a
+  violation REPORT for the parent to verify by evidence, never a trusted write.
+  skills/pending/ is the explicit legal staging seam: proposals land there, the
+  forge (WP-045) and the parent's promotion gates own activation. No code path
+  anywhere lets a child write a global store directly (REQ-SKL-010).
+Verify: `npm run verify` -> 965 pass, 0 fail, 0 cancelled, exit 0 (27.1s).
+Evidence: EVD-041.
+Surprises: the heredoc backslash trap bit a THIRD time (\ -> \ in regex
+  literals) — validateChildResult and one test line both corrupted the same way;
+  fixed by rewriting the regex without backslashes where possible (split/join for
+  path normalisation). The pending-exception regex also failed because the
+  root-prefix check caught pending paths first — the legal seam is now a named
+  isLegalStaging() predicate checked BEFORE either violation rule. LESSON
+  REINFORCED: source files through the file tool, heredocs only for prose.
+Next: WP-049 — skill user surface (CLI).
