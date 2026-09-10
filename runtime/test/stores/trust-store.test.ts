@@ -49,7 +49,7 @@ async function writeSkill(text = SKILL_TEXT): Promise<void> {
 }
 
 describe("WP-042 trust grants bound to content hash", () => {
-  test("SKSEC-T02: hash drift invalidates trust (REQ-SKL-003)", async () => {
+  test("SKSEC-T02: hash drift invalidates trust (REQ-SKL-003, HOME-T06)", async () => {
     await writeSkill()
     const store = openTrustStore(home, {})
     const h1 = await hashSkillContent(path.join(home, "skills", "meta", "a-skill", "SKILL.md"))

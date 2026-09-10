@@ -209,7 +209,7 @@ describe("WP-021 commit — revision CAS", () => {
 })
 
 describe("WP-021 hot views (10 §6, C-008)", () => {
-  test("views render from active global records; deleting them loses nothing", async () => {
+  test("views render from active global records; deleting them loses nothing (MEM-CON-T05: views are derived)", async () => {
     const { dir, memoryDir } = await tempStore("apex-mem-view-")
     const store = openMemoryStore(memoryDir)
     await store.commit(0, [
@@ -331,6 +331,171 @@ describe("WP-021 MEM-CON-T04 — killed writer before rename leaves old canonica
     const next = openMemoryStore(memoryDir)
     const state = await next.read()
     assert.equal(state.records[0]!.text, "original")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})
+
+// Audit repair (EVD-043): MEM-CON-T02/T03 from 12 §13 had no concurrent-process
+// tests anywhere — WP-021 was closed claiming T01..T07 with only T01/T04 present.
+
+describe("WP-021 MEM-CON-T02 — same candidate from 20 processes merges to one fact", () => {
+  test("one logical record, all 20 provenances merged, no duplicate rows", { timeout: 180_000 }, async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-dup20-")
+    const storeUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/stores/memory-store.ts")).href
+    const logUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/core/log.ts")).href
+    const libUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/engines/memory-librarian.ts")).href
+    const script = [
+      `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
+      `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
+      `const { resolveCandidate } = await import(${JSON.stringify(libUrl)})`,
+      `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "w"))})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const prov = { sourceType: "verified_event", sourceId: "worker-" + process.env.WORKER, observedAt: "2026-09-10T00:00:00.000Z" }`,
+      `for (let attempt = 0; attempt < 80; attempt++) {`,
+      `  const state = await store.read()`,
+      `  const out = await resolveCandidate(state.records, {`,
+      `    text: "The release tag is v4.2.0", semanticKey: "fact.release_tag",`,
+      `    scope: { kind: "global" }, kind: "fact", relation: "new", provenance: prov,`,
+      `  })`,
+      `  try {`,
+      `    await store.commit(state.revision, out.records)`,
+      `    process.exit(0)`,
+      `  } catch (e) {`,
+      `    if (e.code !== "MEMORY_REVISION_CONFLICT") { console.error(String(e)); process.exit(1) }`,
+      `  }`,
+      `}`,
+      `console.error("exhausted retries"); process.exit(1)`,
+    ].join("\n")
+
+    const procs: Array<Promise<void>> = []
+    for (let i = 0; i < 20; i++) {
+      procs.push(
+        new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            process.execPath,
+            ["--experimental-strip-types", "--input-type=module", "-e", script],
+            {
+              env: { ...process.env, NODE_NO_WARNINGS: "1", WORKER: String(i).padStart(2, "0") },
+              stdio: ["ignore", "ignore", "pipe"],
+            },
+          )
+          let err = ""
+          child.stderr.on("data", (d: Buffer) => {
+            err += d.toString()
+          })
+          child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`worker ${i}: ${err.slice(0, 300)}`))))
+        }),
+      )
+    }
+    await Promise.all(procs)
+
+    const store = openMemoryStore(memoryDir)
+    const state = await store.read()
+    const rows = state.records.filter((r) => r.semanticKey === "fact.release_tag")
+    assert.equal(rows.length, 1, "20 writers of the same fact leave ONE logical record")
+    const row = rows[0]!
+    assert.equal(row.status, "active")
+    assert.equal(row.provenance.length, 20, "every writer's provenance is merged, none dropped")
+    assert.equal(new Set(row.provenance.map((p) => p.sourceId)).size, 20, "all 20 distinct sources present")
+    assert.equal(row.revision, 20, "create + 19 provenance merges, exactly one commit per worker")
+    assert.equal(state.revision, 20, "store revision counts 20 successful commits")
+    await fsp.rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe("WP-021 MEM-CON-T03 — correction racing an old reinforcement ends deterministic", () => {
+  test("whichever lands last: one active corrected value, original superseded, provenance merged", { timeout: 120_000 }, async () => {
+    const { dir, memoryDir } = await tempStore("apex-mem-corrace-")
+    const store = openMemoryStore(memoryDir)
+    await store.commit(0, [
+      makeRecord({
+        text: "Use npm for installs.",
+        provenance: [{ sourceType: "verified_event", sourceId: "orig", observedAt: "2026-09-10T00:00:00.000Z" }],
+      }) as never,
+    ])
+
+    const storeUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/stores/memory-store.ts")).href
+    const logUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/core/log.ts")).href
+    const libUrl = pathToFileURL(pathModule.resolve(HERE, "../../src/engines/memory-librarian.ts")).href
+    const shared = [
+      `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
+      `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
+      `const { resolveCandidate } = await import(${JSON.stringify(libUrl)})`,
+      `setLogDir(${JSON.stringify(pathModule.join(dir, "logs"))})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+    ]
+    // The reinforcer keeps pushing the OLD value (exact text -> provenance merge);
+    // the corrector supersedes the original with the new value. Only CAS order decides
+    // who lands last; the final content invariants must hold in EVERY interleaving.
+    const reinforcer = [
+      ...shared,
+      `for (let attempt = 0; attempt < 80; attempt++) {`,
+      `  const state = await store.read()`,
+      `  const out = await resolveCandidate(state.records, {`,
+      `    text: "Use npm for installs.", semanticKey: "preference.package_manager",`,
+      `    scope: { kind: "global" }, kind: "preference", relation: "reinforce",`,
+      `    provenance: { sourceType: "verified_event", sourceId: "reinforcer", observedAt: "2026-09-10T00:00:00.000Z" },`,
+      `  })`,
+      `  try {`,
+      `    await store.commit(state.revision, out.records)`,
+      `    process.exit(0)`,
+      `  } catch (e) {`,
+      `    if (e.code !== "MEMORY_REVISION_CONFLICT") { console.error(String(e)); process.exit(1) }`,
+      `  }`,
+      `}`,
+      `console.error("exhausted retries"); process.exit(1)`,
+    ].join("\n")
+    const corrector = [
+      ...shared,
+      `for (let attempt = 0; attempt < 80; attempt++) {`,
+      `  const state = await store.read()`,
+      `  const target = state.records.find((r) => r.text === "Use npm for installs.")`,
+      `  if (!target) { console.error("original vanished"); process.exit(1) }`,
+      `  const out = await resolveCandidate(state.records, {`,
+      `    text: "Use pnpm for installs.", semanticKey: "preference.package_manager",`,
+      `    scope: { kind: "global" }, kind: "preference", relation: "correct",`,
+      `    targetIds: [target.id],`,
+      `    provenance: { sourceType: "explicit_user", observedAt: "2026-09-10T00:00:00.000Z" },`,
+      `  })`,
+      `  try {`,
+      `    await store.commit(state.revision, out.records)`,
+      `    process.exit(0)`,
+      `  } catch (e) {`,
+      `    if (e.code !== "MEMORY_REVISION_CONFLICT") { console.error(String(e)); process.exit(1) }`,
+      `  }`,
+      `}`,
+      `console.error("exhausted retries"); process.exit(1)`,
+    ].join("\n")
+
+    const spawnRole = (role: string, script: string) =>
+      new Promise<void>((resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          ["--experimental-strip-types", "--input-type=module", "-e", script],
+          { env: { ...process.env, NODE_NO_WARNINGS: "1", ROLE: role }, stdio: ["ignore", "ignore", "pipe"] },
+        )
+        let err = ""
+        child.stderr.on("data", (d: Buffer) => {
+          err += d.toString()
+        })
+        child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${role}: ${err.slice(0, 300)}`))))
+      })
+    await Promise.all([spawnRole("reinforce", reinforcer), spawnRole("correct", corrector)])
+
+    const store2 = openMemoryStore(memoryDir)
+    const state = await store2.read()
+    assert.equal(state.records.length, 2, "merge adds no rows, correction adds exactly one")
+    const active = state.records.filter((r) => r.status === "active")
+    assert.equal(active.length, 1, "exactly one active value survives the race")
+    assert.equal(active[0]!.text, "Use pnpm for installs.", "the corrected value is the active truth")
+    const correction = active[0]!
+    const original = state.records.find((r) => r.id !== correction.id)!
+    assert.equal(original.status, "superseded", "the old value is superseded, never deleted")
+    assert.deepEqual(correction.supersedes, [original.id], "the chain names its target")
+    const sources = new Set(original.provenance.map((p) => p.sourceId))
+    assert.ok(sources.has("orig") && sources.has("reinforcer"), "the racing reinforcement's provenance is merged, not lost")
+    assert.ok(state.records.every((r) => r.status !== "conflicted"), "identical-text reinforce never fabricates a conflict")
+    assert.equal(state.revision, 3, "exactly three commits: seed, reinforce, correct — no lost update")
     await fsp.rm(dir, { recursive: true, force: true })
   })
 })

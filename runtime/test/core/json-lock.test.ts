@@ -98,7 +98,7 @@ await withCrossProcessLock(
     assert.equal(await fsp.stat(lockFile).then(() => true, () => false), false)
   })
 
-  test("a live lock is never stolen: contender times out with LOCK_TIMEOUT", async () => {
+  test("a live lock is never stolen: contender times out with LOCK_TIMEOUT (MEM-CON-T06)", async () => {
     const holder = withCrossProcessLock(lockFile, "holder", async () => {
       // Hold long enough that the contender exhausts its tiny budget.
       await new Promise((r) => setTimeout(r, 700))
@@ -120,7 +120,7 @@ await withCrossProcessLock(
     assert.equal(await fsp.stat(lockFile).then(() => true, () => false), false)
   })
 
-  test("a lock held by a live foreign process is never stolen (Scenario F, real pid)", async () => {
+  test("a lock held by a live foreign process is never stolen (Scenario F, real pid, MEM-CON-T06)", async () => {
     // A real sleeper writes a lock record and STAYS ALIVE while the contender runs.
     const sleeper = `
 const fsp = await import("node:fs/promises")

@@ -112,7 +112,7 @@ describe("WP-015 apexHome — sources and precedence (43 §2)", () => {
     await Promise.all([a, b].map((d) => fsp.rm(d, { recursive: true, force: true })))
   })
 
-  test("default derives beside userStateDir, never inside a project", () => {
+  test("default derives beside userStateDir, never inside a project (HOME-T07: portable home stays off)", () => {
     const res = apexHome()
     assert.equal(res.source, "default")
     assert.ok(res.path.endsWith(".apex"), `default home is <profile>/.apex, got ${res.path}`)

@@ -334,13 +334,25 @@ import { selectMemory } from "../../src/engines/memory-librarian.ts"
 describe("WP-025 selectMemory", () => {
   const NOW = "2026-09-10T00:00:00.000Z"
 
-  test("memory.useGlobal:false yields ZERO global records (CFG-T06)", () => {
+  test("memory.useGlobal:false yields ZERO global records (CFG-T06, HOME-T03)", () => {
     const global1 = rec({ id: "MEM-000000001-aaaaaa", text: "Use pnpm." })
     const proj = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "This project uses npm." })
     const out = selectMemory([global1, proj], { projectKey: "prj_1111111111111111", useGlobal: false }, "", NOW)
     assert.equal(out.records.filter((r) => r.scope.kind === "global").length, 0, "zero global records")
     assert.ok(out.records.length > 0, "project memory still injects")
     assert.ok(out.skipped.some((s) => s.reason.includes("useGlobal")), "the skip is recorded with its reason")
+  })
+
+  test("another project's facts are never injected here (HOME-T02, C-020)", () => {
+    const mine = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "This project uses npm." })
+    const foreign = rec({ id: "MEM-000000003-cccccc", scope: { kind: "project", projectKey: "prj_2222222222222222" }, text: "That project deploys on Fridays." })
+    const global1 = rec({ id: "MEM-000000001-aaaaaa", text: "Use pnpm." })
+    const out = selectMemory([global1, foreign, mine], { projectKey: "prj_1111111111111111" }, "", NOW)
+    assert.ok(!out.records.some((r) => r.id === foreign.id), "the other project's fact is invisible here")
+    assert.ok(out.records.some((r) => r.id === mine.id), "this project's own fact still injects")
+    assert.ok(out.records.some((r) => r.id === global1.id), "global facts still inject")
+    const skip = out.skipped.find((s) => s.id === foreign.id)
+    assert.ok(skip && skip.reason.includes("other project"), "the skip names the foreign project as the reason")
   })
 
   test("expired items never appear (MEM-T05); the skip says when it expired", () => {

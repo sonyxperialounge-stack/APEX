@@ -487,6 +487,25 @@ function pidAlive(pid: number): boolean {
 }
 
 /**
+ * Holder-record read that survives the same Windows transients as the
+ * exclusive-create above (antivirus/indexer briefly holding the new lock file).
+ * An unreadable holder means "no information this round" — the contender retries
+ * under the bounded backoff; it must never crash a correct run (D-006 shape).
+ */
+async function readHolderRecord(file: string): Promise<LockOwner | null> {
+  for (let tries = 0; tries < 4; tries++) {
+    try {
+      return await readJson<LockOwner | null>(file, null)
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") throw err
+      await new Promise((resolve) => setTimeout(resolve, 25 * (tries + 1)))
+    }
+  }
+  return null
+}
+
+/**
  * Cross-process exclusive lock around a critical section (12 §4, HC-009).
  *
  * Exclusive-create (`"wx"`) + owner record + bounded jittered backoff. Release is
@@ -551,8 +570,9 @@ export async function withCrossProcessLock<T>(
         )
       }
 
-      // Inspect the holder before sleeping (12 §4 step 3).
-      const existing = await readJson<LockOwner | null>(lockFile, null)
+      // Inspect the holder before sleeping (12 §4 step 3). The read itself can hit
+      // the same transient EPERM as the create — retried, never fatal.
+      const existing = await readHolderRecord(lockFile)
       if (existing && typeof existing === "object" && typeof existing.token === "string") {
         const lockAge = now() - Date.parse(existing.createdAt)
         const wellFormed = Number.isInteger(existing.pid) && typeof existing.host === "string"

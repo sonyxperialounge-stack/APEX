@@ -702,7 +702,7 @@ describe("WP-048 — children propose, parents promote (LRNT-T03, FLT-T02)", () 
     assert.equal(validated.result.proposedMemory!.length, 1)
   })
 
-  test("LRNT-T03/FLT-T02: a child claiming writes into global stores is FLAGGED, not trusted", () => {
+  test("LRNT-T03/FLT-T02/HOME-T04: a child claiming writes into global stores is FLAGGED, not trusted", () => {
     const home = path.join(dir, "globalhome")
     const validated = validateChildResult(
       {

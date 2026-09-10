@@ -900,3 +900,57 @@ Surprises: none — the surface composes WP-040..047 machinery directly. The
   retire subcommand prints the archive path RELATIVE to the skills root so the
   user sees "skills/.archive/<name>-<ts>" not an opaque absolute path.
 Next: PHASE 4 COMPLETE (WP-040..WP-049 all DONE). Phase 5 (capabilities) at WP-050.
+
+## AUDIT — phases 0-4 cross-check (owner-requested) · DONE · 2026-09-11
+
+Scope: verify every DONE packet's "Done when" against the real tree and fix defects
+at root cause. 46 packets, ~98 commits, all 42 evidence files.
+
+Verified clean (no action):
+- 42 hard constraints: zero deps, no enum/namespace/param-props, writes only via
+  core/json.ts|log.ts, byte-identical headers (3 legacy V3 files differ only in
+  CRLF), Governor kinds = 42 §6 set, no TODO/FIXME/stubs in shipped source.
+- STATE.json: 92 ids == 49 catalogue (WPC-T05); all 46 DONE commits resolve.
+- sourcescan: every WP-014 scan present WITH planted-violation self-tests.
+- Baseline/NO-REGRESSION artifacts real and complete; payload START-HERE size
+  delta vs root is the sync script's intentional link REWRITES, not drift.
+- SKL 200-skill fixture, ARC-T04 single-event-append companion scan, WP-027
+  byte-identical round-trip, WP-026 CTX-T03..T06 (they exist inside
+  cortex.test.ts — grep hides them; see Surprises), MIG-T01..T05, json-lock
+  Scenario F/G shapes.
+
+Defects found and fixed at root cause:
+1. WP-021 was closed claiming "MEM-CON-T01..T07" with only T01/T04 named and
+   T02 (20-proc same-candidate merge), T03 (correction racing reinforcement)
+   having NO equivalent anywhere. Added both as real 20/2-process spawn tests
+   asserting the deterministic end-state (one logical record, merged
+   provenance / one active corrected value, superseded original, merged
+   provenance, no fabricated conflict, exactly 3 commits).
+2. HOME-T02 (cross-project fact leakage) existed only as an isSameSubject unit
+   assertion, never at selection level. Added a selectMemory test.
+3. Traceability: 09 §11 T02..T07 and 12 §13 T05..T07 behaviors were covered
+   under unnamed tests. Labeled the covering tests with their acceptance ids
+   (HOME-T03..T07, MEM-CON-T05/06/07, HOME-T05 on cortex CTX-T06).
+4. STATE.json WP-011 commit field held nested quotes ("\"6f9cd87\"") from a
+   shell-quoting bug; normalised to the sha.
+5. ROOT-CAUSE for the documented "MEM-CON-T01 occasionally flakes on Windows":
+   withCrossProcessLock hardened the exclusive-create EPERM (42-era fix) but
+   the backoff's holder-record read (readJson on the lock file) rethrew
+   transient EPERM/EACCES/EBUSY via readTextOrNull, crashing a correct
+   contender. readHolderRecord() now retries the same transient set and treats
+   an unreadable holder as "no information this round". Stress: 6/6 green
+   back-to-back 20-way races (was ~1 fail per handful).
+6. HANDOFF.md said "Phases 0-4 COMPLETE" while six second-pass packets inside
+   those phases (WP-026b, WP-041b, WP-042b, WP-047b, WP-049b, WP-049c) are
+   PENDING and 49 calls them "not optional extras". Corrected the HANDOFF and
+   the next action (WP-026b first, then the rest, then WP-050).
+
+Verify: `npm run verify` -> 973 pass, 0 fail, 0 cancelled, exit 0 (35.1s).
+Evidence: EVD-043.
+Surprises: grep treats a test file containing NUL bytes as binary and SILENTLY
+  hides matches — cortex.test.ts embeds an intentional "\u0000\u0000 garbage"
+  corruption fixture, so every grep-based acceptance-id scan misses its
+  CTX-T03..T06. Acceptance sweeps must be binary-safe (node readFileSync) — the
+  audit's first grep pass produced three false "missing" verdicts.
+Next: WP-026b (attached-context 25/50 guard), then WP-041b/042b/047b/049b/049c,
+then Phase 5 at WP-050.
