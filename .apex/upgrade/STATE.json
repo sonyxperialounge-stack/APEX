@@ -447,7 +447,8 @@
       "evidence": [
         "EVD-038"
       ],
-      "notes": "FORGE-T01..T05: transition table, 3-gate promotion, patch-over-rewrite with version history, use-based demotion"
+      "notes": "FORGE-T01..T05: transition table, 3-gate promotion, patch-over-rewrite with version history, use-based demotion",
+      "commit": "d04ed1c"
     },
     "WP-046": {
       "status": "PENDING"
