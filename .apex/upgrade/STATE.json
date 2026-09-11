@@ -552,7 +552,14 @@
       "commit": "ccae2df"
     },
     "WP-050b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T04:05:00.000Z",
+      "finishedAt": "2026-09-11T05:00:00.000Z",
+      "evidence": [
+        "EVD-050b"
+      ],
+      "notes": "code-intelligence ids (code.*) + diagnostics evidence row between parse and types",
+      "commit": "PENDING"
     },
     "WP-051": {
       "status": "DONE",

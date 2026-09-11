@@ -20,7 +20,7 @@
 
 import { test, describe } from "node:test"
 import assert from "node:assert/strict"
-import { CapabilityRegistry, inferEffects, mayExpose, normalizeCapabilityId } from "../../src/engines/capability-registry.ts"
+import { CapabilityRegistry, inferEffects, mayExpose, normalizeCapabilityId, codeIntelligenceId, codeIntelligenceDescriptor } from "../../src/engines/capability-registry.ts"
 import type { CapabilityDescriptor } from "../../src/engines/capability-registry.ts"
 import { CAPABILITY_EFFECTS, type CapabilityEffect } from "../../src/core/types.ts"
 import { ApexError } from "../../src/core/errors.ts"
@@ -252,5 +252,65 @@ describe("WP-051 — normalizeCapabilityId hygiene", () => {
   test("trims, lowercases, collapses whitespace", () => {
     assert.equal(normalizeCapabilityId("  FS.READ  "), "fs.read")
     assert.equal(normalizeCapabilityId("Web\tSearch "), "web search")
+  })
+})
+// ── WP-050b — code-intelligence capability ids (54 §14, CAP-T10) ────────────
+
+describe("WP-050b — code-intelligence ids (CAP-T10)", () => {
+  const HOST_TOOL_PAIRS: Array<[string, string]> = [
+    ["publishDiagnostics", "code.diagnostics"],
+    ["getDiagnostics", "code.diagnostics"],
+    ["documentSymbol", "code.symbols"],
+    ["outline", "code.symbols"],
+    ["findReferences", "code.references"],
+    ["references", "code.references"],
+    ["goToDefinition", "code.definition"],
+    ["definition", "code.definition"],
+    ["renameSymbol", "code.rename"],
+    ["textDocument/rename", "code.rename"],
+    ["textDocument/diagnostic", "code.diagnostics"],
+  ]
+  for (const [hostTool, canonical] of HOST_TOOL_PAIRS) {
+    test(`"${hostTool}" normalizes to "${canonical}"`, () => {
+      assert.equal(codeIntelligenceId(hostTool), canonical)
+    })
+  }
+
+  test("at least two differently named host tools map to each canonical id (CAP-T10)", () => {
+    const canonicalIds = HOST_TOOL_PAIRS.reduce((acc: string[], [, c]) => (acc.includes(c) ? acc : [...acc, c]), [])
+    for (const canonical of canonicalIds) {
+      const names = HOST_TOOL_PAIRS.filter(([, c]) => c === canonical).map(([n]) => n)
+      assert.ok(new Set(names).size >= 2, `${canonical} needs >= 2 distinct host aliases (has ${names.length})`)
+    }
+  })
+
+  test("17 canonical ids match the table and are registered", () => {
+    assert.equal(codeIntelligenceId("code.diagnostics"), "code.diagnostics")
+    assert.equal(codeIntelligenceId("code.symbols"), "code.symbols")
+  })
+
+  test("unknown host tools never map to a code-intelligence id (no guessing)", () => {
+    assert.equal(codeIntelligenceId("zorp_quantum_sync"), null)
+    assert.equal(codeIntelligenceId(""), null)
+  })
+
+  test("descriptor builder produces registry-ready descriptors; only rename carries WRITE", () => {
+    const src = { kind: "host" as const, providerId: "ide", toolName: "publishDiagnostics" }
+    const desc = codeIntelligenceDescriptor("publishDiagnostics", src, { now: FIXED })!
+    assert.equal(desc.id, "code.diagnostics")
+    assert.equal(desc.effects.join(), "READ")
+    assert.equal(desc.availability, "AVAILABLE")
+    assert.equal(desc.trust, "TRUSTED")
+
+    const rename = codeIntelligenceDescriptor("textDocument/rename", { kind: "host", providerId: "ide", toolName: "textDocument/rename" }, { now: FIXED })!
+    assert.deepEqual(rename.effects, ["WRITE"])
+  })
+
+  test("registry round-trip: a host code-intelligence tool is usable via the registry", () => {
+    const r = new CapabilityRegistry({ now: FIXED })
+    const desc = codeIntelligenceDescriptor("publishDiagnostics", { kind: "host", providerId: "ide", toolName: "publishDiagnostics" }, { now: FIXED })!
+    r.register(desc)
+    assert.equal(r.isAvailable("code.diagnostics"), true)
+    assert.equal(r.select("code.diagnostics")!.source.toolName, "publishDiagnostics")
   })
 })

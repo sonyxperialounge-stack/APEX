@@ -63,6 +63,12 @@ export const VERIFY_TYPES = [
   "build",
   "runtime",
   "manual",
+  /**
+   * WP-050b — host-provided semantic diagnostics (54 §14). Never a command,
+   * never installed: it only exists when the host already exposes it, sits
+   * between `parse` and `types`, and its absence is never a failure.
+   */
+  "diagnostics",
 ] as const
 
 export type VerifyType = (typeof VERIFY_TYPES)[number]
@@ -158,6 +164,21 @@ export interface ApexSkillsConfig {
   seedSkills: boolean
 }
 
+/**
+ * WP-050b — host-provided code intelligence (54 §14). APEX never installs
+ * language servers; these keys only let a host that ALREADY exposes semantic
+ * diagnostics name them for evidence records.
+ */
+export interface ApexCapabilitiesConfig {
+  /**
+   * Whether host-provided semantic diagnostics should be used (default true).
+   * Their absence is never reported as failure.
+   */
+  hostDiagnostics: boolean
+  /** Latest host-reported diagnostics message for this file/project (evidence). */
+  diagnosticsMessage: string
+}
+
 export interface ApexConfig {
   projectRoot: string
   autonomy: AutonomyMode
@@ -171,6 +192,7 @@ export interface ApexConfig {
   council: CouncilConfig
   context: ApexContextConfig
   skills: ApexSkillsConfig
+  capabilities: ApexCapabilitiesConfig
   delegation: DelegationConfig
 }
 

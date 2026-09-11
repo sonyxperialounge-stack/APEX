@@ -1137,3 +1137,26 @@ Surprises: (1) alias lookups initially returned nothing — aliases were stored 
   because "get" is the READ pattern and READ includes observing REMOTE state (21 §3) — expectation
   fixed, inference was right.
 Next: WP-050b (code-intelligence capability ids, 54 §14).
+
+## WP-050b — code-intelligence capability ids + diagnostics evidence row (DONE)
+
+Date: 2026-09-11
+Packet: WP-050b (54 §14 amending 21 §2/24 §3; CAP-T10, AUT-T08)
+Files: ~runtime/src/engines/capability-registry.ts (codeIntelligenceId, codeIntelligenceDescriptor),
+  ~runtime/src/engines/verifier.ts (diagnostics tier + diagnosticsRecords),
+  ~runtime/src/core/types.ts (VERIFY_TYPES + CASCADE_ORDER + ApexCapabilitiesConfig),
+  ~runtime/src/engines/ledger.ts (defaults + merges), ~templates/config.json + payload (capabilities block),
+  ~runtime/test/engines/capability-registry.test.ts (+16), ~runtime/test/engines/verifier.test.ts (+4),
+  +.apex/upgrade/EVIDENCE/EVD-050b.md
+Decision: Adopted the five code.* ids (code.diagnostics/symbols/references/definition/rename; only rename
+  is WRITE) and REJECTED language servers — nothing is installed or invoked, and an unknown host tool
+  never maps to a code-intelligence id (no guessing). Diagnostics slot into the verify cascade between
+  parse and types, used only when the host exposes them: clean host message -> PASS (strength: strong for
+  THIS edit, weaker than the suite), empty -> NOT_RUN (never a failure), disabled -> no record. They
+  never substitute for a required test tier (AUT-T08). New ApexCapabilitiesConfig (hostDiagnostics,
+  diagnosticsMessage) with ledger defaults and template docs.
+Verify: `npm run verify` -> 1072 pass, 0 fail, exit 0 (31.1s).
+Evidence: EVD-050b.
+Surprises: the config template must carry every ApexConfig key (CFG test) — added the capabilities block
+  to both template copies; and the VERIFY_TYPES entry had to precede CASCADE_ORDER usage.
+Next: WP-052 (host discovery).

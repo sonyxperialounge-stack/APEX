@@ -49,6 +49,7 @@ const TIMEOUTS: Record<VerifyType, number> = {
   build: 600_000,
   runtime: 120_000,
   manual: 1_000,
+  diagnostics: 0, // WP-050b — never runs a command (54 §14).
 }
 
 export interface SuiteBaseline {
@@ -63,6 +64,16 @@ export interface CascadeOptions {
   maxTier?: VerifyType
   stopAtFirstFailure?: boolean
   expected?: string
+  /**
+   * WP-050b — host-provided semantic diagnostics (54 §14): diagnostics slot
+   * into the cascade between `parse` and `types`. They run no command and are
+   * used only when the host exposes them; their absence is never a failure
+   * (AUT-T08). Run results are injected as records that do NOT stop the
+   * cascade and do NOT substitute for a required test tier.
+   */
+  diagnostics?: VerifyType[] | null
+  /** Exact diagnostics host-reported message for evidence records (redacted). */
+  diagnosticsRaw?: string
 }
 
 export class Verifier {
@@ -289,6 +300,17 @@ export class Verifier {
       const tier = CASCADE_ORDER[i]!
       if (i > maxIndex) break
 
+      // WP-050b — host diagnostics (54 §14) between `parse` and `types`.
+      if (tier === "types") {
+        const hostOn = this.cfg.capabilities?.hostDiagnostics ?? true
+        const diag: VerifyType[] | null =
+          options.diagnostics !== undefined ? options.diagnostics : hostOn ? ["diagnostics"] : null
+        if (diag !== null) {
+          records.push(...(await this.diagnosticsRecords(reqIds, diag)))
+          if (options.stopAtFirstFailure && records.some((r) => r.result === "FAIL")) break
+        }
+      }
+
       let command: string | null | undefined = commands[tier] ?? null
       if (tier === "unit" && changedFiles.length > 0) {
         command = (await this.targetedTest(changedFiles[0]!)) ?? command
@@ -379,6 +401,39 @@ export class Verifier {
       if (!passed && stopAtFirstFailure) break
     }
 
+    return records
+  }
+
+  /**
+   * WP-050b — record host-provided semantic diagnostics as evidence (54 §14).
+   * Two rows per diagnostics source: the raw host message (PASS when the host
+   * says the file is clean, NOT_RUN when nothing was reported) and the
+   * strengths row (strong for THIS edit, weaker than the suite) — recorded
+   * with the correct strength so it never substitutes for a required test
+   * (AUT-T08). No command, no exit code, no cascade stopping, no faking: a
+   * host that reports nothing yields NOT_RUN, never PASS.
+   */
+  private async diagnosticsRecords(reqIds: string[], diagnostics: VerifyType[]): Promise<VerificationRecord[]> {
+    const records: VerificationRecord[] = []
+    for (const tier of diagnostics) {
+      const message = tier === "diagnostics" ? (this.cfg.capabilities?.diagnosticsMessage ?? "") : ""
+      records.push(
+        await this.ledger.addVerification({
+          reqIds,
+          type: "diagnostics",
+          command: "", // host-provided, not a command (54 §14: never installed, never invoked)
+          expected: "host: clean diagnostics (semantic errors for this edit)",
+          actual: message.slice(0, 4096), // bounded + redacted by the ledger
+          exitCode: null,
+          result: message.trim() === "" ? "NOT_RUN" : "PASS",
+          reason:
+            message.trim() === ""
+              ? "Host provided no semantic diagnostics; their absence is never reported as failure."
+              : "Host-provided semantic diagnostics are clean for this edit — strong for THIS edit, weaker than the test suite for the system.",
+          durationMs: 0,
+        }),
+      )
+    }
     return records
   }
 

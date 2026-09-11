@@ -75,6 +75,7 @@ export const DEFAULT_CONFIG: ApexConfig = {
   council: { enabled: false, reviewerModel: null, conveneOn: [] },
   context: { budgetTokens: 2000 },
   skills: { maxBodiesPerTask: 3, seedSkills: true },
+  capabilities: { hostDiagnostics: true, diagnosticsMessage: "" },
   delegation: {
     mode: "AUTO",
     maxConcurrentCalls: 6,
@@ -150,6 +151,7 @@ export class Ledger {
       council: { ...DEFAULT_CONFIG.council, ...(config.council ?? {}) },
       context: { ...DEFAULT_CONFIG.context, ...(config.context ?? {}) },
       skills: { ...DEFAULT_CONFIG.skills, ...(config.skills ?? {}) },
+      capabilities: { ...DEFAULT_CONFIG.capabilities, ...(config.capabilities ?? {}) },
       delegation: {
         ...DEFAULT_CONFIG.delegation,
         ...(config.delegation ?? {}),
@@ -290,6 +292,7 @@ export class Ledger {
       },
       context: { ...DEFAULT_CONFIG.context, ...(raw.context ?? {}) },
       skills: { ...DEFAULT_CONFIG.skills, ...(raw.skills ?? {}) },
+      capabilities: { ...DEFAULT_CONFIG.capabilities, ...(raw.capabilities ?? {}) },
     }
   }
 

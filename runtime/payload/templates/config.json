@@ -45,6 +45,12 @@
     "seedSkills": true
   },
 
+  "_capabilitiesNote": "Host-provided code intelligence (54 §14). APEX never installs language servers; hostDiagnostics lets a host that already exposes semantic diagnostics record them as evidence. diagnosticsMessage holds the latest host-reported message (evidence only).",
+  "capabilities": {
+    "hostDiagnostics": true,
+    "diagnosticsMessage": ""
+  },
+
   "_delegationNote": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",
   "delegation": {
     "mode": "AUTO",

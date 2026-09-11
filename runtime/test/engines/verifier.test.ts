@@ -416,3 +416,57 @@ describe("helpers", () => {
     assert.equal(Verifier.tierReached([]), null)
   })
 })
+
+// ── WP-050b — host-provided semantic diagnostics (54 §14, AUT-T08) ──────────
+
+describe("WP-050b — diagnostics evidence slot", () => {
+  test("a clean host diagnostics message records PASS, correctly positioned", async () => {
+    const runner = new FakeCommandRunner({})
+    const v = makeVerifier(runner, {
+      verifyCommands: { types: "npx tsc --noEmit" },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors" },
+    })
+    const records = await v.cascade(["src/a.ts"], ["REQ-001"], { maxTier: "types" })
+    const diag = records.find((r) => r.type === "diagnostics")!
+    assert.ok(diag, "diagnostics record exists between parse and types")
+    assert.equal(diag.result, "PASS")
+    assert.match(diag.reason, /strong for THIS edit/)
+    const typesIndex = records.findIndex((r) => r.type === "types")
+    const diagIndex = records.indexOf(diag)
+    assert.ok(typesIndex > diagIndex, "diagnostics slots before types in the cascade")
+  })
+
+  test("empty host message is NOT_RUN, never a fake PASS", async () => {
+    const runner = new FakeCommandRunner({})
+    const v = makeVerifier(runner, {
+      verifyCommands: { types: "npx tsc --noEmit" },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "" },
+    })
+    const records = await v.cascade([], ["REQ-002"], { maxTier: "types" })
+    const diag = records.find((r) => r.type === "diagnostics")!
+    assert.equal(diag.result, "NOT_RUN")
+    assert.match(diag.reason, /never reported as failure/)
+  })
+
+  test("hostDiagnostics:false suppresses the diagnostics slot entirely", async () => {
+    const runner = new FakeCommandRunner({})
+    const v = makeVerifier(runner, {
+      verifyCommands: { types: "npx tsc --noEmit" },
+      capabilities: { hostDiagnostics: false, diagnosticsMessage: "no semantic errors" },
+    })
+    const records = await v.cascade([], ["REQ-003"], { maxTier: "types" })
+    assert.equal(records.some((r) => r.type === "diagnostics"), false)
+  })
+
+  test("diagnostics never substitute for a required test tier (AUT-T08)", async () => {
+    const runner = new FakeCommandRunner({})
+    const v = makeVerifier(runner, {
+      verifyCommands: { suite: "pytest" },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors" },
+    })
+    const records = await v.cascade([], ["REQ-004"], { maxTier: "suite" })
+    const suite = records.find((r) => r.type === "suite")
+    assert.ok(suite, "the suite tier still runs — diagnostics are evidence, not a substitute")
+    assert.equal(suite!.result, "NOT_RUN") // no pytest here; honest NOT_RUN
+  })
+})

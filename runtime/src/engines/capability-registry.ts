@@ -135,6 +135,106 @@ const TRUST_RANK: Record<CapabilityTrust, number> = {
   REVOKED: 0,
 }
 
+/**
+ * WP-050b — code-intelligence capability ids (54 §14, amending 21 §2).
+ *
+ * APEX must NOT install language servers: that is a dependency, an install
+ * step and a background process, breaking C-002/C-018 and the zero-dependency
+ * contract. What it can do is NAME these capabilities so they are used when a
+ * host already provides them (many IDE hosts do). Host tool names are aliases,
+ * never the canonical API — `codeIntelligenceId()` maps at least two
+ * differently named host tools per canonical id (CAP-T10).
+ */
+export interface CodeIntelligenceIdDef {
+  /** Canonical, vendor-neutral id, e.g. code.diagnostics. */
+  id: string
+  title: string
+  description: string
+  effects: CapabilityEffect[]
+  /** Differently named host tools that normalize to this canonical id. */
+  hostAliases: string[]
+}
+
+const CODE_INTELLIGENCE_DEFS: readonly CodeIntelligenceIdDef[] = [
+  {
+    id: "code.diagnostics",
+    title: "Semantic diagnostics",
+    description: "Semantic errors for a file or the project",
+    effects: ["READ"],
+    hostAliases: ["publishDiagnostics", "getDiagnostics", "semantic diagnostics", "textDocument/diagnostic"],
+  },
+  {
+    id: "code.symbols",
+    title: "Symbol outline",
+    description: "Symbol lookup / outline",
+    effects: ["READ"],
+    hostAliases: ["documentSymbol", "outline", "symbols", "textDocument/documentSymbol"],
+  },
+  {
+    id: "code.references",
+    title: "Find references",
+    description: "Find references to a symbol",
+    effects: ["READ"],
+    hostAliases: ["findReferences", "references", "textDocument/references"],
+  },
+  {
+    id: "code.definition",
+    title: "Go to definition",
+    description: "Go to definition of a symbol",
+    effects: ["READ"],
+    hostAliases: ["goToDefinition", "definition", "textDocument/definition"],
+  },
+  {
+    id: "code.rename",
+    title: "Rename symbol",
+    description: "Rename a symbol across the project",
+    effects: ["WRITE"],
+    hostAliases: ["renameSymbol", "textDocument/rename"],
+  },
+]
+
+/**
+ * WP-050b — normalize a host tool name to its canonical code-intelligence id.
+ * Matching is case-insensitive and whitespace-collapsed over the documented
+ * host aliases (CAP-T10); anything else returns null — never guessed.
+ */
+export function codeIntelligenceId(hostToolName: string): string | null {
+  const n = normalizeCapabilityId(hostToolName)
+  if (n.length === 0) return null
+  for (const def of CODE_INTELLIGENCE_DEFS) {
+    if (n === def.id || def.hostAliases.some((a) => normalizeCapabilityId(a) === n)) return def.id
+  }
+  return null
+}
+
+/**
+ * WP-050b — build a registry-ready descriptor for a host-provided
+ * code-intelligence tool, or null when the name is not one. Effects come from
+ * the canonical table: only `code.rename` carries WRITE (54 §14). The tool is
+ * never invoked or installed here — this only names the capability.
+ */
+export function codeIntelligenceDescriptor(
+  hostToolName: string,
+  source: CapabilityDescriptor["source"],
+  opts: { now?: () => number } = {},
+): CapabilityDescriptor | null {
+  const canonical = codeIntelligenceId(hostToolName)
+  if (canonical === null) return null
+  const def = CODE_INTELLIGENCE_DEFS.find((d) => d.id === canonical)!
+  const now = opts.now ?? Date.now
+  return {
+    id: canonical,
+    title: def.title,
+    description: def.description,
+    aliases: [hostToolName],
+    source,
+    availability: "AVAILABLE",
+    effects: def.effects,
+    trust: "TRUSTED",
+    lastCheckedAt: toIsoString(now()),
+  }
+}
+
 /** WP-051 — deterministic best-candidate ranking: available first, then trust. */
 export function rankCandidate(cap: CapabilityDescriptor): number {
   return (cap.availability === "AVAILABLE" ? 1 << 8 : 0) + TRUST_RANK[cap.trust]
