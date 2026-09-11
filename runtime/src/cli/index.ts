@@ -41,12 +41,12 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
   apex-agent doctor [--project <path>] [--repair]           what is installed, what is broken, how to fix it
   apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, show, add,
                                                              correct, retract, pending, approve, reject,
-                                                             export, off
+                                                             journey, export, off
   apex-agent session <sub> [args] [--project <path>]      session archive: list, search, show, prune
   apex-agent archive <sub> [args] [--project <path>]       the same archive, archival names: discover,
                                                              browse, read, scroll
   apex-agent skills <sub> [args] [--project <path>]       skills: list, search, show, stage, pending,
-                                                             promote, retire, trust, run
+                                                             journey, promote, retire, trust, run
   apex-agent home <sub> [args]                            global home: show, export, migrate-from-army
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
@@ -90,10 +90,12 @@ apex-agent memory <sub> [args]
   show <id> | add <text> [--kind K] [--key key.name] [--scope global|project]
   correct <id> <new text> | retract <id> --reason "<why>"
   pending | approve <id> | reject <id>
+  journey [--forget <id>] [--reason "<why>"]
   export [--out file.json] | off
 
   Durable personal memory. Corrections always win; retractions are audited;
-  nothing is deleted silently. \`apex-agent memory --help\` has the details.
+  nothing is deleted silently. journey shows everything the system learned,
+  in order, with the evidence that justified it.
 `,
   session: `
 apex-agent session <sub> [args]
@@ -116,13 +118,15 @@ apex-agent archive <sub> [args]
 apex-agent skills <sub> [args]
 
   list [--stale] [--candidates] | search <term> | show <category/name>
-  stage <file.md> | pending | promote <id> [--i-accept-unverified]
+  stage <file.md> | pending | journey [--forget <name>] [--reason "<why>"]
+  promote <id> [--i-accept-unverified]
   retire <name> --reason "<why>" | trust <path>
   pin <name> | unpin <name> | reset <name> [--restore]
   run <name-or-bundle> | bundle list|create|delete
 
   The skill library. Promotion needs evidence or your explicit override
   (recorded as unverified); trust is hash-bound and never automatic.
+  journey shows everything the system learned, in order, with evidence.
 `,
   home: `
 apex-agent home <sub>

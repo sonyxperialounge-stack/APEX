@@ -259,7 +259,9 @@ export function openSkillForge(homeDir: string, opts: SkillForgeOptions = {}) {
         : "unverified promotion: user override on record — first real use must validate, and may demote"
       await writeText(
         path.join(path.dirname(dirs.live), ".promotion.json"),
-        JSON.stringify({ id, verified, unverifiedPromotion: !verified, note, at: toIsoString(now()) }, null, 2),
+        // WP-073b: the evidence ids ship with the promotion fact, so the journey
+        // (54 §17) can show what justified the skill without reading quarantine.
+        JSON.stringify({ id, verified, unverifiedPromotion: !verified, note, at: toIsoString(now()), evidenceIds: rec.candidate.evidenceIds }, null, 2),
       )
 
       return { ok: true, verified, version, name: parsed.header.name }

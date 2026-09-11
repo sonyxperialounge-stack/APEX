@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "7A",
-  "currentPacket": "WP-073b",
+  "currentPacket": "WP-074",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -778,7 +778,9 @@
       "committed": "WP-073: CLI surface completion (53 §3) — session/home groups, show/pending/off, trust, --reason gates, per-command --help"
     },
     "WP-073b": {
-      "status": "PENDING"
+      "status": "DONE",
+      "evidence": ".apex/upgrade/EVIDENCE/EVD-073b.md",
+      "committed": "WP-073b: memory journey / skills journey (54 §17, UX-T07) — chronological learned-record with evidence ids and --forget"
     },
     "WP-074": {
       "status": "PENDING"

@@ -37,7 +37,7 @@ import { composeSkillInstruction } from "../engines/skill-composer.ts"
 import { lintSkill } from "../engines/skill-linter.ts"
 import { newId, toIsoString } from "../core/ids.ts"
 import { event, say } from "../core/log.ts"
-import { writeText } from "../core/json.ts"
+import { readJson, writeText } from "../core/json.ts"
 import type { SkillLifecycle } from "../engines/skill-forge.ts"
 
 export interface SkillsCliArgs {
@@ -256,28 +256,90 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
         process.exitCode = 1
         return
       }
-      // Retirement archives rather than deletes (54 §9.3): the body moves to
-      // .archive/, and the report says exactly where it went.
-      const archiveDir = path.join(skillsRoot, ".archive")
-      let found = false
-      for (const category of await fsp.readdir(skillsRoot, { withFileTypes: true }).catch(() => [])) {
-        if (!category.isDirectory() || category.name.startsWith(".")) continue
-        const skillDir = path.join(skillsRoot, category.name, name)
-        const exists = await fsp.access(path.join(skillDir, "SKILL.md")).then(() => true, () => false)
-        if (!exists) continue
-        await fsp.mkdir(archiveDir, { recursive: true })
-        const to = path.join(archiveDir, `${name}-${toIsoString(Date.now()).replace(/[:.]/g, "-")}`)
-        await fsp.rename(skillDir, to)
-        event("skill.retired", { id: name, reason: reason.trim() })
-        say(`Retired ${name} — archived to ${to.replace(skillsRoot, "skills")}. Reason recorded: "${reason.trim()}".`)
-        say(`Nothing is deleted.`)
-        found = true
-        break
-      }
-      if (!found) {
+      const to = await retireSkillDir(skillsRoot, name)
+      if (to === null) {
         say(`No shipped skill named ${name}.`)
         process.exitCode = 1
+        return
       }
+      event("skill.retired", { id: name, reason: reason.trim() })
+      say(`Retired ${name} — archived to ${to.replace(skillsRoot, "skills")}. Reason recorded: "${reason.trim()}".`)
+      say(`Nothing is deleted.`)
+      return
+    }
+
+    case "journey": {
+      // WP-073b (54 §17, UX-T07): the chronological, plain-language record of
+      // every skill the system itself learned — forge promotions and candidates
+      // still in quarantine — with the evidence that justified each one. Seed
+      // skills are shipped knowledge, not learned, so they are not entries.
+      const forget = flag("--forget")
+      if (forget) {
+        // `--forget` is the explicit removal flag (53 §3); an optional --reason
+        // is recorded when given.
+        const reason = flag("--reason") ?? "forgotten from the skills journey view"
+        const to = await retireSkillDir(skillsRoot, forget)
+        if (to === null) {
+          say(`No learned skill named ${forget} on the journey — nothing was removed.`)
+          process.exitCode = 1
+          return
+        }
+        event("skill.forgotten", { id: forget, reason: reason.trim() })
+        say(`Removed ${forget} from the journey — archived to ${to.replace(skillsRoot, "skills")}.`)
+        say(`Nothing is deleted; it can be re-learned the next time the evidence supports it.`)
+        return
+      }
+      const entries: Array<{ at: string; name: string; line: string; evidence: string[] }> = []
+      // Promotions: every .promotion.json under skills/<category>/<name>/.
+      const categories = await fsp.readdir(skillsRoot, { withFileTypes: true }).catch(() => [])
+      for (const category of categories) {
+        if (!category.isDirectory() || category.name.startsWith(".")) continue
+        const skills = await fsp.readdir(path.join(skillsRoot, category.name), { withFileTypes: true }).catch(() => [])
+        for (const skill of skills) {
+          if (!skill.isDirectory()) continue
+          const promo = await readJson<{ id?: string; verified?: boolean; at?: string; evidenceIds?: string[] } | null>(
+            path.join(skillsRoot, category.name, skill.name, ".promotion.json"), null,
+          )
+          if (!promo?.at) continue
+          const verifiedLine = promo.verified ? "evidence-verified" : "UNVERIFIED (user override)"
+          entries.push({
+            at: promo.at,
+            name: skill.name,
+            evidence: promo.evidenceIds ?? [],
+            line: `learned skill "${skill.name}" (${verifiedLine})`,
+          })
+        }
+      }
+      // Candidates still in quarantine: staged, not yet learned.
+      const pendingDir = path.join(skillsRoot, "pending")
+      for (const file of await fsp.readdir(pendingDir).catch(() => [] as string[])) {
+        const rec = await readJson<{ candidate?: { title?: string; evidenceIds?: string[] }; stagedAt?: string } | null>(
+          path.join(pendingDir, file), null,
+        )
+        if (!rec?.stagedAt) continue
+        entries.push({
+          at: rec.stagedAt,
+          name: rec.candidate?.title ?? file.replace(/\.json$/, ""),
+          evidence: rec.candidate?.evidenceIds ?? [],
+          line: `proposed candidate "${rec.candidate?.title ?? file.replace(/\.json$/, "")}" (staged, awaiting promotion)`,
+        })
+      }
+      entries.sort((a, b) => a.at.localeCompare(b.at))
+      if (json) {
+        process.stderr.write(JSON.stringify({ count: entries.length, journey: entries }, null, 2) + "\n")
+        return
+      }
+      if (entries.length === 0) {
+        say(`\nNo skills learned yet — the journey starts with the first promoted candidate.`)
+        return
+      }
+      say(`\nThe learning journey — ${entries.length} skill event(s), oldest first:`)
+      for (const e of entries) {
+        say(`  ${e.at.slice(0, 10)}  ${e.line}`)
+        if (e.evidence.length) say(`      evidence: ${e.evidence.join(", ")}`)
+      }
+      say(`\nRemove one: apex-agent skills journey --forget <name> [--reason "<why>"]`)
+      say("")
       return
     }
 
@@ -491,6 +553,27 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
 }
 
 /**
+ * Retirement archives rather than deletes (54 §9.3): the skill's directory moves
+ * to skills/.archive/ under a timestamped name, and the destination is returned
+ * so the report can say exactly where it went. Returns null when no shipped
+ * skill carries that name.
+ */
+async function retireSkillDir(skillsRoot: string, name: string): Promise<string | null> {
+  const archiveDir = path.join(skillsRoot, ".archive")
+  for (const category of await fsp.readdir(skillsRoot, { withFileTypes: true }).catch(() => [])) {
+    if (!category.isDirectory() || category.name.startsWith(".")) continue
+    const skillDir = path.join(skillsRoot, category.name, name)
+    const exists = await fsp.access(path.join(skillDir, "SKILL.md")).then(() => true, () => false)
+    if (!exists) continue
+    await fsp.mkdir(archiveDir, { recursive: true })
+    const to = path.join(archiveDir, `${name}-${toIsoString(Date.now()).replace(/[:.]/g, "-")}`)
+    await fsp.rename(skillDir, to)
+    return to
+  }
+  return null
+}
+
+/**
  * Locate a shipped skill's directory by its header name: `<skills>/<category>/<name>`
  * where SKILL.md exists, or `<skills>/<name>` when the caller already used the
  * category path. Returns null when no such skill is shipped.
@@ -521,6 +604,7 @@ apex-agent skills <sub> [args]
   show <category/name>          read one skill: header, usage, body
   stage <file.md>               stage a draft as a CANDIDATE (gates checked first)
   pending                       list staged candidates awaiting promotion
+  journey [--forget <name>]     everything learned, in order, with evidence
   promote <id> [--i-accept-unverified]  promote through the forge gates
   retire <name> --reason "<why>"  archive a shipped skill (never deletes)
   trust <path>                  record an explicit, hash-bound trust grant

@@ -1676,3 +1676,17 @@ Next: WP-073 (CLI surface completion).
 - Evidence: `.apex/upgrade/EVIDENCE/EVD-073.md`.
 
 Next: WP-073b (memory journey / skills journey, 54 §17, UX-T07).
+
+## WP-073b — memory journey / skills journey (54 §17) — DONE
+
+- `apex-agent memory journey` — chronological, plain-language learning record with
+  provenance and evidence ids; `--forget <id>` retracts through the librarian (record
+  stays visible, marked retracted; nothing deleted silently).
+- `apex-agent skills journey` — forge promotions + staged candidates in time order with
+  evidence ids; `--forget <name>` archives via the shared `retireSkillDir` helper.
+- `skill-forge.ts` now persists `evidenceIds` in `.promotion.json` so a skill's
+  justification survives promotion (previously destroyed with the quarantine record).
+- UX-T07 covered end-to-end in `test/cli/wp073b-journey.test.ts` (3 tests).
+- Tests: 1365 pass / 0 fail (was 1362). Evidence: `.apex/upgrade/EVIDENCE/EVD-073b.md`.
+
+Next: WP-074 (templates and config migration, 44 §6, CFG-T01..T09).

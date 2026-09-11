@@ -274,6 +274,72 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       return
     }
 
+    case "journey": {
+      // WP-073b (54 §17, UX-T07): the chronological, plain-language record of
+      // everything the system learned, with the evidence that justified it.
+      // Self-learning stays inspectable instead of spooky. `--forget` is the
+      // explicit removal flag (53 §3 design rules); an optional --reason is
+      // recorded when given.
+      const forget = flag("--forget")
+      const reason = flag("--reason")
+      if (forget) {
+        const state = await store.read()
+        const target = state.records.find((r) => r.id === forget)
+        if (!target) {
+          say(`No memory record named ${forget} — nothing was removed.`)
+          process.exitCode = 1
+          return
+        }
+        const candidate: MemoryCandidate = {
+          text: reason ?? "",
+          semanticKey: target.semanticKey,
+          scope: target.scope,
+          kind: target.kind,
+          relation: "retract",
+          targetIds: [forget],
+          provenance: { sourceType: "explicit_user", observedAt: toIsoString(Date.now()) },
+        }
+        const out = await resolveCandidate(state.records, candidate)
+        if (out.actions[0]!.action === "refused") {
+          say(`Refused: ${out.actions[0]!.reason}`)
+          process.exitCode = 1
+          return
+        }
+        const rev = await store.commit(state.revision, out.records)
+        event("memory.forgotten", { id: forget, reason: reason ?? "" })
+        say(`Removed ${forget} — its status is now retracted at store revision ${rev}. Nothing else changed.`)
+        return
+      }
+      const state = await store.read()
+      const records = [...state.records].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      if (json) {
+        process.stderr.write(JSON.stringify({ count: records.length, journey: records }, null, 2) + "\n")
+        return
+      }
+      if (records.length === 0) {
+        say(`\nNothing has been learned yet — the journey starts with the first remembered fact.`)
+        return
+      }
+      say(`\nThe learning journey — ${records.length} record(s), oldest first:`)
+      for (const r of records) {
+        const verb =
+          r.status === "retracted" ? "learned, then retracted" :
+          r.status === "superseded" ? "learned, then superseded" :
+          r.status === "candidate" ? "proposed" :
+          r.status === "conflicted" ? "learned (conflicted)" :
+          r.status === "stale" ? "learned (gone stale)" : "learned"
+        const source = r.provenance[0]?.sourceType ?? "unknown"
+        say(`  ${r.createdAt.slice(0, 10)}  ${r.id}  ${verb} (${source}) — ${r.semanticKey}`)
+        say(`      ${r.text.slice(0, 110)}`)
+        const evidence = r.provenance.flatMap((p) => p.evidenceIds ?? [])
+        if (evidence.length) say(`      evidence: ${evidence.join(", ")}`)
+        if (r.supersededBy) say(`      superseded by ${r.supersededBy}`)
+      }
+      say(`\nRemove one: apex-agent memory journey --forget <id> [--reason "<why>"]`)
+      say("")
+      return
+    }
+
     case "disable":
     case "off": {
       // Per-project disable: writes memory.useGlobal=false into the project's config.
@@ -313,6 +379,7 @@ apex-agent memory <sub> [args]
   retract <id> --reason "<why>"         retract a record; the reason is audited
   pending                               staged writes awaiting approval
   approve <id> | reject <id>            resolve a staged pending mutation
+  journey [--forget <id>]               everything learned, in order, with evidence
   export [--out file.json]              export durable state (redacted)
   off                                   disable global memory retrieval for THIS project
 
