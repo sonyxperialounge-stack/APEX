@@ -627,7 +627,7 @@
    "finishedAt": "2026-09-11T07:40:00.000Z",
    "evidence": "EVD-057",
    "notes": "capability doctrine: +core/16-CAPABILITIES.md (48 §2 routing; one effects taxonomy; mayExpose != mayExecute; 48 §5 canonical UNAVAILABLE statement + forbiddens; progressive disclosure; CAP-T05), ~START-HERE.md row, payload sync; packaging tests pass inside npm run verify",
-   "commit": "PENDING"
+   "commit": "176f1c4"
   },
   "WP-058": {
    "status": "PENDING"
