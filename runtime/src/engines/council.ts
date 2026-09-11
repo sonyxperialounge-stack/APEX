@@ -42,6 +42,9 @@ export type ConveneReason =
   | "irreversible"
   | "architecture"
   | "requirement_extraction"
+  | "migration_design"
+  | "skill_promotion"
+  | "security_boundary"
 
 export interface ConveneContext {
   consecutiveFailures: number
@@ -50,6 +53,12 @@ export interface ConveneContext {
   architectural: boolean
   reversalCostHours: number
   kind?: "review" | "requirement-extraction"
+  /** A migration moves durable state; the design deserves a second look (26 §8). */
+  migrationDesign?: boolean
+  /** A proposed SkillForge promotion becomes reusable procedure; challenge it first (26 §8). */
+  skillPromotion?: boolean
+  /** A trust, permission or isolation boundary moves (26 §8). */
+  securityBoundary?: boolean
 }
 
 export interface Finding {
@@ -112,6 +121,15 @@ export class Council {
     }
     if (ctx.kind === "requirement-extraction") {
       return { yes: true, reason: "requirement diffing — a union of two extractions beats either alone", trigger: "requirement_extraction" }
+    }
+    if (ctx.migrationDesign === true) {
+      return { yes: true, reason: "migration design — durable state moves are expensive to reverse", trigger: "migration_design" }
+    }
+    if (ctx.skillPromotion === true) {
+      return { yes: true, reason: "proposed skill promotion — challenge it before it becomes reusable procedure", trigger: "skill_promotion" }
+    }
+    if (ctx.securityBoundary === true) {
+      return { yes: true, reason: "security boundary change — trust, permission or isolation moves", trigger: "security_boundary" }
     }
     return {
       yes: false,

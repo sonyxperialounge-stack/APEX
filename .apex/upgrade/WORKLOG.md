@@ -1561,3 +1561,18 @@ Verify: `npm run verify` -> 1305 pass, 0 fail, 0 cancelled, exit 0 (~40s)
 Evidence: EVD-065b (FLT-T07..T11).
 Surprises: none.
 Next: WP-066 (council triggers).
+
+## WP-066 — Council triggers · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/council.ts (+3 triggers, gate untouched),
+  ~runtime/test/engines/recall-council.test.ts (+4),
+  +.apex/upgrade/EVIDENCE/EVD-066.md
+Decision: convene on migration design, skill-promotion challenge and
+  security-boundary change with naming reasons (26 §8); the council still
+  sets no status (CNC-006). FLT-T04 proved functionally: two agreeing
+  reviews leave every finding unverified with zero verification records.
+Verify: `npm run verify` -> 1309 pass, 0 fail, 0 cancelled, exit 0 (~49s)
+  (was 1305; +4 new).
+Evidence: EVD-066 (FLT-T04).
+Surprises: none.
+Next: WP-067 (completion states + Gate integration).

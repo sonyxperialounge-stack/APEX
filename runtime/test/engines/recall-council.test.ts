@@ -305,6 +305,46 @@ describe("CNC-002 — the convening gate refuses routine work", () => {
   })
 })
 
+describe("WP-066 — council convenes on autonomy triggers, never as verifier (26 §§8–9)", () => {
+  test("migration design convenes", () => {
+    const r = council().shouldConvene(ctx({ migrationDesign: true }))
+    assert.equal(r.yes, true)
+    assert.equal(r.trigger, "migration_design")
+  })
+
+  test("skill promotion challenge convenes", () => {
+    const r = council().shouldConvene(ctx({ skillPromotion: true }))
+    assert.equal(r.yes, true)
+    assert.equal(r.trigger, "skill_promotion")
+  })
+
+  test("security boundary change convenes", () => {
+    const r = council().shouldConvene(ctx({ securityBoundary: true }))
+    assert.equal(r.yes, true)
+    assert.equal(r.trigger, "security_boundary")
+  })
+
+  test("FLT-T04: agreement between reviews never becomes verification", async () => {
+    const host = new FakeHost(["impl-model", "review-model"])
+    const input = {
+      requirementId: "REQ-066", requirementText: "Prune keeps evidence",
+      acceptance: "dry-run lists candidates; evidence sessions refused",
+      diff: "+ prune()", testOutput: "6 passed", implementerModel: "impl-model",
+    }
+    const first = await council(host).review(input)
+    const second = await council(host).review(input)
+    // Consensus: both reviews agree — and both findings stay hypotheses.
+    assert.ok(first.findings.length > 0 && second.findings.length > 0)
+    for (const finding of [...first.findings, ...second.findings]) {
+      assert.equal(finding.verified, false)
+      assert.equal(finding.verificationId, "")
+    }
+    assert.match(first.note, /HYPOTHESIS|not a verdict/)
+    // Nothing the council said became evidence on its own.
+    assert.deepEqual(await ledger.listVerifications(), [])
+  })
+})
+
 describe("CNC-003 — the reviewer is not anchored", () => {
   const input = {
     requirementId: "REQ-021", requirementText: "Upload with retry",
