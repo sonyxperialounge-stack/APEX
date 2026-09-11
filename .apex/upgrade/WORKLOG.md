@@ -1209,3 +1209,28 @@ Surprises: /\W+/ tokenization glued underscores - host.delete_file could not mat
   and lost ties by id order; split on [^a-z0-9]+ instead. Descriptor has title not summary;
   availability changes are re-registration, not mutation; effects exclude SEARCH/MODIFY.
 Next: WP-054 (lazy schema cache).
+
+## WP-054 — Lazy schema cache
+
+Date: 2026-09-11 | Packet: WP-054 | Branch: upgrade/army-v4 | Dep: WP-053
+Files:
+  ~runtime/src/engines/capability-search.ts (ToolSchemaCache, validateDeferredSchema, schemaHashOf,
+  CapabilitySearch.loadSchema + invalidateSchema/Provider),
+  ~runtime/test/engines/capability-search.test.ts (+16 => 34),
+  +.apex/upgrade/EVIDENCE/EVD-054.md
+Decision: Session-only in-memory cache keyed providerId:toolName with structural hash recorded per
+  entry (22 §9; 41 §14 blueprint). get() serves cache hits without touching the loader; a
+  host-reported expectedHash that differs replaces the stale entry (hash drift = invalidation,
+  TLS-T04); invalidateProvider sweeps on disconnect, invalidate drops one capability. Validation
+  (22 §8): JSON gate for strings, object gate for roots, internal #/ refs must resolve, $ref
+  cycles rejected (recursive constructs the local validator cannot reason about); external refs
+  stay the backend's contract; throws CAPABILITY_SCHEMA_INVALID, raw kept for inspection.
+  loadSchema resolves via registry.select and throws CAPABILITY_UNAVAILABLE for missing/
+  unavailable capabilities - a schema is never fabricated (TLS-T07). The engine never probes on
+  its own: loaders come from the host adapter / WP-058 bridge.
+Verify: `npm run verify` -> 1129 pass, 0 fail, exit 0 (~32s).
+Evidence: EVD-054 (TLS-T02, TLS-T03, TLS-T04).
+Surprises: fixture descriptors left toolName undefined, colliding host.a/host.b under "host:" -
+  realistic descriptors (discovery always names the tool) fixed the test; an unparseable string
+  is caught by the JSON gate, so the non-object assertion must accept both messages.
+Next: WP-059 (ExecutionContext on the operation record, 54 §13).
