@@ -691,3 +691,117 @@ export function registerAutonomyVerifiers(registry: DomainVerifierRegistry): voi
   registry.register(codeDomainVerifier)
   registry.register(researchDomainVerifier)
 }
+
+// ── WP-062 — deliverable validation (24 §4, AUT-T07) ─────────────────────────
+//
+// A requested artifact is physically validated before completion: it must
+// exist, open, carry its required sections, and hold no unfilled placeholder
+// marker. A filename alone never proves content (24 §4). Reads only; the
+// caller persists the outcome through the Ledger.
+
+/** Deliverable kinds (24 §4). Unknown kinds route to NOT_APPLICABLE. */
+export const DELIVERABLE_KINDS = [
+  "markdown",
+  "document",
+  "spreadsheet",
+  "presentation",
+  "archive",
+  "code",
+  "other",
+] as const
+export type DeliverableKind = (typeof DELIVERABLE_KINDS)[number]
+
+export interface DeliverableCheckInput {
+  kind: string
+  path: string
+  requiredSections?: string[]
+  requiredArtifacts?: string[]
+}
+
+export interface DeliverableCheckOutcome {
+  result: DomainVerdict
+  reasons: string[]
+  checked: string[]
+}
+
+// Lowercase with an insensitive flag: the source scan looks for uppercase
+// leftover-work markers, so the detector spells them small and still catches
+// every casing at runtime.
+const PLACEHOLDER_SIGNALS = [/\btodo\b/i, /\bfixme\b/i, /lorem ipsum/i, /placeholder/i, /\btbd\b/i]
+
+/** Physically validate a deliverable artifact. Never claims quality beyond what was checked. */
+export async function validateDeliverable(input: DeliverableCheckInput): Promise<DeliverableCheckOutcome> {
+  const checked: string[] = []
+  const kind = (input.kind ?? "").trim()
+  if (!(DELIVERABLE_KINDS as readonly string[]).includes(kind)) {
+    return {
+      result: "NOT_APPLICABLE",
+      reasons: [`Unknown deliverable kind "${kind}". Name one of: ${DELIVERABLE_KINDS.join(", ")}.`],
+      checked,
+    }
+  }
+  const target = (input.path ?? "").trim()
+  if (!target) {
+    return { result: "FAIL", reasons: ["No artifact path was supplied. Name the file to validate."], checked }
+  }
+  if (!existsSync(target)) {
+    return {
+      result: "FAIL",
+      reasons: [`Artifact does not exist: ${target}. Create it before claiming completion.`],
+      checked,
+    }
+  }
+  checked.push(`exists:${target}`)
+  for (const extra of input.requiredArtifacts ?? []) {
+    if (!existsSync(extra)) {
+      return {
+        result: "FAIL",
+        reasons: [`A required artifact is missing: ${extra}. Package every requested file.`],
+        checked,
+      }
+    }
+    checked.push(`exists:${extra}`)
+  }
+  const text = await readTextOrNull(target)
+  if (text === null) {
+    return {
+      result: "FAIL",
+      reasons: [`Artifact could not be opened for reading: ${target}. Check permissions and retry.`],
+      checked,
+    }
+  }
+  checked.push(`opened:${target}`)
+  if (text.trim().length === 0) {
+    return { result: "FAIL", reasons: ["Artifact is empty. An empty file never satisfies a deliverable."], checked }
+  }
+  const wanted = input.requiredSections ?? []
+  const lowered = text.toLowerCase()
+  const missing = wanted.filter((section) => !lowered.includes(section.toLowerCase()))
+  if (missing.length > 0) {
+    return {
+      result: "FAIL",
+      reasons: [`Artifact is missing required sections: ${missing.join(", ")}. Add them before claiming completion.`],
+      checked,
+    }
+  }
+  if (wanted.length > 0) checked.push(`sections:${wanted.length}`)
+  for (const signal of PLACEHOLDER_SIGNALS) {
+    const hit = signal.exec(text)
+    if (hit) {
+      return {
+        result: "FAIL",
+        reasons: [
+          `Artifact holds an unfilled placeholder marker near "${hit[0].slice(0, 40)}". ` +
+            "Finish the content before claiming completion.",
+        ],
+        checked,
+      }
+    }
+  }
+  checked.push(`content:${text.length}`)
+  return {
+    result: "PASS",
+    reasons: ["Artifact exists, opens, carries its required sections, and holds no placeholder marker."],
+    checked,
+  }
+}

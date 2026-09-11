@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Verifier, extractFailingTests, appendTestPath, createDomainVerifierRegistry, registerAutonomyVerifiers } from "../../src/engines/verifier.ts"
+import { Verifier, extractFailingTests, appendTestPath, createDomainVerifierRegistry, registerAutonomyVerifiers, validateDeliverable } from "../../src/engines/verifier.ts"
 import { Ledger } from "../../src/engines/ledger.ts"
 import { FakeCommandRunner, RealCommandRunner } from "../../src/core/exec.ts"
 import { setLogDir } from "../../src/core/log.ts"
@@ -611,5 +611,61 @@ describe("WP-061 domain verifier registry (24 §3)", () => {
   test("the registry adds no write path to the verifier (42 §4)", async () => {
     const text = await fsp.readFile(path.join(import.meta.dirname, "../../src/engines/verifier.ts"), "utf8")
     assert.ok(!/writeFile|writeText|writeJson|unlink|rename|rm\(/.test(text), "domain verifiers return records; someone else persists them")
+  })
+})
+
+// ── WP-062 — deliverable validation (24 §4, AUT-T07) ─────────────────────────
+
+describe("WP-062 deliverable validation (24 §4, AUT-T07)", () => {
+  test("AUT-T07: a missing artifact fails before completion", async () => {
+    const outcome = await validateDeliverable({ kind: "markdown", path: path.join(dir, "no-such-file.md") })
+    assert.equal(outcome.result, "FAIL")
+    assert.match(outcome.reasons.join(" "), /does not exist/)
+  })
+
+  test("AUT-T07: an empty artifact fails", async () => {
+    await write("empty.md", "   \n")
+    const outcome = await validateDeliverable({ kind: "markdown", path: path.join(dir, "empty.md") })
+    assert.equal(outcome.result, "FAIL")
+    assert.match(outcome.reasons.join(" "), /empty/)
+  })
+
+  test("AUT-T07: a missing required section fails and names it", async () => {
+    await write("report.md", "# Report\n\n## Summary\nDone.\n")
+    const outcome = await validateDeliverable({
+      kind: "markdown",
+      path: path.join(dir, "report.md"),
+      requiredSections: ["## Summary", "## Evidence"],
+    })
+    assert.equal(outcome.result, "FAIL")
+    assert.match(outcome.reasons.join(" "), /## Evidence/)
+  })
+
+  test("AUT-T07: placeholder content fails", async () => {
+    await write("draft.md", "# Report\n\n## Summary\nTBD: fill this in later.\n")
+    const outcome = await validateDeliverable({
+      kind: "markdown",
+      path: path.join(dir, "draft.md"),
+      requiredSections: ["## Summary"],
+    })
+    assert.equal(outcome.result, "FAIL")
+    assert.match(outcome.reasons.join(" "), /placeholder/i)
+  })
+
+  test("AUT-T07: a real artifact with its sections passes", async () => {
+    await write("done.md", "# Report\n\n## Summary\nShipped the prune.\n\n## Evidence\nV-001 suite green.\n")
+    const outcome = await validateDeliverable({
+      kind: "markdown",
+      path: path.join(dir, "done.md"),
+      requiredSections: ["## Summary", "## Evidence"],
+    })
+    assert.equal(outcome.result, "PASS")
+    assert.ok(outcome.checked.length >= 3)
+  })
+
+  test("an unknown deliverable kind is NOT_APPLICABLE, never a guessed PASS", async () => {
+    await write("x.bin", "bytes\n")
+    const outcome = await validateDeliverable({ kind: "hologram", path: path.join(dir, "x.bin") })
+    assert.equal(outcome.result, "NOT_APPLICABLE")
   })
 })

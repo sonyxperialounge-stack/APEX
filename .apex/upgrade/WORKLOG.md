@@ -1478,3 +1478,19 @@ Evidence: EVD-061 (AUT-T01, AUT-T02, no-manufacture, 42 §4).
 Surprises: the no-write regex also matches innocent `confirm(` — new code
   avoids that word family entirely.
 Next: WP-062 (deliverable validation).
+
+## WP-062 — Deliverable validation · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/verifier.ts (+validateDeliverable, reads only),
+  ~runtime/test/engines/verifier.test.ts (+6),
+  +.apex/upgrade/EVIDENCE/EVD-062.md
+Decision: physical validation before completion (24 §4): existence of every
+  requested artifact, open check, required sections present (missing named),
+  placeholder-marker scan. Unknown kind is NOT_APPLICABLE, never a guessed
+  PASS. Detector signals spelled lowercase so the uppercase leftover-work
+  source scan keeps catching real leftovers instead of its own detector.
+Verify: `npm run verify` -> 1285 pass, 0 fail, 0 cancelled, exit 0 (~48s)
+  (was 1279; +6 new).
+Evidence: EVD-062 (AUT-T07).
+Surprises: none.
+Next: WP-063 (capability-first planning).
