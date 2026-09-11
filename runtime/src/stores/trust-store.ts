@@ -18,8 +18,8 @@
 
 /**
  * The trust store: skill trust grants bound to content hashes (20 §§2–4; WP-042),
- * plus the extension trust surface (23 §5, §6; WP-056) implemented in
- * `./extension-trust.ts`.
+ * plus the extension trust surface (23 §5, §6; WP-056) and hook-script consent
+ * (54 §15; WP-056b).
  *
  * A skill is future instruction; a script inside one is executable code (20 §1).
  * Both are supply-chain inputs, so trust is never a property of a NAME — it is a
@@ -30,9 +30,9 @@
  * and hashed, and the Governor alone decides execution later. Project-sourced
  * content can never grant itself trust (CFG-T07).
  *
- * Extension trust is the SAME mechanism as skill trust, not a second one (54 §15):
- * one cross-process lock, one shared scan-cache (extension verdicts keyed `ext:`),
- * stored in its own `trust/extensions.json`.
+ * Extension trust, hook consent and skill trust are THE SAME mechanism, not
+ * second ones (54 §15): one cross-process lock, one shared scan-cache — verdicts
+ * keyed `ext:` / `hook:` — each in its own file under `trust/`.
  */
 
 import fsp from "node:fs/promises"
@@ -45,8 +45,11 @@ import type { ScanResult, ScanContext } from "../core/redact.ts"
 import { toIsoString } from "../core/ids.ts"
 import { openExtensionTrust } from "./extension-trust.ts"
 import type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
+import { openHookConsent } from "./hook-consent.ts"
+import type { HookConsentGrant, HookConsentStore } from "./hook-consent.ts"
 
 export type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
+export type { HookConsentGrant, HookConsentStore } from "./hook-consent.ts"
 
 /** Source tiers (54 §9.1). PROJECT grants are data-tier: never self-trusting. */
 export type SkillTier = "BUILTIN" | "USER" | "LEARNED" | "PROJECT" | "EXTERNAL"
@@ -101,8 +104,7 @@ export interface TrustStore {
   /**
    * Record a trust grant for a skill at an exact content hash. The skill text is
    * scanned HERE: `deny` is never trusted (54 §9.1), `review` needs a recorded
-   * justification, and a grant claiming PROJECT tier from project content is
-   * refused outright (CFG-T07 — project skills never self-trust).
+   * justification, and PROJECT tier never self-trusts (CFG-T07).
    */
   grant(input: {
     skillId: string
@@ -114,21 +116,15 @@ export interface TrustStore {
   }, skillText?: string): Promise<TrustGrant & { granted: boolean }>
   /** Is this skill, at THIS hash, trusted? Answers for the current content only. */
   status(skillId: string, contentHash: string): Promise<TrustStatus>
-  /**
-   * Scan skill text with the shared ingestion scanner (20 §2), cached by content
-   * hash (54 §9.2, SKSEC-T07): an unchanged skill is not re-scanned on the second
-   * boot — a scanner-policy bump (SCAN_POLICY_VERSION) invalidates the whole cache.
-   */
+  /** Scan skill text with the shared scanner (20 §2), cached by hash (54 §9.2). */
   scanSkill(text: string): Promise<ScanResult>
   /** Enumerate a skill's scripts/ with content hashes (20 §4). Never executes. */
   enumerateScripts(skillId: string, skillDir: string): Promise<ScriptListing[]>
   /**
    * WP-056 — record an EXTENSION trust grant at an exact content hash (23 §5).
-   * The extension ENTRY text is scanned in the strict `extension` context (47
-   * §4.5): a deny verdict is never overridable, a review verdict needs a
-   * recorded justification, and a PROJECT grant claimed by project content is
-   * refused outright (23 §6 — project extensions stay disabled until explicit
-   * user trust).
+   * The ENTRY text is scanned in the strict `extension` context (47 §4.5): deny
+   * is never overridable, review needs a recorded justification, and PROJECT
+   * never self-trusts (23 §6).
    */
   grantExtension(input: {
     extensionId: string
@@ -144,6 +140,29 @@ export interface TrustStore {
   extensionStatus(extensionId: string, contentHash: string): Promise<TrustStatus>
   /** Scan extension entry text in the `extension` scan context, cached by `ext:` key. */
   scanExtension(text: string): Promise<ScanResult>
+  /**
+   * WP-056b — consent for a user-supplied hook script at an exact content hash
+   * (54 §15): keyed `(event, canonical command path, content hash)`, scanned in
+   * the strictest context with the same deny/review rules as extension consent.
+   * An unapproved hook script never runs (EXT-T11).
+   */
+  approveHook(input: {
+    event: string
+    commandPath: string
+    contentHash: string
+    tier: "USER" | "PROJECT" | "EXTERNAL"
+    grantedBy: string
+    override?: boolean
+    justification?: string
+  }, scriptText?: string): Promise<HookConsentGrant & { granted: boolean }>
+  /** Is this hook script, at THIS hash, consented for THIS event (EXT-T11)? */
+  hookStatus(event: string, commandPath: string, contentHash: string): Promise<{
+    trusted: boolean
+    grants: number
+    reason?: string
+  }>
+  /** Scan hook script text in the strictest context, cached by `hook:` key. */
+  scanHook(text: string): Promise<ScanResult>
   readonly file: string
 }
 
@@ -169,10 +188,8 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
     if (stored && stored.schemaVersion === 1 && stored.policyVersion === SCAN_POLICY_VERSION && stored.entries) {
       return stored
     }
-    // Missing, malformed, or a policy bump: start clean. The OLD file is left in
-    // place (next write replaces it) — nothing is deleted by a cache invalidation.
-    // A FRESH object every call: scanCached mutates entries in place, and sharing
-    // a module-level empty cache would leak hits across boots in one process.
+    // Missing, malformed, or a policy bump: start clean — the old file is left in
+    // place (nothing is deleted), and a FRESH object avoids caching across boots.
     return { schemaVersion: 1, policyVersion: SCAN_POLICY_VERSION, entries: {} }
   }
 
@@ -186,8 +203,8 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
     const cache = await readCache()
     const hit = cache.entries[hash]
     if (hit) {
-      // A cached entry stores rule names + severities, NOT excerpts: a verdict is
-      // enough to decide policy, and an old excerpt is a stale evidence leak.
+      // Verdicts cache rule names + severities, never excerpts: an old excerpt
+      // would be a stale evidence leak.
       return {
         verdict: hit.verdict,
         findings: hit.rules.map((r) => ({ rule: r.rule, severity: r.severity, excerpt: "" })),
@@ -209,9 +226,10 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
     return { schemaVersion: 1, grants: [] }
   }
 
-  // Extension trust shares this store's clock, scan-cache, and cross-process lock
-  // (54 §15 — the same mechanism, not a second one).
+  // Extension, hook and skill trust share this store's clock, scan-cache and
+  // cross-process lock (54 §15) — each verdict cached under its own namespace.
   const extStore = openExtensionTrust(homeDir, { now, scanCached, lockFile })
+  const hookStore = openHookConsent(homeDir, { now, scanCached, lockFile })
 
   return {
     file,
@@ -223,9 +241,8 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
     scanExtension: (text: string) => extStore.scan(text),
 
     async grant(input, skillText): Promise<TrustGrant & { granted: boolean }> {
-      // Project-sourced content may never grant itself trust, whoever the grant
-      // claims to come from: PROJECT tier is reserved for explicit USER approval
-      // of repository data, and a grant BY the skill file itself is refused.
+      // PROJECT tier is explicit USER approval of repository data: a grant BY the
+      // skill file itself is refused (CFG-T07).
       if (input.tier === "PROJECT" && /skill|project/i.test(input.grantedBy)) {
         throw new ApexError(
           "A project-supplied skill cannot grant itself trust. Project skills are data by " +
@@ -271,8 +288,7 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
           (g) => g.skillId === input.skillId && g.contentHash === input.contentHash,
         )
         if (existing) {
-          // Idempotent: the same grant at the same hash is a win, not a duplicate.
-          result = { ...existing, granted: true }
+          result = { ...existing, granted: true } // idempotent: same grant, same hash
           return
         }
         data.grants.push(result)
@@ -285,6 +301,10 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
 
     grantExtension: (input, entryText) => extStore.grant(input, entryText),
     extensionStatus: (extensionId, contentHash) => extStore.status(extensionId, contentHash),
+
+    approveHook: (input, scriptText) => hookStore.approve(input, scriptText),
+    hookStatus: (event, commandPath, contentHash) => hookStore.status(event, commandPath, contentHash),
+    scanHook: (text) => hookStore.scan(text),
 
     async status(skillId: string, contentHash: string): Promise<TrustStatus> {
       const data = await read()

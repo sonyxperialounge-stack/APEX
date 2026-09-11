@@ -1327,3 +1327,33 @@ Surprises: the MOD-T05 module-budget gate (350 lines, no grandfathering) caught 
   (allowed/ask/rule/reason only); redact() strips real secret shapes, not placeholders; a
   scanned-clean untrusted entry evaluates TRUST_PENDING, not SCANNED.
 Next: WP-056b (hook fail-open/closed + per-hook timeout + consent records, 54 §15).
+
+## WP-056b — Hook fail-open/closed classes + consent records · DONE · 2026-09-11
+
+Files: +runtime/src/plugin/hook-safety.ts (HookClass map: policy/inject/capture/gate,
+  safe fail-open wrapper + safeClosed fail-closed wrapper + HookTimeoutError +
+  HOOK_CLOSED marker, openHookQuarantine 23 §11, hookScriptRunnable/assertHookScriptRunnable
+  EXT-T11 gate, GATE_NOTE on the completion gate), +runtime/src/stores/hook-consent.ts
+  (consent keyed by (event, canonical path, content hash) in trust/hooks.json, strictest
+  scan context under hook: cache namespace, deny never overridable, review needs
+  justification, re-approve supersedes stale rows, same lock + scan-cache as extension
+  trust), ~runtime/src/stores/trust-store.ts (approveHook/hookStatus/scanHook delegation,
+  back under the 350-line budget), ~runtime/src/plugin/index.ts (class-correct wiring:
+  tool.execute.before + permission.ask fail-closed, capture/inject fail-open with
+  plugin.capture.lost on loss, Engines.trust + hookQuarantine, hookScriptRegistry +
+  extensionSurface hooks/hookClasses/config/trust), +runtime/test/plugin/hook-safety.test.ts
+  (+29), +.apex/upgrade/EVIDENCE/EVD-056b.md
+Decision: headed down the DOCUMENTED route (54 §15): the "same mechanism as extension trust"
+  is one scan-cache writer, one cross-process lock and the same deny/review rules — hook
+  consent lives in its own trust/hooks.json file so records never mix, and a NEWER consent
+  for the same (event, path) at a different hash supersedes the stale row (the file cannot
+  grow one dead row per edit). The completion gate is fail-closed by construction: it is
+  never wrapped in a failing-open wrapper, so a broken gate can never report "GATE PASSED".
+  Guards (policy hooks) are never quarantined — quarantining a guard would reopen the hole
+  it exists to close; only fail-open hooks get the 23 §11 session quarantine.
+Verify: `npm run verify` -> 1229 pass, 0 fail, exit 0 (~40s).
+Evidence: EVD-056b (EXT-T08..T11).
+Surprises: ApexError.code is a property, not part of the message (tests assert err.code);
+  TS generic inference makes zero-arg fixtures infer A=[] (pass explicit params);
+  MOD-T05 again — trust-store grew to 365 lines, compressed back to 347.
+Next: WP-057 (capability doctrine).

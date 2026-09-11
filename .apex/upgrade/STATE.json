@@ -3,7 +3,7 @@
  "plan": "army-update-plan",
  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
  "startedAt": "2026-09-10T05:36:15.128Z",
- "updatedAt": "2026-09-11T05:55:30.000Z",
+ "updatedAt": "2026-09-11T07:20:00.000Z",
  "baseline": {
   "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
   "dirtyAtStart": false,
@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "5",
- "currentPacket": "WP-056b",
+ "currentPacket": "WP-057",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -614,7 +614,12 @@
    "commit": "ed34b4a"
   },
   "WP-056b": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T06:10:00.000Z",
+   "finishedAt": "2026-09-11T07:15:00.000Z",
+   "evidence": "EVD-056b",
+   "notes": "hook fail-open/closed classes by 54 §15 (EXT-T08..T10), 23 §11 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json — same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
+   "commit": "PENDING"
   },
   "WP-057": {
    "status": "PENDING"

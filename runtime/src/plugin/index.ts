@@ -31,6 +31,7 @@
  */
 
 import path from "node:path"
+import fsp from "node:fs/promises"
 import { Ledger } from "../engines/ledger.ts"
 import { Verifier } from "../engines/verifier.ts"
 import { Governor } from "../engines/governor.ts"
@@ -50,6 +51,13 @@ import { CapabilityRegistry } from "../engines/capability-registry.ts"
 import { onHostCapabilityChange, registerHostTools } from "../engines/host-discovery.ts"
 import { discoverExtensions, openExtensionQuarantine, reportExternalDirectories } from "./extensions.ts"
 import { NullHostCapabilities, type HostCapabilities } from "../host/types.ts"
+import {
+  HOOK_CLASS, HOOK_TIMEOUT_MS, hookClassOf, openHookQuarantine, safe, safeClosed,
+  describeHookClasses, assertHookScriptRunnable, canonicalScriptPath,
+} from "./hook-safety.ts"
+import { openTrustStore } from "../stores/trust-store.ts"
+import type { TrustStore } from "../stores/trust-store.ts"
+import { createHash } from "node:crypto"
 
 /** WP-052 — single provider label for everything the plugin's host declares. */
 const HOST_PROVIDER_ID = "host"
@@ -72,64 +80,12 @@ export function describeHooks(): readonly HookName[] {
   return HOOK_NAMES
 }
 
-const HOOK_TIMEOUT_MS = 10_000
-
-/**
- * PLG-002 — the wrapper that keeps a plugin FAILURE from becoming a session failure.
- *
- * The distinction that matters, and which this got wrong once in a way that silently
- * disabled the entire enforcement layer:
- *
- *   - An APEX **failure** (a bug, a timeout, an unreadable ledger) must be swallowed.
- *     Losing a capability is acceptable; taking down the user's session is not.
- *   - An APEX **decision** — a deliberate block — must PROPAGATE. Throwing is how a
- *     `tool.execute.before` hook refuses an operation. Swallowing it means the governor
- *     computes the right answer, logs it, and the write happens anyway.
- *
- * A live run against real OpenCode showed exactly that: `governor.block` and
- * `plugin.block` both fired, and the protected file was still modified, because this
- * wrapper caught the refusal. Deliberate blocks are re-thrown.
- */
-export function safe<A extends unknown[], R>(
-  name: string,
-  fn: (...args: A) => Promise<R>,
-  timeoutMs = HOOK_TIMEOUT_MS,
-): (...args: A) => Promise<R | undefined> {
-  return async (...args: A): Promise<R | undefined> => {
-    let timer: NodeJS.Timeout | undefined
-    try {
-      return await Promise.race([
-        fn(...args),
-        new Promise<never>((_, reject) => {
-          // Deliberately NOT unref'd: when the wrapped hook hangs, this timer is the
-          // ONLY thing keeping the event loop alive. Unref it and an empty loop exits
-          // before the timeout fires — the runner observes a pending promise with nothing
-          // left to run, and the hang is never bounded at all (caught on Node 22).
-          // The timer is cleared in `finally` once the race settles, so it never outlives
-          // the hook execution window.
-          timer = setTimeout(() => reject(new Error(`hook ${name} exceeded ${timeoutMs}ms`)), timeoutMs)
-        }),
-      ])
-    } catch (err) {
-      if (isDeliberateBlock(err)) {
-        event("plugin.block.propagated", { hook: name })
-        throw err // enforcement, not failure
-      }
-      log.error(`apex hook failed — continuing without it`, { hook: name, err: String(err) })
-      return undefined
-    } finally {
-      if (timer) clearTimeout(timer)
-    }
-  }
-}
-
-/** A refusal APEX issued on purpose, as opposed to something that went wrong. */
-export function isDeliberateBlock(err: unknown): boolean {
-  if (err instanceof BlockedError) return true
-  // Defence in depth: a block that crossed a module boundary and lost its prototype
-  // must still be recognised, or enforcement silently degrades again.
-  return err instanceof Error && err.message.includes("[APEX BLOCKED:")
-}
+// WP-056b — the fail-open/fail-closed wrappers and hook classes now live in
+// `./hook-safety.ts` (54 §15). Re-exported here so the plugin surface is
+// unchanged and doctor/tests keep one import path.
+export { safe, safeClosed, HOOK_CLASS, HOOK_TIMEOUT_MS, hookClassOf, describeHookClasses } from "./hook-safety.ts"
+export { isDeliberateBlock, openHookQuarantine, assertHookScriptRunnable } from "./hook-safety.ts"
+export type { HookClass, HookQuarantine } from "./hook-safety.ts"
 
 // ── engine bundle ───────────────────────────────────────────────────────────
 
@@ -156,6 +112,15 @@ export interface Engines {
   registry: CapabilityRegistry
   /** WP-052 — unsubscribe for the host capability-change subscription. */
   disposeDiscovery: () => void
+  /**
+   * WP-056b — the trust store (54 §15): extension grants (WP-056) plus hook-script
+   * consent records keyed by `(event, canonical command path, content hash)`.
+   * The consent gate is what makes "an unapproved hook script never runs" (EXT-T11)
+   * fail-closed.
+   */
+  trust: TrustStore
+  /** WP-056b — 23 §11 crash-loop quarantine for FAIL-OPEN hooks (never for guards). */
+  hookQuarantine: ReturnType<typeof openHookQuarantine>
 }
 
 export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
@@ -192,6 +157,18 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     void registry.refresh(reason)
   })
 
+  // WP-056b — one trust store for extension grants and hook-script consent (54
+  // §15: the same mechanism as extension trust, not a second one), plus the
+  // fail-open hook quarantine of 23 §11.
+  let trust: TrustStore
+  try {
+    trust = openTrustStore(apexHome().path)
+  } catch {
+    // No resolvable global home: the consent gate degrades to closed (no trust
+    // file readable means no consent, which means scripts do not run).
+    trust = openTrustStore(path.join(projectRoot, ".apex"))
+  }
+
   return {
     cfg,
     ledger,
@@ -204,6 +181,8 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     archiveSessionId,
     registry,
     disposeDiscovery,
+    trust,
+    hookQuarantine: openHookQuarantine(),
   }
 }
 
@@ -628,26 +607,37 @@ export async function ApexPlugin(ctx: PluginContext = {}): Promise<Record<string
 
   log.info("apex plugin loaded", { projectRoot, hooks: HOOK_NAMES.length })
 
+  // WP-056b — THROTTLE configuration comes from the ledger, so the wiring is
+  // impossible to sidestep by mutating a private const.
+  const cfg = engines.cfg
+  const hookRegistry = hookScriptRegistry(engines)
+  void hookRegistry // kept for doctor to introspect; consent surface below
+
   return {
-    "experimental.chat.system.transform": safe("system.transform", systemTransform(engines)),
-    "experimental.chat.messages.transform": safe("messages.transform", messagesTransform(engines)),
-    "experimental.session.compacting": safe("session.compacting", onCompacting(engines)),
-    "tool.execute.before": safe("tool.execute.before", toolBefore(engines), 15_000),
+    // WP-056b (54 §15) — every host hook is wrapped by its CLASS:
+    //   inject   -> safe        (fail-open; missing context degrades quality, not safety)
+    //   capture  -> safe        (fail-open, but the loss is RECORDED — plugin.capture.lost)
+    //   policy   -> safeClosed  (fail-closed; a guard that disappears is not a guard)
+    // Timeouts are treated by the hook's own class: a timed-out policy hook BLOCKS.
+    "experimental.chat.system.transform": safe("experimental.chat.system.transform", systemTransform(engines), undefined, engines.hookQuarantine),
+    "experimental.chat.messages.transform": safe("experimental.chat.messages.transform", messagesTransform(engines)),
+    "experimental.session.compacting": safe("experimental.session.compacting", onCompacting(engines)),
+    "tool.execute.before": safeClosed("tool.execute.before", toolBefore(engines), 15_000),
     // Aligned with the verifier (audit 2026-08-18): this hook AWAITS the verification cascade,
     // whose tiers run 180s (types/unit) to 600s (integration). The old 60s bound made the hook
     // give up while the cascade kept writing verification records in the background — harmless
     // but surprising. The hook must outlive the work it reports, so it now does.
-    "tool.execute.after": safe("tool.execute.after", toolAfter(engines), 610_000),
-    "permission.ask": safe("permission.ask", permissionAsk(engines)),
+    "tool.execute.after": safe("tool.execute.after", toolAfter(engines), 610_000, engines.hookQuarantine),
+    "permission.ask": safeClosed("permission.ask", permissionAsk(engines)),
     "chat.params": safe("chat.params", chatParams(engines)),
-    event: safe("event", onEvent(engines)),
+    event: safe("event", onEvent(engines), undefined, engines.hookQuarantine),
     // PLG-014 — register apex_* natively so L2 needs no MCP server running.
     tool: apexTools(projectRoot),
     // WP-056 — the extension surface (23). DATA-ONLY: discovery parses manifests
     // and hashes entry files; nothing here imports or executes extension code.
     // Loading happens only through the invoke bridge (WP-058) after hash-bound
     // trust, per EXT-T01.
-    extensions: extensionSurface(projectRoot),
+    extensions: extensionSurface(projectRoot, engines.trust, hookRegistry, cfg),
     dispose: async () => {
       await engines.ledger.appendProgress({ note: "APEX plugin disposed." })
     },
@@ -662,8 +652,18 @@ export default ApexPlugin
  * and an honest UNSUPPORTED verdict for external directories (23 §7, EXT-T05).
  * Trust is granted through the trust store by an explicit user action; this
  * surface only ever READS manifests and hashes.
+ *
+ * WP-056b — the same surface carries the hook-script consent gate (54 §15,
+ * EXT-T11): a user-supplied hook script runs only with a consent record for
+ * `(event, canonical command path, content hash)` — the same mechanism as
+ * extension trust, not a second one.
  */
-export function extensionSurface(projectRoot: string) {
+export function extensionSurface(
+  projectRoot: string,
+  trust?: TrustStore,
+  registry?: ReturnType<typeof hookScriptRegistry>,
+  cfg?: ApexConfig,
+) {
   return {
     extensionsDir: path.join(apexDir(projectRoot), "extensions"),
     /** EXT-T01 — discover manifests + entry hashes without executing anything. */
@@ -672,6 +672,61 @@ export function extensionSurface(projectRoot: string) {
     externalDirectories: () => reportExternalDirectories([]),
     /** EXT-T07 — repeated crash loops quarantine an extension for the session. */
     quarantine: openExtensionQuarantine(),
+    /** WP-056b — consent-gated user-supplied hook scripts (54 §15, EXT-T11). */
+    hooks: registry?.consent ?? null,
+    /** WP-056b — the class map for doctor to diff. */
+    hookClasses: registry?.classes ?? describeHookClasses(),
+    /** WP-056b — config context for hook wiring. */
+    config: cfg ?? null,
+    /** The trust store itself (extension grants + hook consent), for explicit user actions. */
+    trust: trust ?? null,
+  }
+}
+
+/**
+ * WP-056b — the consent-gated surface for USER-SUPPLIED hook scripts (54 §15).
+ *
+ * `approve` reads and hashes the script, scans it in the strictest context, and
+ * records consent in the trust store keyed by `(event, canonical command path,
+ * content hash)` — the same lock, the same scan-cache (`hook:` namespace), the
+ * same deny/review rules as extension trust.
+ *
+ * `require` is the fail-closed gate every execution path MUST pass (EXT-T11):
+ * missing consent throws `HOOK_CONSENT_MISSING`; the script never runs.
+ */
+export function hookScriptRegistry(e: Engines) {
+  return {
+    classes: describeHookClasses(),
+    consent: {
+      async approve(
+        event: string,
+        commandPath: string,
+        opts: {
+          tier: "USER" | "PROJECT" | "EXTERNAL"
+          grantedBy: string
+          override?: boolean
+          justification?: string
+        },
+      ) {
+        const canonical = canonicalScriptPath(commandPath)
+        const text = await fsp.readFile(canonical, "utf8")
+        const contentHash = createHash("sha256").update(text).digest("hex").slice(0, 16)
+        return e.trust.approveHook({ event, commandPath: canonical, contentHash, ...opts }, text)
+      },
+      async status(event: string, commandPath: string) {
+        const canonical = canonicalScriptPath(commandPath)
+        let contentHash: string | null = null
+        try {
+          const text = await fsp.readFile(canonical, "utf8")
+          contentHash = createHash("sha256").update(text).digest("hex").slice(0, 16)
+        } catch {
+          return { trusted: false, grants: 0, reason: "the script file is unreadable" }
+        }
+        return e.trust.hookStatus(event, canonical, contentHash)
+      },
+      /** EXT-T11 — fail-closed: an unapproved hook script never runs. */
+      require: (event: string, commandPath: string) => assertHookScriptRunnable(e.trust, event, commandPath),
+    },
   }
 }
 
