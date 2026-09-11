@@ -1635,3 +1635,12 @@ Verify: `npm run verify` -> 1327 pass, 0 fail, 0 cancelled, exit 0 (~42s)
 Surprises: project memory was never wrapped — the pre-V2 section
   predated the wrapper work; fixed here because SH-T04 names it.
 Next: WP-071 (adapter refresh).
+
+## WP-071 — Adapter refresh · DONE · 2026-09-11
+
+Files: ~adapters/*.md (5) + payload — DURABLE STATE AND CAPABILITIES
+  section in each; each names what its host does and does not enforce.
+  +.apex/upgrade/EVIDENCE/EVD-071.md
+Verify: payload sync clean; `npm run test:unit` 913 pass, 0 fail.
+Surprises: none.
+Next: WP-072 (new MCP tools).

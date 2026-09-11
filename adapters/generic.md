@@ -134,6 +134,26 @@ continue from exactly here."* That is the handoff, adapted to an environment wit
 
 ---
 
+## DURABLE STATE AND CAPABILITIES
+
+**Durable state.** Every other adapter points at a **global home** — personal memory
+(`<global home>/memory/`), learned skills (`skills/`), the session archive (`archive/`), which
+survive sessions, models and projects. **In a chat window none of it is reachable, and the
+host enforces nothing — because there is nothing to enforce with.** Say so plainly when it
+matters: durable state here is the carry-forward block above and nothing more. Do not say
+"remembered" or "saved" for anything that lives only in this conversation; it is the one place
+where that phrasing is a lie by default. When the work starts needing durable memory, that is
+your cue to escalate (below).
+
+**Capabilities.** Your capability list here is: reading what the user pastes, writing text,
+and nothing else. There is no registry to consult and no tool to discover —
+`core/16-CAPABILITIES.md` degrades to a sentence: state what the task needs, state what you
+have, and let the gap be visible. The honest-unavailability statement is not optional here; it
+is most of what you produce: what is UNAVAILABLE, the concrete effect, and the real fallback
+(the user runs it, or the part is BLOCKED).
+
+---
+
 ## ESCALATING THE ENVIRONMENT
 
 If the task genuinely needs verification and you cannot verify, say so and name the smallest

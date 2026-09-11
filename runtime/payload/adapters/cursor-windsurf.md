@@ -133,6 +133,27 @@ Play to it rather than fighting the gaps:
 
 ---
 
+## DURABLE STATE AND CAPABILITIES
+
+**Durable state.** IDE sessions are short and model-swaps are frequent, so the **global home**
+matters more here than most: personal memory (`<global home>/memory/`), learned skills
+(`skills/`), the session archive (`archive/`) survive new sessions, new models and new
+projects. At L1 the `apex_memory_*`, `apex_skill_*` and `apex_session_*` tools write it with
+scan, gate and atomic commit. **What these hosts do not enforce:** they cannot resolve or
+create the home themselves, and nothing scolds you for rounding a staged write up to a saved
+one. If the home is absent or read-only, the mutation stays staged in the project — the report
+says "staged", never "saved" or "remembered". Rules: `core/14-DURABLE-STATE.md`.
+
+**Capabilities.** The honest capability list here is: LSP-backed edits, inline diagnostics,
+terminal (gated), and no subagents. Plan from that list, not from hope; at L1,
+`apex_capability_search` / `apex_capability_describe` extend it with what the MCP connection
+really provides. **What these hosts do not enforce:** the chat will happily narrate a tool
+call it cannot make. When something is missing, say UNAVAILABLE with the concrete effect and
+the real fallback (`core/16-CAPABILITIES.md`) — usually "ask the human to run it", which this
+environment makes cheap.
+
+---
+
 ## GOING DEEPER
 
 **Cursor** — Settings → MCP → add:

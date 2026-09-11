@@ -3,7 +3,7 @@
  "plan": "army-update-plan",
  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
  "startedAt": "2026-09-10T05:36:15.128Z",
- "updatedAt": "2026-09-11T16:20:00.000Z",
+ "updatedAt": "2026-09-11T16:45:00.000Z",
  "baseline": {
   "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
   "dirtyAtStart": false,
@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "7A",
- "currentPacket": "WP-071",
+ "currentPacket": "WP-072",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -755,7 +755,13 @@
    "notes": "START-HERE V2: home modes, readiness contract, WHAT-SURVIVES-WHAT, core item 8, degraded disclaimer; SH-T04 fix (project memory now wrapped); SH-T01..T07 tests. 1327 pass."
   },
   "WP-071": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T16:25:00.000Z",
+   "finishedAt": "2026-09-11T16:45:00.000Z",
+   "evidence": [
+    "EVD-071"
+   ],
+   "notes": "Durable-state + capability paragraphs in all 5 adapters, host does/does-not-enforce split. Payload sync clean. 913 unit pass."
   },
   "WP-072": {
    "status": "PENDING"

@@ -177,6 +177,25 @@ At L2, spend your attention on the work rather than on remembering the rules.
 
 ---
 
+## DURABLE STATE AND CAPABILITIES
+
+**Durable state.** Beyond the project ledger, APEX has a **global home** — personal memory
+(`<global home>/memory/`), learned skills (`skills/`), the session archive (`archive/`) — which
+survives new sessions, new models and new projects. At L1 the `apex_memory_*`, `apex_skill_*`
+and `apex_session_*` tools make it real: writes are staged, scanned, gated and committed
+atomically, and a read-only home degrades to staging honestly. **What OpenCode does not
+enforce:** nothing checks that you *described* a durable write truthfully. If the home is
+read-only, the mutation is staged, not saved — say "staged" and name the pending path; the
+words "saved" or "remembered" are forbidden for it. Layout and rules: `core/14-DURABLE-STATE.md`.
+
+**Capabilities.** `core/16-CAPABILITIES.md` and, at L1, the `apex_capability_*` tools tell you
+what the current host can really do, with schemas loaded on demand. **What OpenCode does not
+enforce:** it will not stop you from describing a hypothetical tool call as if it ran. When a
+capability is missing, say so in the canonical shape (`core/16-CAPABILITIES.md`): what is
+UNAVAILABLE, the concrete effect, the real fallback — or "none — this part is BLOCKED".
+
+---
+
 ## OPENCODE-SPECIFIC NOTES
 
 **Config is merged, not replaced.** `opencode.json` at global, `OPENCODE_CONFIG`, project, and

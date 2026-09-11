@@ -164,6 +164,26 @@ diagnostics apply. Read the squiggles; that is free Tier 2 evidence.
 
 ---
 
+## DURABLE STATE AND CAPABILITIES
+
+**Durable state.** CLI agents change models and sessions often — which is exactly what the
+**global home** is for: personal memory (`<global home>/memory/`), learned skills (`skills/`)
+and the session archive (`archive/`) survive new sessions, new models and new projects. At L1
+the `apex_memory_*`, `apex_skill_*` and `apex_session_*` tools write it with scan, gate and
+atomic commit. **What a CLI host does not enforce:** most have no idea the home exists. Before
+claiming a durable write, resolve the home's mode (`READ_WRITE` / `READ_ONLY` / `VOLATILE`);
+from a read-only or absent home, the write is staged in the project, and the report says
+"staged" with the pending path — never "saved" or "remembered". Rules: `core/14-DURABLE-STATE.md`.
+
+**Capabilities.** Probe the sandbox once (what is blocked: network, writes outside the
+project, subprocesses) and record it in `.apex/config.json`; then treat every missing tool
+through `core/16-CAPABILITIES.md` — at L1, `apex_capability_search` and
+`apex_capability_describe`. **What a CLI host does not enforce:** nothing stops a headless run
+from inventing a tool result. The canonical statement — UNAVAILABLE, concrete effect, real
+fallback or "none — this part is BLOCKED" — is self-enforced here. Say it.
+
+---
+
 ## STAYING HONEST HERE
 
 CLI hosts vary enormously, and the temptation is to describe a capability you do not have.

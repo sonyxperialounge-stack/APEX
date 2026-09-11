@@ -152,6 +152,24 @@ requirement inventory without touching anything, then `ExitPlanMode` to execute.
 
 Do not use it to avoid starting — Law 12. The default expectation is implementation.
 
+### Durable state and capabilities
+
+**Durable state.** `CLAUDE.md` mirrors *project* memory, but APEX's **global home** — personal
+memory (`<global home>/memory/`), learned skills (`skills/`), the session archive (`archive/`)
+— lives outside the project and survives new sessions, new models and new projects. At L1 the
+`apex_memory_*`, `apex_skill_*` and `apex_session_*` tools write it with scan, gate and atomic
+commit; a read-only home stages instead of writing, honestly. **What Claude Code does not
+enforce:** hooks can guard project paths, but nothing here verifies the global home took your
+write. If it did not, the mutation is staged — say "staged", never "saved" or "remembered".
+Layout and rules: `core/14-DURABLE-STATE.md`.
+
+**Capabilities.** Check what you can actually reach (`Bash`, `Grep`, `Task`, connected MCP
+servers) before planning tool-heavy work; `core/16-CAPABILITIES.md` and, at L1,
+`apex_capability_*` keep the registry instead of your guesses. **What Claude Code does not
+enforce:** a model name in a `Task` definition that cannot load is still your problem — verify,
+or say UNAVAILABLE with the concrete effect and the real fallback
+(`core/16-CAPABILITIES.md`). Never describe a hypothetical result as if you observed it.
+
 ---
 
 ## THINGS TO GET RIGHT HERE
