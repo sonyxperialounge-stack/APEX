@@ -1494,3 +1494,20 @@ Verify: `npm run verify` -> 1285 pass, 0 fail, 0 cancelled, exit 0 (~48s)
 Evidence: EVD-062 (AUT-T07).
 Surprises: none.
 Next: WP-063 (capability-first planning).
+
+## WP-063 — Capability-first planning · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/task-contract.ts (+pure planning, no calls),
+  ~runtime/test/engines/task-contract.test.ts (+4),
+  +.apex/upgrade/EVIDENCE/EVD-063.md
+Decision: feasibility checked against the registry before anything runs
+  (24 §7): present → execute as planned; absent-with-fallback → replan with
+  a 48 §5 UNAVAILABLE statement; absent-without-fallback → BLOCKED, never a
+  fake call (AUT-T03). `collectRequiredCapabilities` feeds the PERF-T10
+  disclosure seam. Pure: the checker issues nothing.
+Verify: `npm run verify` -> 1289 pass, 0 fail, 0 cancelled, exit 0 (~38s)
+  (was 1285; +4 new).
+Evidence: EVD-063 (AUT-T03).
+Surprises: a mid-packet edit deleted the capsule-validator signature —
+  restored on read-back; always re-read the seam.
+Next: WP-064 (failure taxonomy + recovery ladder).

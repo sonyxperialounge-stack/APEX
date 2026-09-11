@@ -27,7 +27,9 @@ import {
   assertTaskTransition,
   buildTaskHandoff,
   canCloseTask,
+  checkPlanFeasibility,
   classifyObligation,
+  collectRequiredCapabilities,
   createChildTask,
   createTaskContract,
   evaluateCompletion,
@@ -231,5 +233,54 @@ describe("WP-060 TaskContract envelope (25 §1–§2)", () => {
     const ready = evaluateCompletion(task, { openRequirementIds: [], artifactsExist: true })
     assert.equal(ready.complete, true)
     assert.deepEqual(ready.reasons, [])
+  })
+})
+
+describe("WP-063 capability-first planning (24 §7, AUT-T03)", () => {
+  test("AUT-T03: a plan with all capabilities present executes as planned", () => {
+    const live = new Set(["fs.read", "fs.search"])
+    const outcome = checkPlanFeasibility(
+      [{ id: "s1", title: "Inspect", requiredCapabilities: ["fs.read"] }],
+      (id) => live.has(id),
+    )
+    assert.equal(outcome.feasible, true)
+    assert.equal(outcome.blocked, false)
+    assert.deepEqual(outcome.missing, [])
+    assert.equal(outcome.steps[0]!.executable, true)
+  })
+
+  test("AUT-T03: an absent capability replans onto the fallback, never a fake call", () => {
+    const live = new Set(["fs.read"])
+    const outcome = checkPlanFeasibility(
+      [{ id: "s1", title: "Search the web", requiredCapabilities: ["web.search"], fallback: "use the offline skill index" }],
+      (id) => live.has(id),
+    )
+    assert.equal(outcome.feasible, true)
+    assert.equal(outcome.blocked, false)
+    assert.deepEqual(outcome.missing, ["web.search"])
+    assert.equal(outcome.steps[0]!.executable, false)
+    assert.match(outcome.steps[0]!.action, /replan onto fallback/)
+    assert.match(outcome.reasons.join(" "), /UNAVAILABLE/)
+  })
+
+  test("AUT-T03: an absent capability with no fallback blocks honestly", () => {
+    const outcome = checkPlanFeasibility(
+      [{ id: "s1", title: "Drive the browser", requiredCapabilities: ["browser.automate"] }],
+      () => false,
+    )
+    assert.equal(outcome.feasible, false)
+    assert.equal(outcome.blocked, true)
+    assert.match(outcome.reasons.join(" "), /BLOCKED/)
+    assert.match(outcome.steps[0]!.action, /Never issue the call/)
+  })
+
+  test("required ids collect once for the disclosure seam (PERF-T10)", () => {
+    assert.deepEqual(
+      collectRequiredCapabilities([
+        { id: "s1", title: "A", requiredCapabilities: ["fs.read", "web.search"] },
+        { id: "s2", title: "B", requiredCapabilities: ["web.search"] },
+      ]),
+      ["fs.read", "web.search"],
+    )
   })
 })

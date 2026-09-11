@@ -527,6 +527,120 @@ export function evaluateCompletion(
   return { complete: reasons.length === 0, reasons }
 }
 
+// ── WP-063 — capability-first planning (24 §7, AUT-T03) ─────────────────────
+//
+// A plan is feasible only against the registry the host actually exposes.
+// A step naming an absent capability is never executed as written: it is
+// replanned onto its stated fallback, or reported blocked with the honest
+// unavailability shape (48 §5). A fake call is never an outcome.
+
+export interface PlanStep {
+  id: string
+  title: string
+  requiredCapabilities: string[]
+  /** A real alternative when the required capability is absent. Empty means none. */
+  fallback?: string
+}
+
+export interface StepFeasibility {
+  stepId: string
+  executable: boolean
+  missing: string[]
+  action: string
+}
+
+export interface PlanFeasibility {
+  /** True when every step either executes as planned or replans onto a fallback. */
+  feasible: boolean
+  blocked: boolean
+  /** Sorted unique ids absent from the registry. */
+  missing: string[]
+  steps: StepFeasibility[]
+  reasons: string[]
+}
+
+/** Every capability id the plan depends on, deduplicated in first-seen order. */
+export function collectRequiredCapabilities(steps: PlanStep[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const step of steps) {
+    for (const id of step.requiredCapabilities ?? []) {
+      if (!seen.has(id)) {
+        seen.add(id)
+        out.push(id)
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Check each step against `isAvailable` (the registry). Steps with all
+ * capabilities present execute as planned; steps with absent capabilities
+ * replan onto their fallback; steps with absent capabilities and no fallback
+ * block with an honest UNAVAILABLE statement. Nothing here issues a call.
+ */
+export function checkPlanFeasibility(
+  steps: PlanStep[],
+  isAvailable: (id: string) => boolean,
+): PlanFeasibility {
+  const stepRows: StepFeasibility[] = []
+  const reasons: string[] = []
+  const missingSet = new Set<string>()
+  let blocked = false
+
+  for (const step of steps) {
+    const required = step.requiredCapabilities ?? []
+    const missing = required.filter((id) => {
+      try {
+        return !isAvailable(id)
+      } catch {
+        return true
+      }
+    })
+    for (const id of missing) missingSet.add(id)
+    if (missing.length === 0) {
+      stepRows.push({ stepId: step.id, executable: true, missing: [], action: "execute as planned" })
+      continue
+    }
+    const fallback = (step.fallback ?? "").trim()
+    if (fallback) {
+      stepRows.push({
+        stepId: step.id,
+        executable: false,
+        missing: [...missing],
+        action: `replan onto fallback: ${fallback}. Do not issue the absent call.`,
+      })
+      reasons.push(
+        `${missing.join(", ")} is UNAVAILABLE in this host. ` +
+          `Effect on the task: step ${step.id} cannot run as planned. ` +
+          `Fallback: ${fallback}.`,
+      )
+      continue
+    }
+    blocked = true
+    stepRows.push({
+      stepId: step.id,
+      executable: false,
+      missing: [...missing],
+      action: "blocked: report UNAVAILABLE with the fallback \"none — this part is BLOCKED\". Never issue the call.",
+    })
+    reasons.push(
+      `${missing.join(", ")} is UNAVAILABLE in this host. ` +
+        `Effect on the task: step ${step.id} cannot run. ` +
+        "Fallback: none — this part is BLOCKED.",
+    )
+  }
+
+  return {
+    feasible: !blocked,
+    blocked,
+    missing: [...missingSet].sort(),
+    steps: stepRows,
+    reasons,
+  }
+}
+
 /** Minimal structural validation of a resume capsule (30 §2: no silent corruption). */
 export function validateResumeCapsule(capsule: unknown): ResumeCapsuleV1 | null {
   if (capsule === null || typeof capsule !== "object") return null
