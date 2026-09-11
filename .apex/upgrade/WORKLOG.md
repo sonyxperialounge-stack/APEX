@@ -1748,3 +1748,11 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation checks: redaction removed → SEC-T02 fails; PROJECT self-grant guard short-circuited → SEC-T05 fails. Both restored byte-identical.
 - Verify: 1397 pass / 0 fail (was 1389). No production code changed.
 - Evidence: EVD-080.md. Next: WP-081 (CI matrix).
+
+## 2026-09-11 — WP-081 DONE (CI matrix)
+- `.github/workflows/verify.yml` updated to 43 §6: node ["22.6.0","22","24"] × [windows-latest, ubuntu-latest, macos-latest], fail-fast off, Windows first; verify job now runs `npm run verify` + an eol-agnostic payload drift guard; dedicated `packed` job (needs verify): pack → clean install → smoke `--version`/`init`/`doctor`/`gate` → payload+dist presence, no raw TS.
+- Declared floor PROVEN locally on Windows via node-win-x64 binaries: full verify under v22.6.0, v22.23.2, v24.16.0 → 1397/0 on each.
+- Packed smoke run verbatim locally: version OK, init OK, doctor OK, gate correctly exits 1 on an empty ledger, payload+dist present, no raw TS shipped.
+- Documented exclusion: ubuntu/macos cells + Actions execution itself (no remote configured) — environment constraint, defer to first push; workflow YAML-validated.
+- Fix: colon-in-plain-scalar YAML error in a step name (quoted now).
+- Evidence: EVD-081.md. Next: WP-082 (packed artifact smoke, PKG-T01..T08).

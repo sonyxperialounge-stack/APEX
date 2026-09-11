@@ -1,18 +1,25 @@
 name: verify
 
+# WP-081 — CI matrix (doc 43 §6, doc 33 §4-§5).
+#
 # X-003 / CORE-007 — cross-platform is a claim until CI proves it. Windows is listed
 # first because it is the primary target and the platform where this project's two worst
 # bugs lived (an unescaped path in JSON, and a shell child that survived its timeout).
 #
-# Node range: the test suite runs sources via --experimental-strip-types, which exists
-# from Node 22.6 on — Node 20 cannot even parse the flag. The shipped artifact (dist/)
-# is plain ES2022 JS, but a claim is not support until CI exercises it, so the matrix
-# covers exactly the versions this file declares: 22 and 24.
+# Node range (43 §6, frozen): the declared floor 22.6.x, the active LTS line, and the
+# current latest line. Sources run via --experimental-strip-types, which exists from
+# Node 22.6 on — Node 20 cannot even parse the flag. A green newer runtime alone never
+# proves the floor, so the floor is a matrix cell of its own.
 #
-# Step order matters: tests inspect the compiled dist/ (packaging regressions) and the
-# L2 shim is only written when dist/plugin exists — so `build` MUST run before `test`.
-# The first public CI run proved it: test-before-build failed 9/9 jobs on a fresh clone
-# where dist/ did not exist yet.
+# Step order matters: `npm run verify` runs sync:payload · typecheck · clean · build ·
+# test, and tests inspect the compiled dist/ (packaging regressions) — the L2 shim is
+# only written when dist/plugin exists, so build MUST precede test. The first public CI
+# run proved it: test-before-build failed 9/9 jobs on a fresh clone where dist/ did not
+# exist yet.
+#
+# The payload drift guard catches the sneaky case: `verify` syncs payload/ before
+# testing, which would silently PAPER OVER a stale committed copy — so after verify,
+# the tree must still be clean, or the PR ships a payload it never rebuilt.
 
 on:
   push:
@@ -26,11 +33,12 @@ defaults:
 
 jobs:
   verify:
+    name: source verify · ${{ matrix.os }} · node ${{ matrix.node }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        node: [22, 24]
+        node: ["22.6.0", "22", "24"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -42,29 +50,71 @@ jobs:
           cache-dependency-path: runtime/package-lock.json
 
       - run: npm ci
+      - run: npm run verify
 
-      - name: typecheck
-        run: npx tsc --noEmit
-
-      - name: build
-        run: npm run clean && npm run build
-
-      - name: test
-        run: npm test
-
-      - name: pack and install from the tarball
+      - name: payload drift guard — verify must not change the committed tree
         shell: bash
         run: |
-          # The failure this catches: Node refuses to strip TypeScript types under
-          # node_modules, so a package shipping raw .ts installs cleanly and then throws
-          # on first run. Only a real install proves the published artifact works.
-          npm pack
+          # eol-agnostic by design: checkout line-ending conversion must never mask (or
+          # fake) payload drift — only real content drift may fail this step.
+          git -c core.autocrlf=false diff --exit-code --ignore-cr-at-eol -- payload/ || {
+            echo "::error::runtime/payload/ was out of sync with the sources. Run 'npm run sync:payload' locally and commit the result."
+            exit 1
+          }
+
+  # 33 §5 — a source test pass does not prove published package contents are correct:
+  # pack, install into a clean temp project, and smoke the INSTALLED artifact.
+  packed:
+    name: packed artifact · ${{ matrix.os }}
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: runtime/package-lock.json
+
+      - name: install toolchain
+        working-directory: runtime
+        run: npm ci
+
+      - name: "pack (prepack: sync payload, clean, build)"
+        working-directory: runtime
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: install into a clean temp project
+        shell: bash
+        run: |
           mkdir -p "$RUNNER_TEMP/consumer"
           cd "$RUNNER_TEMP/consumer"
           npm init -y > /dev/null
           # Glob, not a hardcoded version — a version bump must not break the pipeline.
-          tarball=$(ls "$GITHUB_WORKSPACE"/runtime/apex-agent-*.tgz | head -n1)
+          tarball=$(ls "$RUNNER_TEMP"/apex-agent-*.tgz | head -n1)
           npm install "$tarball"
+
+      - name: smoke the installed CLI
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/consumer"
           npx apex-agent --version
           npx apex-agent init
+          # The full doctor path must run without crashing; exit code is not asserted —
+          # on a bare consumer project a missing global home may legitimately warn.
+          npx apex-agent doctor | grep -q "APEX Doctor"
           npx apex-agent gate || true   # an empty ledger must FAIL the gate
+
+      - name: the doctrine payload shipped in the tarball
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/consumer/node_modules/apex-agent"
+          test -f payload/START-HERE.md
+          test -d payload/core
+          test -d dist
+          ! ls payload/*.ts 2>/dev/null | grep -q .   # no raw TypeScript ships

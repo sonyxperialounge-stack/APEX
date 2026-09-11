@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "7A",
- "currentPacket": "WP-081",
+ "currentPacket": "WP-082",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -798,7 +798,9 @@
    "committed": "WP-080: security fixture suite (30 s15, 33 s13) - SEC-T01..T08 fixture-driven, fake secrets only, 2 mutation checks (archive redaction, extension self-trust), 1397 pass"
   },
   "WP-081": {
-   "status": "PENDING"
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-081.md",
+   "committed": "WP-081: CI matrix per 43 s6 - node floor 22.6.0/LTS/latest x win/ubuntu/macos, Windows first, packed-artifact job + payload drift guard; floor proven locally on win (22.6.0, 22.23.2, 24.16.0 all 1397/0); ubuntu/macos deferred to CI (documented exclusion)"
   },
   "WP-082": {
    "status": "PENDING"
