@@ -1111,3 +1111,29 @@ Surprises: two self-test-expectation corrections — (1) EXECUTE must win over N
   (2) EXECUTE+DELETE maps to "bash" not "delete": a delete executed through a command must stay
   on bash because the unbounded-delete / sql-destructive rules reason on op.command.
 Next: WP-051 (capability registry: descriptors, availability, trust, mayExpose).
+
+## WP-051 — capability registry (DONE)
+
+Date: 2026-09-11
+Packet: WP-051 (21 §§4–5, 47 §4.9; CAP-T01..T03, CAP-T05, CAP-T07)
+Files: +runtime/src/engines/capability-registry.ts, +runtime/test/engines/capability-registry.test.ts (35),
+  +.apex/upgrade/EVIDENCE/EVD-051.md
+Decision: Registry is memory-only by construction — no exec import, no disk I/O (CAP-T03: lookups
+  perform zero tool execution). Descriptors carry canonical ids with aliases normalized and indexed
+  (alias -> canonical id), so host-specific names route to the stable ARMY concept (CAP-T01). Effects
+  are declared when known, otherwise inferred conservatively via inferEffects(): unknown/empty
+  classification lands on EXTERNAL_SIDE_EFFECT, never optimistic "reads only" (CAP-T02). select()
+  returns only AVAILABLE candidates, trust-ranked (CORE>TRUSTED>UNTRUSTED, REVOKED never),
+  deterministic tie-break = first-registered. mayExpose (21 §7) is a SEPARATE decision from
+  execution: availability/REVOKED/UNTRUSTED+DESTRUCTIVE gates, but execution still goes through the
+  Governor. refresh() is bounded and runs each reason at most once (21 §9, no polling), delegating
+  the actual discovery to an injected hook (host discovery arrives at WP-052). toOperationKind
+  delegates to the governor adapter — the ONLY bridge (47 §4.9). Taxonomy validated against
+  CAPABILITY_EFFECTS from core/types.ts (CAP-T07).
+Verify: `npm run verify` -> 1052 pass, 0 fail, exit 0 (32.8s).
+Evidence: EVD-051.
+Surprises: (1) alias lookups initially returned nothing — aliases were stored on descriptors but not
+  indexed; added an aliasIndex rebuilt on re-registration. (2) inferEffects("http_get") = READ+NETWORK
+  because "get" is the READ pattern and READ includes observing REMOTE state (21 §3) — expectation
+  fixed, inference was right.
+Next: WP-050b (code-intelligence capability ids, 54 §14).

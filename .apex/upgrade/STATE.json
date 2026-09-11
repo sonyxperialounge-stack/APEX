@@ -555,7 +555,14 @@
       "status": "PENDING"
     },
     "WP-051": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T03:05:00.000Z",
+      "finishedAt": "2026-09-11T04:02:00.000Z",
+      "evidence": [
+        "EVD-051"
+      ],
+      "notes": "capability registry: descriptors, alias index, conservative inference, availability, trust, mayExpose",
+      "commit": "PENDING"
     },
     "WP-052": {
       "status": "PENDING"
