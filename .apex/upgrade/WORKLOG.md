@@ -1431,3 +1431,32 @@ Next: PHASE 5 COMPLETE (WP-050..WP-057 + second-pass WP-059, WP-050b, WP-058, WP
   never deferred) and missing tools degrade honestly (CAPABILITY_NOT_IN_CATALOG /
   ARGS_INVALID / BLOCKED / CALL_FAILED, not-found is structured, never fabricated; doctrine
   16-CAPABILITIES.md + START-HERE row). Phase 6 (autonomy) at WP-060.
+
+## WP-060 — TaskContract envelope + governed task loop entry · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/task-contract.ts (stub -> full envelope, pure, no
+  write path), +runtime/test/engines/task-contract.test.ts (11),
+  +.apex/upgrade/EVIDENCE/EVD-060.md
+Decision: envelope-only per 25 §1 (the Ledger stays the only requirement
+  store — TASK-T01 asserted by a source test, not a comment). Creation follows
+  41 §15 adapted to the injected clock (no wall-clock token, MOD-T03) and the
+  real TASK id namespace. Terminal COMPLETE/CANCELLED never reopen; the parent
+  Gate may close a child but a child may never close its parent (25 §8,
+  TASK-T04). The conversion rule records the caller's blocksAcceptance
+  judgment instead of guessing (25 §3). Resume compares the capsule
+  fingerprint against current state and invalidates the stale next action on
+  change (25 §6, TASK-T03). Correction returns a new envelope plus a
+  CorrectionRecord preserving superseded ids and the previous objective; the
+  input is never mutated and old evidence is never edited (25 §9, TASK-T05).
+  The handoff builder takes NO history parameter, so a history copy is
+  unrepresentable (25 §5, TASK-T06). `validateResumeCapsule` kept
+  byte-compatible for the archive-store tests.
+Verify: `npm run verify` -> 1272 pass, 0 fail, 0 cancelled, exit 0 (~37s)
+  (was 1261; +11 new).
+Evidence: EVD-060 (TASK-T01..T06 + conversion/completion rules).
+Surprises: deterministic ids collide on identical injected inputs by design —
+  parent+child built on the same fixed clock shared one TASK id and the
+  self-parent guard correctly refused it. The test advances the child clock;
+  production uses wall-clock + entropy. Also: `npm run test:unit -- <file>`
+  ignores the file filter (hard-coded globs) yet still runs core+engines.
+Next: WP-061 (domain verifier registry).
