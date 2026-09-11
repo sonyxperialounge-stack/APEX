@@ -46,6 +46,12 @@ import { safeProjectRoot, apexHome } from "../core/paths.ts"
 import { projectKey } from "../core/ids.ts"
 import { TOOLS, callTool } from "../mcp/tools.ts"
 import { openArchiveCapture } from "../engines/archive-capture.ts"
+import { CapabilityRegistry } from "../engines/capability-registry.ts"
+import { onHostCapabilityChange, registerHostTools } from "../engines/host-discovery.ts"
+import { NullHostCapabilities, type HostCapabilities } from "../host/types.ts"
+
+/** WP-052 — single provider label for everything the plugin's host declares. */
+const HOST_PROVIDER_ID = "host"
 
 export const HOOK_NAMES = [
   "experimental.chat.system.transform",
@@ -141,6 +147,14 @@ export interface Engines {
    */
   capture: ReturnType<typeof openArchiveCapture> | null
   archiveSessionId: string | null
+  /**
+   * WP-052 — the host-discovery registry (22 §6, 40 §17). Populated only when the
+   * host exposes a capability surface; a host without one yields an empty registry,
+   * and engines still work (L0 doctrine fallback, 22 §10).
+   */
+  registry: CapabilityRegistry
+  /** WP-052 — unsubscribe for the host capability-change subscription. */
+  disposeDiscovery: () => void
 }
 
 export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
@@ -160,6 +174,21 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     capture = null
   }
 
+  // WP-052 — host capability discovery (40 §17). The host surface is detected at
+  // runtime; today no OpenCode host exposes one, so the plugin wires the null
+  // surface and the registry stays honestly empty (L0 doctrine fallback, 22 §10).
+  // When a real HostCapabilities arrives, this is the single seam to pass it; the
+  // registry + subscription below then work unchanged. Discovery is non-destructive
+  // and best-effort.
+  const hostCaps: HostCapabilities = new NullHostCapabilities()
+  const registry: CapabilityRegistry = new CapabilityRegistry({
+    onRefresh: (reason) => {
+      void registerHostTools(registry, hostCaps, HOST_PROVIDER_ID)
+    },
+  })
+  await registerHostTools(registry, hostCaps, HOST_PROVIDER_ID)
+  const disposeDiscovery = onHostCapabilityChange(hostCaps, (reason) => registry.refresh(reason))
+
   return {
     cfg,
     ledger,
@@ -170,6 +199,8 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     intents: new Map(),
     capture,
     archiveSessionId,
+    registry,
+    disposeDiscovery,
   }
 }
 

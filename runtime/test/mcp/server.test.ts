@@ -7,6 +7,7 @@ import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { McpServer, VERSION } from "../../src/mcp/server.ts"
 import { TOOLS, awaitAllTasks } from "../../src/mcp/tools.ts"
+import { CapabilityRegistry } from "../../src/engines/capability-registry.ts"
 import { setLogDir } from "../../src/core/log.ts"
 
 const RUNTIME = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
@@ -269,6 +270,64 @@ describe("MCP-007/008 — resources and prompts", () => {
     assert.match(body, /Assume there is at least one/)
     assert.match(body, /DIFF_HERE/)
     assert.ok(!/because|rationale|I chose/i.test(body), "the reviewer must not be anchored")
+  })
+})
+
+// ── WP-052 — compact capability index (22 §2, 40 §16) ──────────────────────
+
+describe("WP-052 — the compact capability index resource", () => {
+  test("without a registry the resource is not advertised and cannot be read", async () => {
+    const listed = (await server.handle({ id: 1, method: "resources/list" })) as {
+      result: { resources: Array<{ uri: string }> }
+    }
+    assert.ok(!listed.result.resources.some((r) => r.uri === "apex://capabilities"))
+    const res = (await server.handle({ id: 1, method: "resources/read", params: { uri: "apex://capabilities" } })) as {
+      error: { code: number }
+    }
+    assert.equal(res.error.code, -32602)
+  })
+
+  test("with a discovery registry it lists the compact index and it is JSON", async () => {
+    const registry = new CapabilityRegistry({ now: () => 1_765_000_000_000 })
+    registry.register({
+      id: "host.read_file",
+      title: "Read file",
+      description: "Read a project file\nsecond line",
+      aliases: ["read_file"],
+      source: { kind: "host", providerId: "opencode", toolName: "read_file" },
+      availability: "AVAILABLE",
+      effects: ["READ"],
+      trust: "UNTRUSTED",
+      lastCheckedAt: "2025-12-06T05:46:40.000Z",
+    })
+    server.setCapabilities(registry)
+
+    const listed = (await server.handle({ id: 1, method: "resources/list" })) as {
+      result: { resources: Array<{ uri: string; mimeType: string }> }
+    }
+    const capRes = listed.result.resources.find((r) => r.uri === "apex://capabilities")
+    assert.ok(capRes, "apex://capabilities must be advertised")
+    assert.equal(capRes!.mimeType, "application/json")
+
+    const res = (await server.handle({ id: 1, method: "resources/read", params: { uri: "apex://capabilities" } })) as {
+      result: { contents: Array<{ text: string }> }
+    }
+    const parsed = JSON.parse(res.result.contents[0]!.text) as {
+      capabilities: Array<{ id: string; summary: string; effects: string[] }>
+    }
+    assert.equal(parsed.capabilities.length, 1)
+    assert.equal(parsed.capabilities[0]!.id, "host.read_file")
+    assert.equal(parsed.capabilities[0]!.summary, "Read a project file") // first line only — compact
+    assert.deepEqual(parsed.capabilities[0]!.effects, ["READ"])
+  })
+
+  test("an empty registry renders an honest empty index, not a lie", async () => {
+    server.setCapabilities(new CapabilityRegistry({ now: () => 1_765_000_000_000 }))
+    const res = (await server.handle({ id: 1, method: "resources/read", params: { uri: "apex://capabilities" } })) as {
+      result: { contents: Array<{ text: string }> }
+    }
+    const parsed = JSON.parse(res.result.contents[0]!.text) as { capabilities: unknown[] }
+    assert.deepEqual(parsed.capabilities, [])
   })
 })
 

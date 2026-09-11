@@ -79,3 +79,38 @@ export class NullHostClient implements HostClient {
     return false
   }
 }
+
+/**
+ * WP-052 — optional capability-inspection surface (40 §14, 22 §6).
+ *
+ * A SECONDARY interface so the existing HostClient contract stays untouched:
+ * hosts that implement listTools/describeTool/onCapabilityChange are detected
+ * at runtime, never by extending the base interface. Provider credentials and
+ * model catalogs remain host-owned — these hooks only answer "what tools can
+ * I see" (22 §10). Every hook is non-destructive BY CONTRACT: discovery reads
+ * names and descriptions, it never invokes a tool to probe it (TLS-T05).
+ */
+export interface HostCapabilities {
+  /** List the tools currently visible in the host. */
+  listTools?(): Promise<HostToolDescriptor[]>
+  /** Resolve one tool's detail on demand; lazy, never called during discovery. */
+  describeTool?(name: string): Promise<unknown>
+  /** Subscribe to capability changes; returns an unsubscribe function (40 §17). */
+  onCapabilityChange?(cb: () => void): () => void
+}
+
+/**
+ * WP-052 — a host tool as the host declares it. The name is an ALIAS in
+ * registry terms (21 §2): discovery normalizes it to a canonical capability
+ * id, it is never used as the canonical API itself.
+ */
+export interface HostToolDescriptor {
+  name: string
+  /** Human-readable purpose; effects are inferred from it conservatively. */
+  description?: string
+  /** Optional lazy pointer to a machine-readable definition (22 §3, §8). */
+  schemaLocator?: string
+}
+
+/** No capability-inspection surface: engines degrade to the honest L0 catalog (22 §10). */
+export class NullHostCapabilities implements HostCapabilities {}

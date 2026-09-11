@@ -1160,3 +1160,26 @@ Evidence: EVD-050b.
 Surprises: the config template must carry every ApexConfig key (CFG test) — added the capabilities block
   to both template copies; and the VERIFY_TYPES entry had to precede CASCADE_ORDER usage.
 Next: WP-052 (host discovery).
+Date: 2026-09-11
+Packet: WP-052 (22 §6-7, 40 §14; TLS-T05, TLS-T06)
+Files: ~runtime/src/host/types.ts (HostCapabilities + HostToolDescriptor + NullHostCapabilities),
+  +runtime/src/engines/host-discovery.ts (canonicalHostToolId, registerHostTools, onHostCapabilityChange),
+  ~runtime/src/plugin/index.ts (registry + disposeDiscovery on Engines; bootstrapEngines wires the
+  null host surface + refresh subscription), ~runtime/src/mcp/server.ts (capabilities registry,
+  setCapabilities, apex://capabilities compact index),
+  +runtime/test/engines/host-discovery.test.ts (20), ~runtime/test/mcp/server.test.ts (+3),
+  +.apex/upgrade/EVIDENCE/EVD-052.md
+Decision: Secondary HostCapabilities interface + runtime feature detection (40 §14) - HostClient stays
+  untouched. Discovery reads names/descriptions only: describeTool is NEVER called during discovery,
+  no tool is ever probed (TLS-T05), schemas stay lazy (WP-054 loads them). Known names normalize to
+  code.* (54 §14) or the honest host.<normalized-name> fallback (22 §7); a host without listTools
+  yields an empty but usable registry, named in unknownHosts (TLS-T06, 22 §10). Effects inferred
+  conservatively (unknown -> EXTERNAL_SIDE_EFFECT); code.* vouched TRUSTED, host tools UNTRUSTED.
+  Refresh is bounded once per reason (47 §4.9). MCP advertises a read-only compact index only when a
+  registry is attached - no fabricated L0 service (40 §16).
+Verify: `npm run verify` -> 1095 pass, 0 fail, exit 0 (~38s).
+Evidence: EVD-052.
+Surprises: a config-file loader cannot carry functions - removed dead loadHostCapabilities, plugin is
+  the seam; register() normalizes aliases (lowercase) so tests expect normalized forms; two distinct
+  host names mapping to one canonical id stay two candidates (CAP-T01).
+Next: WP-053 (capability search + compact index, TLS-T01 with 1,000 synthetic tools).

@@ -31,6 +31,7 @@ import readline from "node:readline"
 import path from "node:path"
 import { TOOLS, callTool } from "./tools.ts"
 import { Ledger } from "../engines/ledger.ts"
+import type { CapabilityRegistry } from "../engines/capability-registry.ts"
 import { readTextOrNull } from "../core/json.ts"
 import { log, event } from "../core/log.ts"
 
@@ -51,15 +52,19 @@ interface RpcMessage {
 export interface ServerOptions {
   projectRoot: string
   write: (line: string) => void
+  /** WP-052 — optional host-discovery registry (L1, 40 §16). Absent: no capability resource. */
+  capabilities?: CapabilityRegistry | null
 }
 
 export class McpServer {
   private projectRoot: string
   private write: (line: string) => void
+  private registry: CapabilityRegistry | null
 
   constructor(options: ServerOptions) {
     this.projectRoot = options.projectRoot
     this.write = options.write
+    this.registry = options.capabilities ?? null
   }
 
   /** Handle one message. Returns null for notifications, which get no response. */
@@ -100,22 +105,33 @@ export class McpServer {
         return this.ok(id, result)
       }
 
-      case "resources/list":
-        return this.ok(id, {
-          resources: [
-            { uri: "apex://state", name: "APEX state", mimeType: "application/json" },
-            { uri: "apex://requirements", name: "Requirements", mimeType: "text/markdown" },
-            { uri: "apex://handoff", name: "Handoff", mimeType: "text/markdown" },
-            { uri: "apex://memory", name: "Project memory", mimeType: "text/markdown" },
-          ],
-        })
+      case "resources/list": {
+        const resources: Array<{ uri: string; name: string; mimeType: string }> = [
+          { uri: "apex://state", name: "APEX state", mimeType: "application/json" },
+          { uri: "apex://requirements", name: "Requirements", mimeType: "text/markdown" },
+          { uri: "apex://handoff", name: "Handoff", mimeType: "text/markdown" },
+          { uri: "apex://memory", name: "Project memory", mimeType: "text/markdown" },
+        ]
+        // WP-052 — compact capability index (22 §2, 40 §16): read-only, no schemas,
+        // no callable surface. Only present when a discovery registry is attached.
+        if (this.registry !== null) {
+          resources.push({ uri: "apex://capabilities", name: "Capability index", mimeType: "application/json" })
+        }
+        return this.ok(id, { resources })
+      }
 
       case "resources/read": {
         const uri = String(params.uri ?? "")
         const body = await this.readResource(uri)
         if (body === null) return this.error(id, -32602, `Unknown resource: ${uri}`)
         return this.ok(id, {
-          contents: [{ uri, mimeType: uri.endsWith("state") ? "application/json" : "text/markdown", text: body }],
+          contents: [
+            {
+              uri,
+              mimeType: uri.endsWith("state") || uri.endsWith("capabilities") ? "application/json" : "text/markdown",
+              text: body,
+            },
+          ],
         })
       }
 
@@ -158,6 +174,20 @@ export class McpServer {
         return (await readTextOrNull(ledger.file("HANDOFF.md"))) ?? (await ledger.generateHandoff())
       case "apex://memory":
         return (await readTextOrNull(ledger.file("MEMORY.md"))) ?? "(no memory recorded)"
+      case "apex://capabilities": {
+        // WP-052 — the compact index (22 §2) over discovered host capabilities:
+        // canonical id + one-line summary + effects only. No schemas, no aliases —
+        // that is the WP-053/WP-054 surface, kept out of the prompt. Absent a
+        // registry this resource was never advertised, so this branch is defensive.
+        if (this.registry === null) return null
+        const all = this.registry.all()
+        if (all.length === 0) return JSON.stringify({ capabilities: [] }, null, 2)
+        const capabilities = all
+          .filter((d) => d.availability === "AVAILABLE")
+          .sort((a, b) => a.id.localeCompare(b.id))
+          .map((d) => ({ id: d.id, summary: d.description.split("\n")[0] ?? "", effects: d.effects }))
+        return JSON.stringify({ capabilities }, null, 2)
+      }
       default:
         return null
     }
@@ -199,12 +229,21 @@ export class McpServer {
     }
   }
 
-  private ok(id: string | number | null, result: unknown) {
+  ok(id: string | number | null, result: unknown) {
     return { jsonrpc: "2.0", id, result }
   }
 
-  private error(id: string | number | null, code: number, message: string) {
+  error(id: string | number | null, code: number, message: string) {
     return { jsonrpc: "2.0", id, error: { code, message } }
+  }
+
+  /**
+   * WP-052 — attach the host-discovery registry after construction. The MCP
+   * server is a thin protocol surface (40 §16); the registry comes from L1
+   * discovery and is only ever read here.
+   */
+  setCapabilities(registry: CapabilityRegistry | null): void {
+    this.registry = registry
   }
 
   send(value: unknown): void {
