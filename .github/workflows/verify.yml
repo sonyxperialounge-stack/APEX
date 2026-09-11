@@ -110,6 +110,32 @@ jobs:
           npx apex-agent doctor | grep -q "APEX Doctor"
           npx apex-agent gate || true   # an empty ledger must FAIL the gate
 
+      - name: smoke the installed MCP server (stdio handshake)
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/mcp-smoke.cjs" <<'SMOKE'
+          const { spawn } = require("child_process")
+          const child = spawn("npx", ["apex-agent", "mcp"], {
+            cwd: process.argv[2] || ".", stdio: ["pipe", "pipe", "pipe"], shell: true,
+          })
+          let buffer = ""
+          child.stdout.on("data", (d) => {
+            buffer += d.toString("utf8")
+            const nl = buffer.indexOf("\n")
+            if (nl !== -1) {
+              const frame = JSON.parse(buffer.slice(0, nl))
+              if (frame.id === 1 && frame.result && frame.result.serverInfo) {
+                console.log("MCP smoke OK:", frame.result.serverInfo.name)
+                child.kill()
+                process.exit(0)
+              }
+            }
+          })
+          child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }) + "\n")
+          setTimeout(() => { console.error("MCP smoke timeout"); child.kill(); process.exit(1) }, 15000)
+          SMOKE
+          node "$RUNNER_TEMP/mcp-smoke.cjs" "$RUNNER_TEMP/consumer"
+
       - name: the doctrine payload shipped in the tarball
         shell: bash
         run: |

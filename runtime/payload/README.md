@@ -132,13 +132,9 @@ claiming things.
 START-HERE.md      ← the one file. Give any AI this link.
 README.md          ← you are here
 EXAMPLES.md        ← worked end-to-end sessions
-CHANGELOG.md       what changed in each release, in plain language
 LICENSE            The license — personal use only. NOT open source.
 LEGAL-NOTICE.md    Legal warning (India + international sections) and
                    the notice to AI agents
-
-docs/              Schema changelog and release notes
-  SCHEMA-CHANGELOG.md   every store's version and what moved it
 
 core/              The doctrine. Thirteen files, loaded on demand.
   01-LAWS          the twelve laws that override default habits
@@ -160,11 +156,8 @@ adapters/          Host-specific binding: opencode · claude-code ·
 
 templates/         The ten ledger files, ready to copy into a project
 
-build/             The full plan for the L1/L2 runtime — detailed enough
-                   for any capable AI to build it. Start at
-                   BUILD-MASTER-PROMPT.md
-
-install/           How to attach at each level
+(The full build plan, the per-store schema changelog and the per-host
+install guides live in the project repository, not in this package.)
 ```
 
 ---

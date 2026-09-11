@@ -1756,3 +1756,11 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Documented exclusion: ubuntu/macos cells + Actions execution itself (no remote configured) — environment constraint, defer to first push; workflow YAML-validated.
 - Fix: colon-in-plain-scalar YAML error in a step name (quoted now).
 - Evidence: EVD-081.md. Next: WP-082 (packed artifact smoke, PKG-T01..T08).
+
+## 2026-09-11 — WP-082 DONE (packed artifact smoke)
+- packaging.test.ts gained PKG-T01..T08 + PKG-MCP: packs the real tarball (--ignore-scripts so prepack's clean can't destroy dist/ under parallel tests), extracts with system tar (relative filename + cwd — GNU tar reads C:/ as a host), and checks required files, nested archives, scratch paths, link resolution, payload sha256 inventory, credential fixtures, license travel + src header canon, and a real stdio initialize handshake on the shipped binary.
+- Suite earned its keep immediately: shipped payload README tree listed CHANGELOG/docs/build/install that do not travel (fixed with three sync-payload rewrites + honest note); runtime README shipped three dead links (../core/, .apex/VERIFICATION.md, .apex/ — fixed to dual-context prose).
+- CI packed job gained the MCP smoke step (script exercised locally: "MCP smoke OK: apex").
+- Mutation: "payload/" removed from files → PKG-T01 + PKG-T05 fail; reverted byte-identical.
+- Verify: 1406 pass / 0 fail (was 1397).
+- Evidence: EVD-082.md. Next: WP-083 (migration fixture suite).

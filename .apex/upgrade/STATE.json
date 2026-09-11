@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "7A",
- "currentPacket": "WP-082",
+ "currentPacket": "WP-083",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -803,7 +803,9 @@
    "committed": "WP-081: CI matrix per 43 s6 - node floor 22.6.0/LTS/latest x win/ubuntu/macos, Windows first, packed-artifact job + payload drift guard; floor proven locally on win (22.6.0, 22.23.2, 24.16.0 all 1397/0); ubuntu/macos deferred to CI (documented exclusion)"
   },
   "WP-082": {
-   "status": "PENDING"
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-082.md",
+   "committed": "WP-082: packed artifact smoke (33 s5, s16) - PKG-T01..T08 + MCP stdio handshake in packaging.test.ts; fixed shipped tree lies (CHANGELOG/docs/build/install) + 3 dead links in runtime README; CI packed job gained MCP smoke; mutation: payload/ removal from files caught by T01+T05; 1406 pass"
   },
   "WP-083": {
    "status": "PENDING"

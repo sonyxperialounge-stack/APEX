@@ -3,8 +3,9 @@
 The APEX runtime. Gives any MCP-capable AI coding host durable requirement tracking,
 grounded verification, protected paths, and a real completion gate.
 
-Doctrine lives one directory up, in [`../core/`](../core/). This package is what makes it
-**enforced** rather than merely requested.
+Doctrine lives one directory up in the source repository, in `../core/`; inside this
+package it ships under `payload/core/`. This package is what makes it **enforced**
+rather than merely requested.
 
 ---
 
@@ -56,14 +57,14 @@ npm run verify       typecheck + full suite + build, all green
 npm pack + install   CLI, MCP server and L2 plugin all run from the tarball
 ```
 
-Exact counts live in [`.apex/VERIFICATION.md`](.apex/VERIFICATION.md), where they are dated
+Exact counts live in `.apex/VERIFICATION.md`, where they are dated
 evidence of a specific run. Prose that hardcodes a number goes stale the moment someone adds
 a test — which this project did to itself twice.
 
 Not yet done: the live manual checklist in `../build/TESTING.md`, against a real OpenCode
 installation. Mock-green is not shipped-green.
 
-This package's own construction is recorded in [`.apex/`](.apex/), built under APEX.
+This package's own construction is recorded in `.apex/`, built under APEX.
 
 ---
 
