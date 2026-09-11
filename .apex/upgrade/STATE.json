@@ -3,7 +3,7 @@
  "plan": "army-update-plan",
  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
  "startedAt": "2026-09-10T05:36:15.128Z",
- "updatedAt": "2026-09-11T09:04:54.000Z",
+ "updatedAt": "2026-09-11T09:05:14.000Z",
  "baseline": {
   "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
   "dirtyAtStart": false,
@@ -635,7 +635,7 @@
    "finishedAt": "2026-09-11T09:04:54.000Z",
    "evidence": "EVD-058",
    "notes": "capability invoke bridge + 3-tier disclosure (54 §2–§4, §20): CapabilityBridge search/describe/invoke through Governor (invoke is NOT an authorization path — validate args locally per 22 §8, toOperationKind, Governor.decide; CAPABILITY_NOT_IN_CATALOG / ARGS_INVALID / BLOCKED / CALL_FAILED; TOOL_NOT_FOUND → markStructuralFailure; mayExpose gates describe+invoke); assembleDisclosure tiers 0/1/2, budget=min(schemaBudgetTokens, 25% context) eager-when-it-fits (54 §4), CORE trust + requiredIds never deferred (PERF-T10 seam for WP-060); plugin.capabilitySurface with bridge/disclosure/registry + plugin.block events; 33 new tests (TLS-T08..T11, PERF-T09/T10)",
-   "commit": "PENDING"
+   "commit": "c6369d8"
   },
   "WP-059": {
    "status": "DONE",
