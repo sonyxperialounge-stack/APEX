@@ -532,7 +532,14 @@
       "commit": "c9c7a5a"
     },
     "WP-049c": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T00:00:00.000Z",
+      "finishedAt": "2026-09-11T00:00:00.000Z",
+      "evidence": [
+        "EVD-049"
+      ],
+      "notes": "bundles, 3-body selection limit, skills run/bundle CLI, maxBodiesPerTask config",
+      "commit": "PENDING"
     },
     "WP-050": {
       "status": "PENDING"

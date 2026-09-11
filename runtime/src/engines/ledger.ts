@@ -74,6 +74,7 @@ export const DEFAULT_CONFIG: ApexConfig = {
   limits: { maxSameStrategyFailures: 3, maxSubagentRetries: 2, handoffAtContextPct: 80 },
   council: { enabled: false, reviewerModel: null, conveneOn: [] },
   context: { budgetTokens: 2000 },
+  skills: { maxBodiesPerTask: 3, seedSkills: true },
   delegation: {
     mode: "AUTO",
     maxConcurrentCalls: 6,
@@ -147,6 +148,8 @@ export class Ledger {
       projectRoot: config.projectRoot ?? this.root,
       limits: { ...DEFAULT_CONFIG.limits, ...(config.limits ?? {}) },
       council: { ...DEFAULT_CONFIG.council, ...(config.council ?? {}) },
+      context: { ...DEFAULT_CONFIG.context, ...(config.context ?? {}) },
+      skills: { ...DEFAULT_CONFIG.skills, ...(config.skills ?? {}) },
       delegation: {
         ...DEFAULT_CONFIG.delegation,
         ...(config.delegation ?? {}),
@@ -286,6 +289,7 @@ export class Ledger {
         models: { ...DEFAULT_CONFIG.delegation.models, ...(raw.delegation?.models ?? {}) },
       },
       context: { ...DEFAULT_CONFIG.context, ...(raw.context ?? {}) },
+      skills: { ...DEFAULT_CONFIG.skills, ...(raw.skills ?? {}) },
     }
   }
 

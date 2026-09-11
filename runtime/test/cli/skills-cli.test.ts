@@ -229,4 +229,42 @@ describe("WP-049 skills CLI (18 §5)", () => {
     const after = await fsp.readFile(target, "utf8")
     assert.equal(after, original, "the local copy is restored byte-for-byte")
   })
+
+  test("run composes a skill body for the model; bundle create + run composes with a gap report", async () => {
+    // Seed two skills and one bundle member that does not exist.
+    await fsp.writeFile(path.join(project, "run1.md"), DRAFT.replace("cli-test-skill", "run-target").replace("Verifies the CLI promotion path end to end.", "Composes instruction blocks."), "utf8")
+    const s1 = runSkills(["stage", path.join(project, "run1.md")])
+    const id1 = /SKL-[0-9a-z-]+/.exec(s1.out)![0]
+    runSkills(["promote", id1, "--user-override"])
+
+    // Plain skill run: composed body, explainable reason, never executed.
+    const run = runSkills(["run", "engineering/run-target", "Apply it."])
+    assert.equal(run.code, 0, run.out)
+    assert.match(run.out, /Composed instruction block/)
+    assert.match(run.out, /loaded: run-target \(engineering\/run-target\)/)
+    assert.match(run.out, /never executed/, "the CLI states it executes nothing")
+    assert.match(run.out, /# Goal/, "the body text is composed")
+    assert.match(run.out, /Apply it\./, "the extra instruction is included")
+
+    // Bundle with a missing member: resolves, reports the gap, never fatal.
+    const create = runSkills(["bundle", "create", "mybundle", "engineering/run-target", "engineering/ghost-skill", "--instruction", "Do the combo."])
+    assert.equal(create.code, 0, create.out)
+
+    const bRun = runSkills(["run", "mybundle"])
+    assert.equal(bRun.code, 0, bRun.out)
+    assert.match(bRun.out, /missing members \(skipped\): engineering\/ghost-skill/, "the gap is reported")
+    assert.match(bRun.out, /Do the combo\./, "the bundle instruction is composed")
+    assert.match(bRun.out, /loaded: run-target/, "the present member resolves")
+
+    // Bundle list sees it.
+    const list = runSkills(["bundle", "list"])
+    assert.equal(list.code, 0, list.out)
+    assert.match(list.out, /mybundle — 2 member\(s\)/)
+  })
+
+  test("run with an unknown name says so honestly", async () => {
+    const run = runSkills(["run", "no-such-skill"])
+    assert.notEqual(run.code, 0)
+    assert.match(run.out, /Nothing to run/)
+  })
 })

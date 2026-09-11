@@ -1066,3 +1066,23 @@ Evidence: EVD-048.
 Surprises: the payload link-integrity test that once caught dead links in the doctrine
   caught the same class of bug in the new seed skills — the check generalises.
 Next: WP-049c (bundles, 3-body limit, skills run/pin CLI).
+## WP-049c — bundles, 3-body limit, skills run/pin CLI (DONE — PHASE 4 COMPLETE)
+
+Date: 2026-09-11
+Packet: WP-049c (54 §8, SKL-T11/T12, REQ-SKL-017)
+Files: +runtime/src/stores/skill-bundles.ts, +runtime/src/engines/skill-composer.ts,
+  ~runtime/src/cli/skills-cli.ts (run + bundle list|create|delete),
+  ~runtime/src/core/types.ts (ApexSkillsConfig), ~runtime/src/engines/ledger.ts,
+  ~templates/config.json (skills block), +runtime/test/engines/skill-composer.test.ts (5),
+  ~runtime/test/cli/skills-cli.test.ts (+2), +.apex/upgrade/EVIDENCE/EVD-049.md
+Decision: 54 §8 was MISSING (nothing said how a skill is invoked). Implemented the bundle
+  store (.bundles/<name>.json, bundle name resolves before a skill name), the composer
+  engine (max 3 bodies per task, explainable reasons, missing members skipped+reported
+  never fatal, truncated members reported — SKL-T11/T12), the skills run/bundle CLI (run
+  never executes), and the skills.maxBodiesPerTask/seedSkills config keys (54 §20).
+  Root-cause fix: bundle read() threw on slash-bearing skill ids (a plain skill lookup
+  would crash the composer) — read now returns null for non-bundle names; only save
+  validates the name rule.
+Verify: `npm run verify` -> 1004 pass, 0 fail, exit 0 (39.6s).
+Evidence: EVD-049.
+Next: PHASE 5 (WP-050..WP-059 capabilities) — Phase 4 is complete.

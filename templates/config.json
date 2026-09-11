@@ -39,6 +39,12 @@
     "conveneOn": ["security", "irreversible", "architecture", "third_failure"]
   },
 
+  "_skillsNote": "Model-facing skill selection (54 §8/§7). maxBodiesPerTask caps how many skill bodies load for one task; seedSkills ships the bundled seed library.",
+  "skills": {
+    "maxBodiesPerTask": 3,
+    "seedSkills": true
+  },
+
   "_delegationNote": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",
   "delegation": {
     "mode": "AUTO",

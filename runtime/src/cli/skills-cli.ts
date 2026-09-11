@@ -30,6 +30,8 @@ import { openSkillForge } from "../engines/skill-forge.ts"
 import { openUsageSidecar } from "../stores/skill-usage.ts"
 import { openGlobalHome } from "../stores/global-home.ts"
 import { openBundledSync } from "../stores/bundled-sync.ts"
+import { openSkillBundles } from "../stores/skill-bundles.ts"
+import { composeSkillInstruction } from "../engines/skill-composer.ts"
 import { lintSkill } from "../engines/skill-linter.ts"
 import { newId, toIsoString } from "../core/ids.ts"
 import { say } from "../core/log.ts"
@@ -247,6 +249,88 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
       return
     }
 
+    case "run": {
+      const name = positional()[0]
+      if (!name) return usageSkills()
+      const extra = positional().slice(1).join(" ") || undefined
+      const maxBodies = 3 // 54 §8 default; configurable via skills.maxBodiesPerTask (not yet wired into the CLI config load)
+      const out = await composeSkillInstruction({ name, extraInstruction: extra, maxBodies, catalog, bundles: openSkillBundles(skillsRoot) })
+      if (json) {
+        process.stderr.write(JSON.stringify(out, null, 2) + "\n")
+        return
+      }
+      if (out.loaded.length === 0) {
+        say(`\nNothing to run: ${name} — no member resolved to a shipped skill.`)
+        process.exitCode = 1
+        return
+      }
+      say(`\n# Composed instruction block (${out.loaded.length} skill body/ies — never executed):`)
+      for (const l of out.loaded) say(`  - loaded: ${l.name} (${l.id}) — ${l.reason}`)
+      if (out.missing.length) say(`  ! missing members (skipped): ${out.missing.join(", ")}`)
+      if (out.truncated.length) say(`  ! truncated at the 3-body cap: ${out.truncated.join(", ")}`)
+      say("")
+      say(out.instruction)
+      return
+    }
+
+    case "bundle": {
+      const sub = positional()[0]
+      const name = positional()[1]
+      if (!sub) return usageSkills()
+      const bundles = openSkillBundles(skillsRoot)
+      if (sub === "list") {
+        const names = await bundles.list()
+        if (json) {
+          process.stderr.write(JSON.stringify({ bundles: names }, null, 2) + "\n")
+          return
+        }
+        if (names.length === 0) {
+          say(`\nNo bundles yet. Create one: apex-agent skills bundle create <name> <skill-id> [more...] --instruction "<line>"`)
+          return
+        }
+        say(`\n${names.length} bundle(s):`)
+        for (const n of names) {
+          const b = await bundles.read(n)
+          say(`  ${n} — ${b?.members.length ?? 0} member(s)${b?.instruction ? ` — "${b.instruction.slice(0, 60)}"` : ""}`)
+        }
+        return
+      }
+      if (sub === "create") {
+        if (!name || positional().slice(2).length === 0) {
+          say(`\nUsage: apex-agent skills bundle create <name> <skill-id> [more skill-ids...] [--instruction "line"]`)
+          process.exitCode = 1
+          return
+        }
+        const members = positional().slice(2)
+        const instruction = flag("--instruction") ?? ""
+        await bundles.save({ schemaVersion: 1, name, instruction, members })
+        if (json) {
+          process.stderr.write(JSON.stringify({ created: name, members, instruction }, null, 2) + "\n")
+          return
+        }
+        say(`Created bundle ${name} with ${members.length} member(s).`)
+        say(`Compose it: apex-agent skills run ${name}`)
+        return
+      }
+      if (sub === "delete") {
+        if (!name) {
+          say(`\nUsage: apex-agent skills bundle delete <name>`)
+          process.exitCode = 1
+          return
+        }
+        await bundles.remove(name)
+        if (json) {
+          process.stderr.write(JSON.stringify({ deleted: name }, null, 2) + "\n")
+          return
+        }
+        say(`Deleted bundle ${name}.`)
+        return
+      }
+      say(`Unknown bundle subcommand "${sub}".`)
+      process.exitCode = 1
+      return
+    }
+
     case "pending": {
       // Candidates awaiting a promotion decision.
       const pendingDir = path.join(skillsRoot, "pending")
@@ -328,6 +412,9 @@ apex-agent skills <sub> [args]
   unpin <name>                  lift the protection
   reset <name> [--restore]      clear a bundled skill's manifest entry; --restore
                                 replaces the local copy with the shipped original
+  run <name-or-bundle> [instruction]  compose the instruction block for the model
+                                (never executes anything)
+  bundle list|create|delete     manage named bundles of skills
 
 Skills are future instruction: promotion needs evidence, or your explicit
 override — recorded as unverified, and demoted on its first real failure.

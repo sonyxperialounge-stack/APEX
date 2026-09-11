@@ -146,6 +146,18 @@ export interface ApexContextConfig {
   budgetTokens: number
 }
 
+/**
+ * WP-049c — the model-facing skill selection surface (54 §8, amending 18).
+ * `maxBodiesPerTask` caps how many skill bodies load for one task (default 3);
+ * `seedSkills` switches the bundled seed library on/off (54 §7, WP-049b).
+ */
+export interface ApexSkillsConfig {
+  /** 54 §8: at most three bodies per task; the choice is explainable (SKL-T11). */
+  maxBodiesPerTask: number
+  /** 54 §7: ship and seed the bundled library on install. Default true. */
+  seedSkills: boolean
+}
+
 export interface ApexConfig {
   projectRoot: string
   autonomy: AutonomyMode
@@ -158,6 +170,7 @@ export interface ApexConfig {
   limits: ApexLimits
   council: CouncilConfig
   context: ApexContextConfig
+  skills: ApexSkillsConfig
   delegation: DelegationConfig
 }
 
