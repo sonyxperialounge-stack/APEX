@@ -5,7 +5,9 @@ import os from "node:os"
 import path from "node:path"
 import {
   Warden, renderPacket, detectEvasions, FAILURE_RESPONSE, validateChildResult,
-  type SubagentPacket, type FleetContext,
+  validateDelegationContract, canDelegateClose, canParentCloseChild, canRunConcurrently,
+  reconcileChildEvidence, buildChildContext,
+  type SubagentPacket, type FleetContext, type DelegationContract,
 } from "../../src/engines/warden.ts"
 const wardenModule = { validateChildResult }
 import { Ledger, DEFAULT_CONFIG } from "../../src/engines/ledger.ts"
@@ -837,5 +839,88 @@ describe("WP-055 — replan after a capability loss (21 §10)", () => {
     assert.equal(replanned.attempt, 2)
     assert.deepEqual(replanned.alreadyExists, ["src/storage.py"])
     assert.ok(replanned.strategyChange.includes("refreshed"))
+  })
+})
+
+// ── WP-065 — fleet delegation contracts (26 §§3–6) ───────────────────────────
+
+describe("WP-065 fleet delegation contracts (26 §§3–6)", () => {
+  function delegation(over: Partial<DelegationContract> = {}): DelegationContract {
+    return {
+      taskId: "TASK-child-1",
+      parentTaskId: "TASK-parent-1",
+      objective: "Probe prune candidates in the archive store",
+      allowedPaths: ["runtime/src/stores/"],
+      prohibitedEffects: ["DELETE", "EXTERNAL_SIDE_EFFECT"],
+      requiredCapabilities: ["fs.read"],
+      expectedEvidence: ["file references"],
+      writeMode: "SCOPED_WRITE",
+      ...over,
+    }
+  }
+
+  test("delegation contracts name explicit scopes and modes", () => {
+    assert.equal(validateDelegationContract(delegation()).valid, true)
+    const scopeless = validateDelegationContract(delegation({ allowedPaths: [] }))
+    assert.equal(scopeless.valid, false)
+    assert.match(scopeless.reasons.join(" "), /explicit.*allowedPaths/i)
+    const badMode = validateDelegationContract(delegation({ writeMode: "DO_ANYTHING" as never }))
+    assert.equal(badMode.valid, false)
+  })
+
+  test("FLT-T01: a child cannot close its parent task", () => {
+    const refused = canDelegateClose("TASK-parent-1", { taskId: "TASK-child-1", parentTaskId: "TASK-parent-1" })
+    assert.equal(refused.allowed, false)
+    assert.match(refused.reason, /cannot close parent/i)
+    assert.equal(canDelegateClose("TASK-parent-1", { taskId: "TASK-parent-1" }).allowed, true)
+    assert.equal(canParentCloseChild("TASK-parent-1", delegation()), true)
+    assert.equal(canParentCloseChild("TASK-stranger-9", delegation()), false)
+  })
+
+  test("FLT-T03: overlapping writers serialize; disjoint writers and readers run together", () => {
+    const a = delegation({ taskId: "TASK-a" })
+    const overlapping = delegation({ taskId: "TASK-b", allowedPaths: ["runtime/src/stores/archive-store.ts"] })
+    const clash = canRunConcurrently(a, overlapping)
+    assert.equal(clash.concurrent, false)
+    assert.match(clash.reason, /overwrite each other/i)
+    const disjoint = canRunConcurrently(a, delegation({ taskId: "TASK-c", allowedPaths: ["runtime/src/cli/"] }))
+    assert.equal(disjoint.concurrent, true)
+    const reader = canRunConcurrently(a, delegation({ taskId: "TASK-d", allowedPaths: ["runtime/src/stores/"], writeMode: "READ_ONLY" }))
+    assert.equal(reader.concurrent, true)
+  })
+
+  test("FLT-T05: the parent reconciles child evidence against passing records", () => {
+    const child = {
+      taskId: "TASK-child-1",
+      status: "COMPLETE" as const,
+      claims: [{ text: "prune keeps evidence", evidenceIds: ["V-001"], confidence: "HIGH" as const }],
+      changedPaths: [],
+      unresolved: [],
+    }
+    const accepted = reconcileChildEvidence({ child, passingEvidenceIds: ["V-001"] })
+    assert.equal(accepted.accepted, true)
+    const bare = reconcileChildEvidence({
+      child: { ...child, claims: [{ text: "trust me", evidenceIds: [], confidence: "HIGH" as const }] },
+      passingEvidenceIds: ["V-001"],
+    })
+    assert.equal(bare.accepted, false)
+    const forged = reconcileChildEvidence({ child, passingEvidenceIds: ["V-009"] })
+    assert.equal(forged.accepted, false)
+    assert.match(forged.reasons.join(" "), /not a passing verification/i)
+  })
+
+  test("FLT-T06: the child context carries only its slice", () => {
+    const unrelated = "the user takes biryani every Sunday"
+    const ctx = buildChildContext({
+      lawsSummary: "obey the Governor; never invent evidence",
+      taskSlice: "TASK-child-1: probe prune candidates",
+      requiredProjectContext: "archive layout: sessions + events",
+      relevantSkill: "verify-cascade",
+      requiredCapabilities: ["fs.read"],
+    })
+    assert.ok(ctx.includes("TASK-child-1: probe prune candidates"))
+    assert.ok(ctx.includes("fs.read"))
+    assert.ok(!ctx.includes("biryani"), "unrelated personal memory has no path into the child")
+    assert.ok(!unrelated.split(" ")[3] || !ctx.includes(unrelated), "the full memory string is absent")
   })
 })

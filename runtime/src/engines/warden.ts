@@ -1227,3 +1227,203 @@ export function buildRecoveryRecord(input: {
     evidenceIds: input.evidenceIds ?? [],
   }
 }
+
+// ── fleet delegation contracts (26 §§3–6; WP-065) ────────────────────────────
+//
+// Every child gets a minimal contract: what it may read, what it may write,
+// which effects stay forbidden, and in which mode. Overlapping writers never
+// run together; a child never closes its parent; the parent reconciles every
+// claim against real evidence; and the child's context carries only what the
+// child needs — never unrelated personal memory.
+
+/** Shared-project write modes (26 §6). NONE means the child writes nowhere. */
+export const DELEGATION_WRITE_MODES = [
+  "NONE",
+  "READ_ONLY",
+  "SCOPED_WRITE",
+  "ISOLATED_WORKTREE",
+  "SERIALIZED_WRITE",
+] as const
+export type DelegationWriteMode = (typeof DELEGATION_WRITE_MODES)[number]
+
+/** The minimal contract every subagent receives (26 §3). */
+export interface DelegationContract {
+  taskId: string
+  parentTaskId: string
+  objective: string
+  allowedPaths: string[]
+  prohibitedEffects: string[]
+  requiredCapabilities: string[]
+  expectedEvidence: string[]
+  writeMode: DelegationWriteMode
+}
+
+/** Structural validation for a delegation contract. Pure. */
+export function validateDelegationContract(contract: DelegationContract): { valid: boolean; reasons: string[] } {
+  const reasons: string[] = []
+  if (!contract.taskId.trim()) reasons.push("the child needs its own task id")
+  if (!contract.parentTaskId.trim()) reasons.push("the child must name its parent task id")
+  if (contract.taskId.trim() && contract.taskId === contract.parentTaskId) {
+    reasons.push("a task cannot delegate to itself")
+  }
+  if (!contract.objective.trim()) reasons.push("the child needs a concrete objective")
+  if (!Array.isArray(contract.allowedPaths)) reasons.push("allowedPaths must be a list")
+  if (!Array.isArray(contract.prohibitedEffects)) reasons.push("prohibitedEffects must be a list")
+  if (!Array.isArray(contract.requiredCapabilities)) reasons.push("requiredCapabilities must be a list")
+  if (!(DELEGATION_WRITE_MODES as readonly string[]).includes(contract.writeMode)) {
+    reasons.push(`unknown write mode "${contract.writeMode}"; legal: ${DELEGATION_WRITE_MODES.join(", ")}`)
+  }
+  // A writer with nowhere named to write is a misscoped delegation (26 §3):
+  // "never delegate with do whatever is needed when the child can mutate."
+  if (
+    (contract.writeMode === "SCOPED_WRITE" || contract.writeMode === "SERIALIZED_WRITE") &&
+    contract.allowedPaths.length === 0
+  ) {
+    reasons.push(`write mode ${contract.writeMode} needs explicit non-overlapping allowedPaths`)
+  }
+  return { valid: reasons.length === 0, reasons }
+}
+
+/** A writer mutates shared state; readers never conflict with anyone. */
+export function delegationWrites(contract: DelegationContract): boolean {
+  return contract.writeMode !== "NONE" && contract.writeMode !== "READ_ONLY"
+}
+
+/** Paths two contracts both claim, using the same containment rule as waves. */
+export function delegationOverlap(a: DelegationContract, b: DelegationContract): string[] {
+  const out: string[] = []
+  for (const p of a.allowedPaths) {
+    for (const q of b.allowedPaths) {
+      if (p === q || isUnder(p, q) || isUnder(q, p)) {
+        const label = p === q ? p : `${p} <-> ${q}`
+        if (!out.includes(label)) out.push(label)
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Whether two delegations may run together (26 §6, FLT-T03). Two writers on
+ * overlapping paths must serialize; everything else is concurrent work.
+ */
+export function canRunConcurrently(
+  a: DelegationContract,
+  b: DelegationContract,
+): { concurrent: boolean; reason: string } {
+  if (!delegationWrites(a) || !delegationWrites(b)) {
+    return { concurrent: true, reason: "at least one side only reads; readers never overwrite each other" }
+  }
+  const overlap = delegationOverlap(a, b)
+  if (overlap.length > 0) {
+    return {
+      concurrent: false,
+      reason:
+        `${a.taskId} and ${b.taskId} both write ${overlap.join(", ")} — ` +
+        "they would overwrite each other. Serialize them or split the paths (FLT-T03).",
+    }
+  }
+  return { concurrent: true, reason: "writers on disjoint paths" }
+}
+
+/**
+ * Who may close what in a delegation (26 §3, FLT-T01). Mirrors the envelope
+ * rule for delegation ids: self may close self, a parent may close its
+ * child, a child may never close its parent, and strangers stay out. The
+ * Gate still owns the final verdict in every allowed case.
+ */
+export function canDelegateClose(
+  targetTaskId: string,
+  requestor: { taskId: string; parentTaskId?: string },
+): { allowed: boolean; reason: string } {
+  if (requestor.taskId === targetTaskId) {
+    return { allowed: true, reason: "the task itself may request its own completion; the Gate still verifies" }
+  }
+  if (requestor.parentTaskId !== undefined && requestor.parentTaskId === targetTaskId) {
+    return {
+      allowed: false,
+      reason:
+        `child ${requestor.taskId} cannot close parent ${targetTaskId} unilaterally. ` +
+        "Child evidence contributes to the parent, but only the parent reconciles coverage (FLT-T01).",
+    }
+  }
+  return {
+    allowed: false,
+    reason:
+      `task ${requestor.taskId} may not close unrelated task ${targetTaskId}. ` +
+      "Only the task itself or its parent delegation may request completion.",
+  }
+}
+
+/** Whether a parent delegation may close one of its children. */
+export function canParentCloseChild(parentTaskId: string, child: DelegationContract): boolean {
+  return child.parentTaskId === parentTaskId
+}
+
+/**
+ * Parent reconciliation of child evidence (26 §10, FLT-T05). Every claim the
+ * parent accepts must cite at least one evidence id that resolves to a
+ * passing verification the parent has actually seen. Unresolved items ride
+ * along as recorded work, never as verified truth.
+ */
+export function reconcileChildEvidence(input: {
+  child: DelegateResult
+  passingEvidenceIds: string[]
+}): { accepted: boolean; reasons: string[] } {
+  const reasons: string[] = []
+  const passing = new Set(input.passingEvidenceIds)
+  let accepted = true
+  input.child.claims.forEach((claim, index) => {
+    if (claim.evidenceIds.length === 0) {
+      accepted = false
+      reasons.push(`claim ${index + 1} cites no evidence; a bare claim never verifies`)
+      return
+    }
+    for (const id of claim.evidenceIds) {
+      if (!passing.has(id)) {
+        accepted = false
+        reasons.push(`claim ${index + 1} cites ${id}, which is not a passing verification the parent has seen`)
+      }
+    }
+  })
+  if (input.child.unresolved.length > 0) {
+    reasons.push(`${input.child.unresolved.length} unresolved item(s) carried forward as open work, not as truth`)
+  }
+  if (accepted) reasons.push("every claim resolves to passing evidence the parent inspected")
+  return { accepted, reasons }
+}
+
+/**
+ * The child's working context (26 §11, FLT-T06). Composes ONLY the slice the
+ * child needs — laws summary, its task slice, required project context, one
+ * relevant skill at most, and the capability descriptions it may use. There
+ * is no personal-memory parameter by design: unrelated memory cannot leak
+ * through a parameter that does not exist.
+ */
+export function buildChildContext(input: {
+  lawsSummary: string
+  taskSlice: string
+  requiredProjectContext: string
+  relevantSkill?: string
+  requiredCapabilities?: string[]
+}): string {
+  const lines = [
+    "LAWS AND SAFETY",
+    input.lawsSummary || "(laws summary not recorded)",
+    "",
+    "YOUR TASK SLICE",
+    input.taskSlice,
+    "",
+    "REQUIRED PROJECT CONTEXT",
+    input.requiredProjectContext || "(none)",
+  ]
+  if (input.relevantSkill) {
+    lines.push("", "RELEVANT SKILL (one at most)", input.relevantSkill)
+  }
+  const caps = input.requiredCapabilities ?? []
+  if (caps.length > 0) {
+    lines.push("", "CAPABILITIES YOU MAY USE", caps.join(", "))
+  }
+  lines.push("", "SCOPE DISCIPLINE", "Stay inside your delegation contract. Report outside-scope findings; do not fix them.")
+  return lines.join("\n")
+}

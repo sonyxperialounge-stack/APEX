@@ -1529,3 +1529,19 @@ Evidence: EVD-064 (RCV-T01..T06).
 Surprises: new-record name collided with an existing import (TS2440) —
   renamed at the cause, suite green.
 Next: WP-065 (fleet delegation contracts).
+
+## WP-065 — Fleet delegation contracts · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/warden.ts (+contracts, supervision untouched),
+  ~runtime/test/engines/warden.test.ts (+5),
+  +.apex/upgrade/EVIDENCE/EVD-065.md
+Decision: minimal contracts per 26 §3 (scoped writers need explicit paths;
+  readers never conflict), overlap serialized per 26 §6 via the same
+  containment rule as waves, child-never-closes-parent, parent reconciles
+  every claim against seen passing evidence, child context has no memory
+  parameter so unrelated memory cannot leak by construction.
+Verify: `npm run verify` -> 1300 pass, 0 fail, 0 cancelled, exit 0 (~40s)
+  (was 1295; +5 new).
+Evidence: EVD-065 (FLT-T01/T03/T05/T06).
+Surprises: none.
+Next: WP-065b (child limits).
