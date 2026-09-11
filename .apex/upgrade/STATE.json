@@ -1,1221 +1,1223 @@
 {
-  "schemaVersion": 1,
-  "plan": "army-update-plan",
-  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
-  "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-11T18:40:15.000Z",
-  "baseline": {
-    "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
-    "dirtyAtStart": false,
-    "node": "v24.16.0",
-    "npm": "11.13.0",
-    "os": "win32",
-    "suite": {
-      "pass": 671,
-      "fail": 0,
-      "cancelled": 0,
-      "exit": 0
-    }
+ "schemaVersion": 1,
+ "plan": "army-update-plan",
+ "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
+ "startedAt": "2026-09-10T05:36:15.128Z",
+ "updatedAt": "2026-09-11T18:40:15.000Z",
+ "baseline": {
+  "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
+  "dirtyAtStart": false,
+  "node": "v24.16.0",
+  "npm": "11.13.0",
+  "os": "win32",
+  "suite": {
+   "pass": 671,
+   "fail": 0,
+   "cancelled": 0,
+   "exit": 0
+  }
+ },
+ "currentPhase": "7A",
+ "currentPacket": "WP-081",
+ "phase0": "PASSED",
+ "packets": {
+  "WP-001": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
   },
-  "currentPhase": "7A",
-  "currentPacket": "WP-080",
-  "phase0": "PASSED",
-  "packets": {
-    "WP-001": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-002": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-003": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-004": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-005": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-006": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:36:15.128Z",
-      "finishedAt": "2026-09-10T05:36:15.128Z",
-      "commit": "d36611e",
-      "evidence": [
-        "EVD-001"
-      ],
-      "notes": "Phase 0; commit recorded in WORKLOG at first commit"
-    },
-    "WP-010": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T05:50:28.681Z",
-      "finishedAt": "2026-09-10T06:05:33.778Z",
-      "commit": "1889525",
-      "evidence": [
-        "EVD-003"
-      ],
-      "notes": "+9 tests; ids stateless per determinism rule"
-    },
-    "WP-011": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T06:05:33.779Z",
-      "finishedAt": "2026-09-10T06:09:41.619Z",
-      "commit": "6f9cd87",
-      "evidence": [
-        "EVD-004"
-      ],
-      "notes": "+7 tests"
-    },
-    "WP-012": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T06:09:41.620Z",
-      "finishedAt": "2026-09-10T06:24:26.629Z",
-      "commit": "1168fd5",
-      "evidence": [
-        "EVD-005"
-      ],
-      "notes": "+8 tests; lock inside json.ts"
-    },
-    "WP-013": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T06:24:26.630Z",
-      "finishedAt": "2026-09-10T06:30:47.406Z",
-      "commit": "878b693",
-      "evidence": [
-        "EVD-006"
-      ],
-      "notes": "+7 tests; truncation-recovery bug found+fixed"
-    },
-    "WP-014": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T06:30:47.406Z",
-      "finishedAt": "2026-09-10T06:48:39.997Z",
-      "commit": "febac3e",
-      "evidence": [
-        "EVD-007"
-      ],
-      "notes": "+21 tests; planted-violation self-tests"
-    },
-    "WP-015": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T06:48:39.998Z",
-      "finishedAt": "2026-09-10T07:14:00.056Z",
-      "commit": "6d32acc",
-      "evidence": [
-        "EVD-008"
-      ],
-      "notes": "+19 tests; drive-relative + system-dir refusals added; audit EVD-043: HOME-T02 test added, T03..T07 labeled at covering tests"
-    },
-    "WP-015b": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T07:14:00.057Z",
-      "finishedAt": "2026-09-10T07:25:15.211Z",
-      "commit": "2cc0935",
-      "evidence": [
-        "EVD-009"
-      ],
-      "notes": "SEC-T10/T11 green; union not replace"
-    },
-    "WP-016": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T07:25:15.213Z",
-      "finishedAt": "2026-09-10T07:57:14.914Z",
-      "commit": "03ed953",
-      "evidence": [
-        "EVD-010"
-      ],
-      "notes": "+9 tests; 3 self-defects caught+fixed; BOOT-T02 race green"
-    },
-    "WP-017": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T07:57:14.915Z",
-      "finishedAt": "2026-09-10T08:09:04.485Z",
-      "commit": "c784c45",
-      "evidence": [
-        "EVD-011"
-      ],
-      "notes": "+13 tests; SEC-T08 zero false positives on multilingual corpus"
-    },
-    "WP-018": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T08:09:04.487Z",
-      "finishedAt": "2026-09-10T08:26:10.153Z",
-      "commit": "19f245d",
-      "evidence": [
-        "EVD-012"
-      ],
-      "notes": "+8 tests; MIG-T01..T05 green; interrupted-check reordered first"
-    },
-    "WP-019": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T08:26:10.154Z",
-      "finishedAt": "2026-09-10T09:09:58.252Z",
-      "commit": "cd9cee3",
-      "evidence": [
-        "EVD-013"
-      ],
-      "notes": "+8 tests; DOC-T01/T03 green; CLI --repair wired"
-    },
-    "WP-020": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T09:09:58.254Z",
-      "finishedAt": "2026-09-10T09:21:21.177Z",
-      "commit": "972585c",
-      "evidence": [
-        "EVD-014"
-      ],
-      "notes": "+8 tests; unions exhaustive; validator live"
-    },
-    "WP-021": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T09:21:21.178Z",
-      "finishedAt": "2026-09-10T09:33:36.410Z",
-      "commit": "981e897",
-      "evidence": [
-        "EVD-015"
-      ],
-      "notes": "+7 tests; MEM-CON-T01 20-proc race + T04 kill green; audit repair EVD-043: T02 (20-proc same-candidate merge) and T03 (correction race) tests added, T05..T07 labeled at covering tests"
-    },
-    "WP-022": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T09:33:36.411Z",
-      "finishedAt": "2026-09-10T09:46:23.653Z",
-      "commit": "e66ac93",
-      "evidence": [
-        "EVD-016"
-      ],
-      "notes": "+4 tests; revalidation-before-approval proven"
-    },
-    "WP-023": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T09:46:23.653Z",
-      "finishedAt": "2026-09-10T10:02:57.049Z",
-      "commit": "c7c6ca1",
-      "evidence": [
-        "EVD-017"
-      ],
-      "notes": "+13 tests; 3 Unicode-folding defects fixed"
-    },
-    "WP-024": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T10:02:57.050Z",
-      "finishedAt": "2026-09-10T10:12:42.769Z",
-      "commit": "d73f51c",
-      "evidence": [
-        "EVD-018"
-      ],
-      "notes": "+8 tests; retraction=review proven"
-    },
-    "WP-025": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T10:12:42.770Z",
-      "finishedAt": "2026-09-10T10:21:37.261Z",
-      "commit": "4d092f2",
-      "evidence": [
-        "EVD-019"
-      ],
-      "notes": "+9 tests; selection pure; skips audited"
-    },
-    "WP-025b": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T11:28:38.571Z",
-      "finishedAt": "2026-09-10T11:45:41.262Z",
-      "commit": "e9cedb7",
-      "evidence": [
-        "EVD-024"
-      ],
-      "notes": "+3 tests; MEM-T08/T09; memory-pending split for size ceiling"
-    },
-    "WP-026": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T10:21:37.262Z",
-      "finishedAt": "2026-09-10T10:35:31.860Z",
-      "commit": "84aec83",
-      "evidence": [
-        "EVD-020"
-      ],
-      "notes": "+8 tests; CTX-T03..T06 green; frozen snapshot + overlay live"
-    },
-    "WP-026b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T03:10:00.000Z",
-      "finishedAt": "2026-09-11T03:55:00.000Z",
-      "commit": "4fa7157",
-      "evidence": [
-        "EVD-044"
-      ],
-      "notes": "attached-context 25/50 guard (54 §11.1); context-guard.ts engine + archive read/scroll wiring; 982 pass"
-    },
-    "WP-027": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T10:35:31.861Z",
-      "finishedAt": "2026-09-10T10:48:12.047Z",
-      "commit": "b730b18",
-      "evidence": [
-        "EVD-021"
-      ],
-      "notes": "+4 tests; byte-identical round-trip proven"
-    },
-    "WP-028": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T10:48:12.048Z",
-      "finishedAt": "2026-09-10T11:01:44.230Z",
-      "commit": "e0cbfc2",
-      "evidence": [
-        "EVD-022"
-      ],
-      "notes": "+5 tests; PMEM-T03/T04 green; lock transient hardening (D-006)"
-    },
-    "WP-029": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T11:01:44.231Z",
-      "finishedAt": "2026-09-10T11:28:38.570Z",
-      "commit": "455691f",
-      "evidence": [
-        "EVD-023"
-      ],
-      "notes": "+7 CLI e2e tests; all 10 §12 operations reachable"
-    },
-    "WP-030": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T17:35:00.000Z",
-      "finishedAt": "2026-09-10T18:42:48.000Z",
-      "commit": "0532964",
-      "evidence": [
-        "EVD-025"
-      ],
-      "notes": "+4 tests; 869 pass total; quarantine redirect to events/quarantine.jsonl"
-    },
-    "WP-031": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T18:45:00.000Z",
-      "finishedAt": "2026-09-10T19:00:00.000Z",
-      "commit": "d0c2b6c",
-      "evidence": [
-        "EVD-026"
-      ],
-      "notes": "+2 tests; 871 pass total; persistEvent redaction chokepoint + source scan"
-    },
-    "WP-032": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T18:45:00.000Z",
-      "finishedAt": "2026-09-10T19:10:00.000Z",
-      "commit": "671be7e",
-      "evidence": [
-        "EVD-027"
-      ],
-      "notes": "+2 tests; 873 pass total; resume capsule + chat-only null"
-    },
-    "WP-033": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T19:10:00.000Z",
-      "finishedAt": "2026-09-10T19:20:00.000Z",
-      "commit": "9d6a496",
-      "evidence": [
-        "EVD-028"
-      ],
-      "notes": "+7 tests; 880 pass total; deterministic search with NFC + Devanagari"
-    },
-    "WP-034": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T13:59:57.583Z",
-      "finishedAt": "2026-09-10T17:05:47.167Z",
-      "evidence": [
-        "EVD-029"
-      ],
-      "notes": "derived index, health classification, scan fallback, future-schema refusal",
-      "commit": "1d8a5cf"
-    },
-    "WP-035": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T17:16:28.079Z",
-      "finishedAt": "2026-09-10T17:16:28.080Z",
-      "evidence": [
-        "EVD-030"
-      ],
-      "notes": "retention prune (dry-run, evidence-refusal, pinned, idempotent) + scoped export with re-redaction",
-      "commit": "2a3cace"
-    },
-    "WP-036": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T17:40:12.871Z",
-      "finishedAt": "2026-09-10T17:40:12.872Z",
-      "evidence": [
-        "EVD-031"
-      ],
-      "notes": "capture engine + L1 MCP tools (apex_archive_*) + L2 hook wiring; verifications link V- ids",
-      "commit": "31db678"
-    },
-    "WP-037": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T17:53:05.697Z",
-      "finishedAt": "2026-09-10T17:53:05.698Z",
-      "evidence": [
-        "EVD-032"
-      ],
-      "notes": "CLI discover/browse/read/scroll with provenance; historical-record framing",
-      "commit": "be5da80"
-    },
-    "WP-040": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T18:29:01.188Z",
-      "finishedAt": "2026-09-10T18:53:51.023Z",
-      "evidence": [
-        "EVD-033"
-      ],
-      "notes": "frontmatter subset parser + 41§10 header validation + 18§4 body check + advisory linter (18§8) in engines/skill-linter.ts",
-      "commit": "6ee26a6"
-    },
-    "WP-041": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T18:57:07.841Z",
-      "finishedAt": "2026-09-10T19:06:19.523Z",
-      "evidence": [
-        "EVD-034"
-      ],
-      "notes": "3-level disclosure: catalog store (index/body/resource) + Cortex skills section, budget-guarded",
-      "commit": "2369444"
-    },
-    "WP-041b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T03:55:00.000Z",
-      "finishedAt": "2026-09-11T04:25:00.000Z",
-      "commit": "b80db3e",
-      "evidence": [
-        "EVD-045"
-      ],
-      "notes": "54 §5/§6 activation already present (SKL-T06/T07); added banned-env-name rejection + value drop + SEC-T09 sweep"
-    },
-    "WP-042": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T19:10:25.934Z",
-      "finishedAt": "2026-09-10T19:18:09.632Z",
-      "evidence": [
-        "EVD-035"
-      ],
-      "notes": "hash-bound trust grants, deny never overridable, no self-trust, no execution path",
-      "commit": "e5e7598"
-    },
-    "WP-042b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T00:00:00.000Z",
-      "finishedAt": "2026-09-11T00:00:00.000Z",
-      "evidence": [
-        "EVD-046"
-      ],
-      "notes": "source tiers, scan caching by content hash + policy version (SKSEC-T07), deny never overridable, fresh-cache-object fix",
-      "commit": "4552d28"
-    },
-    "WP-043": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T19:20:11.794Z",
-      "finishedAt": "2026-09-10T19:28:56.881Z",
-      "evidence": [
-        "EVD-036"
-      ],
-      "notes": "skillApplicable engine: lifecycle/platform/requires/fallbackFor/env gates, reasons stated, trust outside",
-      "commit": "7f98482"
-    },
-    "WP-044": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T19:32:24.227Z",
-      "finishedAt": "2026-09-10T19:48:17.381Z",
-      "evidence": [
-        "EVD-037"
-      ],
-      "notes": "LRNT-T01..T05: gate-gated extraction, fact/skill/none classify, failure as riskFlags, no store writes",
-      "commit": "a858dae"
-    },
-    "WP-045": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T19:49:51.310Z",
-      "finishedAt": "2026-09-10T20:03:49.375Z",
-      "evidence": [
-        "EVD-038"
-      ],
-      "notes": "FORGE-T01..T05: transition table, 3-gate promotion, patch-over-rewrite with version history, use-based demotion",
-      "commit": "d04ed1c"
-    },
-    "WP-046": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T20:08:06.379Z",
-      "finishedAt": "2026-09-10T20:17:48.049Z",
-      "evidence": [
-        "EVD-039"
-      ],
-      "notes": "usage sidecar: buffered in-session, one SESSION_END flush, additive merge; SKILL.md never rewritten by use",
-      "commit": "ea62f84"
-    },
-    "WP-047": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T20:19:10.440Z",
-      "finishedAt": "2026-09-10T20:24:17.010Z",
-      "evidence": [
-        "EVD-040"
-      ],
-      "notes": "curator: conservative vocabulary, interval guard, pinned protection, archive-not-delete",
-      "commit": "21df2e5"
-    },
-    "WP-047b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T00:00:00.000Z",
-      "finishedAt": "2026-09-11T00:00:00.000Z",
-      "evidence": [
-        "EVD-047"
-      ],
-      "notes": "archive dir, pinning, curator min-interval; skills pin/unpin CLI added",
-      "commit": "17f19f0"
-    },
-    "WP-048": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T20:27:25.309Z",
-      "finishedAt": "2026-09-10T20:37:44.129Z",
-      "evidence": [
-        "EVD-041"
-      ],
-      "notes": "DelegateResult + validateChildResult: proposals are data, global writes flagged, pending is the legal seam",
-      "commit": "2f9d62a"
-    },
-    "WP-049": {
-      "status": "DONE",
-      "startedAt": "2026-09-10T20:40:36.678Z",
-      "finishedAt": "2026-09-10T20:50:24.860Z",
-      "evidence": [
-        "EVD-042"
-      ],
-      "notes": "skills CLI (gates intact), core/15-SKILLS.md doctrine, payload ships it",
-      "commit": "204aa94"
-    },
-    "WP-049b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T00:00:00.000Z",
-      "finishedAt": "2026-09-11T00:00:00.000Z",
-      "evidence": [
-        "EVD-048"
-      ],
-      "notes": "seed skill library (6 BUILTIN), non-clobbering payload sync, reset --restore",
-      "commit": "c9c7a5a"
-    },
-    "WP-049c": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T00:00:00.000Z",
-      "finishedAt": "2026-09-11T00:00:00.000Z",
-      "evidence": [
-        "EVD-049"
-      ],
-      "notes": "bundles, 3-body selection limit, skills run/bundle CLI, maxBodiesPerTask config",
-      "commit": "bfa367e"
-    },
-    "WP-050": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T02:00:00.000Z",
-      "finishedAt": "2026-09-11T03:02:00.000Z",
-      "evidence": [
-        "EVD-050"
-      ],
-      "notes": "effects taxonomy + Governor adapter",
-      "commit": "ccae2df"
-    },
-    "WP-050b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T04:05:00.000Z",
-      "finishedAt": "2026-09-11T05:00:00.000Z",
-      "evidence": [
-        "EVD-050b"
-      ],
-      "notes": "code-intelligence ids (code.*) + diagnostics evidence row between parse and types",
-      "commit": "5cacee2"
-    },
-    "WP-051": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T03:05:00.000Z",
-      "finishedAt": "2026-09-11T04:02:00.000Z",
-      "evidence": [
-        "EVD-051"
-      ],
-      "notes": "capability registry: descriptors, alias index, conservative inference, availability, trust, mayExpose",
-      "commit": "6eb9e84"
-    },
-    "WP-052": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T02:40:00.000Z",
-      "finishedAt": "2026-09-11T04:45:00.000Z",
-      "evidence": [
-        "EVD-052"
-      ],
-      "notes": "host discovery: secondary HostCapabilities interface, registerHostTools pipeline, bounded refresh, apex://capabilities compact index",
-      "commit": "5a5296c"
-    },
-    "WP-053": {
-      "status": "DONE",
-      "evidence": "EVD-053",
-      "startedAt": "2026-09-11T04:45:00.000Z",
-      "finishedAt": "2026-09-11T05:40:00.000Z",
-      "notes": "capability search + compact index: deterministic scorer, schemaBudgetTokens default 1000, honest deferred, TLS-T01 1,000 tools, TLS-T07",
-      "sha": "ac29aa1"
-    },
-    "WP-054": {
-      "status": "DONE",
-      "evidence": "EVD-054",
-      "startedAt": "2026-09-11T05:40:00.000Z",
-      "finishedAt": "2026-09-11T06:30:00.000Z",
-      "notes": "lazy schema cache: provider+tool key, structural hash, validate before cache, disconnect/hash-drift invalidation, loadSchema door; TLS-T02/T03/T04",
-      "sha": "0e0dedc"
-    },
-    "WP-055": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T05:40:00.000Z",
-      "finishedAt": "2026-09-11T05:01:47.000Z",
-      "evidence": "EVD-055",
-      "notes": "capability loss recovery: DEGRADED mark, bounded refresh (RCV-T04), effects-gated equivalent, FAIL- records with attemptFingerprint (27 §14), replanAfterCapabilityLoss with do-not-reissue, provider invalidation (CAP-T06)",
-      "commit": "98de6d3"
-    },
-    "WP-056": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T05:10:10.000Z",
-      "finishedAt": "2026-09-11T05:55:00.000Z",
-      "evidence": "EVD-056",
-      "notes": "extension contract: manifest-first data-only discovery (EXT-T01), hash-bound grants in trust/extensions.json (EXT-T03, 54 §15 same mechanism), project extensions never self-trust (EXT-T02), Governor-mediated mutations (EXT-T04/T06), external dirs UNSUPPORTED (EXT-T05), crash isolation + session quarantine (EXT-T07); trust store split for module budget",
-      "commit": "ed34b4a"
-    },
-    "WP-056b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T06:10:00.000Z",
-      "finishedAt": "2026-09-11T07:15:00.000Z",
-      "evidence": "EVD-056b",
-      "notes": "hook fail-open/closed classes by 54 §15 (EXT-T08..T10), 23 §11 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json — same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
-      "commit": "16b8660"
-    },
-    "WP-057": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T07:30:00.000Z",
-      "finishedAt": "2026-09-11T07:40:00.000Z",
-      "evidence": "EVD-057",
-      "notes": "capability doctrine: +core/16-CAPABILITIES.md (48 §2 routing; one effects taxonomy; mayExpose != mayExecute; 48 §5 canonical UNAVAILABLE statement + forbiddens; progressive disclosure; CAP-T05), ~START-HERE.md row, payload sync; packaging tests pass inside npm run verify",
-      "commit": "176f1c4"
-    },
-    "WP-058": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T07:45:00.000Z",
-      "finishedAt": "2026-09-11T09:04:54.000Z",
-      "evidence": "EVD-058",
-      "notes": "capability invoke bridge + 3-tier disclosure (54 §2–§4, §20): CapabilityBridge search/describe/invoke through Governor (invoke is NOT an authorization path — validate args locally per 22 §8, toOperationKind, Governor.decide; CAPABILITY_NOT_IN_CATALOG / ARGS_INVALID / BLOCKED / CALL_FAILED; TOOL_NOT_FOUND → markStructuralFailure; mayExpose gates describe+invoke); assembleDisclosure tiers 0/1/2, budget=min(schemaBudgetTokens, 25% context) eager-when-it-fits (54 §4), CORE trust + requiredIds never deferred (PERF-T10 seam for WP-060); plugin.capabilitySurface with bridge/disclosure/registry + plugin.block events; 33 new tests (TLS-T08..T11, PERF-T09/T10)",
-      "commit": "c6369d8"
-    },
-    "WP-059": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T06:30:00.000Z",
-      "finishedAt": "2026-09-11T04:28:52.000Z",
-      "evidence": "EVD-059",
-      "notes": "ExecutionContext on the operation record: EXECUTION_CONTEXTS const, Operation.context?, VerificationRecord.context, detectExecutionContext, normalize/renderContext, disposable-context relaxation (54 §13), audit+evidence carry context, apex_check context param",
-      "commit": "9a5962e"
-    },
-    "WP-060": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T10:35:00.000Z",
-      "finishedAt": "2026-09-11T11:30:00.000Z",
-      "commit": "b51dc31",
-      "evidence": [
-        "EVD-060"
-      ],
-      "notes": "TaskContract envelope + resume validation (25, 41 S15): pure envelope, no second DB, parent/child close guard, conversion rule, fingerprint revalidation, auditable supersession, pointer-rich handoff; 1272 pass"
-    },
-    "WP-061": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T11:35:00.000Z",
-      "finishedAt": "2026-09-11T11:50:00.000Z",
-      "commit": "7248fba",
-      "evidence": [
-        "EVD-061"
-      ],
-      "notes": "domain verifier registry (24 S3, 41 S16): code authoritative, research sourced, evidence-free PASS coerced to FAIL, no write path; 1279 pass"
-    },
-    "WP-062": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T11:50:00.000Z",
-      "finishedAt": "2026-09-11T12:05:00.000Z",
-      "commit": "2684520",
-      "evidence": [
-        "EVD-062"
-      ],
-      "notes": "deliverable validation (24 S4): existence, open, required sections, placeholder scan; AUT-T07; 1285 pass"
-    },
-    "WP-063": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T12:05:00.000Z",
-      "finishedAt": "2026-09-11T12:20:00.000Z",
-      "commit": "1ce68bd",
-      "evidence": [
-        "EVD-063"
-      ],
-      "notes": "capability-first planning (24 S7): feasibility vs registry, replan-or-block, never fake call; AUT-T03; 1289 pass"
-    },
-    "WP-064": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T12:20:00.000Z",
-      "finishedAt": "2026-09-11T12:40:00.000Z",
-      "commit": "5dace68",
-      "evidence": [
-        "EVD-064"
-      ],
-      "notes": "failure taxonomy + recovery ladder (27): fingerprint gate, canonical classes, bounded escalation, check-deletion refused; RCV-T01..T06; 1295 pass"
-    },
-    "WP-065": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T12:40:00.000Z",
-      "finishedAt": "2026-09-11T13:00:00.000Z",
-      "commit": "c192b38",
-      "evidence": [
-        "EVD-065"
-      ],
-      "notes": "fleet delegation contracts (26 S3/S6): explicit scopes, overlap serialize, child-never-closes-parent, parent reconciles, slice-only context; FLT-T01/T03/T05/T06; 1300 pass"
-    },
-    "WP-065b": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T13:00:00.000Z",
-      "finishedAt": "2026-09-11T13:20:00.000Z",
-      "commit": "a94bc21",
-      "evidence": [
-        "EVD-065b"
-      ],
-      "notes": "child limits (54 S12): blocked list, depth gate, budget BLOCKED-with-partials, stall interrupt, cleanup checklist; FLT-T07..T11; 1305 pass"
-    },
-    "WP-066": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T13:20:00.000Z",
-      "finishedAt": "2026-09-11T13:40:00.000Z",
-      "commit": "ba3b8f6",
-      "evidence": [
-        "EVD-066"
-      ],
-      "notes": "council triggers (26 S8/S9): migration_design, skill_promotion, security_boundary; consensus never verifies; FLT-T04; 1309 pass"
-    },
-    "WP-067": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T13:40:00.000Z",
-      "finishedAt": "2026-09-11T14:00:00.000Z",
-      "commit": "e232d02",
-      "evidence": [
-        "EVD-067"
-      ],
-      "notes": "completion states + Gate integration (24 S11, 45 S3.3): five states, limitation required, subjective never objective; apex_gate contract; 1313 pass"
-    },
-    "WP-068": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T14:00:00.000Z",
-      "finishedAt": "2026-09-11T14:20:00.000Z",
-      "commit": "64a7230",
-      "evidence": [
-        "EVD-068"
-      ],
-      "notes": "PHASE 6 COMPLETE: durable-state doctrine (48 S9) with exact implemented paths + routing row + payload sync; phase gate — code/research/artifact/system share one governed loop; 1313 pass"
-    },
-    "WP-070": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T15:40:00.000Z",
-      "finishedAt": "2026-09-11T16:20:00.000Z",
-      "evidence": [
-        "EVD-070"
-      ],
-      "notes": "START-HERE V2: home modes, readiness contract, WHAT-SURVIVES-WHAT, core item 8, degraded disclaimer; SH-T04 fix (project memory now wrapped); SH-T01..T07 tests. 1327 pass."
-    },
-    "WP-071": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T16:25:00.000Z",
-      "finishedAt": "2026-09-11T16:45:00.000Z",
-      "evidence": [
-        "EVD-071"
-      ],
-      "notes": "Durable-state + capability paragraphs in all 5 adapters, host does/does-not-enforce split. Payload sync clean. 913 unit pass."
-    },
-    "WP-072": {
-      "status": "DONE",
-      "startedAt": "2026-09-11T17:00:00.000Z",
-      "finishedAt": "2026-09-11T18:00:00.000Z",
-      "evidence": [
-        "EVD-072"
-      ],
-      "notes": "13 MCP tools in new src/mcp/state-tools.ts (MOD-T05 split); registry travels with tools/call; 23 tests. 1350 pass."
-    },
-    "WP-073": {
-      "status": "DONE",
-      "evidence": ".apex/upgrade/EVIDENCE/EVD-073.md",
-      "committed": "WP-073: CLI surface completion (53 §3) — session/home groups, show/pending/off, trust, --reason gates, per-command --help"
-    },
-    "WP-073b": {
-      "status": "DONE",
-      "evidence": ".apex/upgrade/EVIDENCE/EVD-073b.md",
-      "committed": "WP-073b: memory journey / skills journey (54 §17, UX-T07) — chronological learned-record with evidence ids and --forget"
-    },
-    "WP-074": {
-      "status": "DONE",
-      "evidence": ".apex/upgrade/EVIDENCE/EVD-074.md",
-      "committed": "WP-074: templates + config migration (44 ss1-6) — global/project merge with provenance, MIG-config-1-to-2, CFG-T01..T09"
-    },
-    "WP-075": {
-      "status": "DONE",
-      "evidence": ".apex/upgrade/EVIDENCE/EVD-075.md",
-      "committed": "WP-075: documentation refresh (53) - CHANGELOG + SCHEMA-CHANGELOG, README/ATTACH/EXAMPLES V4 refresh, docs.test.ts UX-T03 guard, CURRENT_SCHEMA.config=2 registry fix"
-    },
-    "WP-080": {
-      "status": "PENDING"
-    },
-    "WP-081": {
-      "status": "PENDING"
-    },
-    "WP-082": {
-      "status": "PENDING"
-    },
-    "WP-083": {
-      "status": "PENDING"
-    },
-    "WP-084": {
-      "status": "PENDING"
-    },
-    "WP-085": {
-      "status": "PENDING"
-    },
-    "WP-085b": {
-      "status": "PENDING"
-    },
-    "WP-086": {
-      "status": "PENDING"
-    },
-    "WP-087": {
-      "status": "PENDING"
-    },
-    "WP-088": {
-      "status": "PENDING"
-    },
-    "WP-089": {
-      "status": "PENDING"
-    }
+  "WP-002": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
   },
-  "packetOrder": [
-    "WP-001",
-    "WP-002",
-    "WP-003",
-    "WP-004",
-    "WP-005",
-    "WP-006",
-    "WP-010",
-    "WP-011",
-    "WP-012",
-    "WP-013",
-    "WP-014",
-    "WP-015",
-    "WP-015b",
-    "WP-016",
-    "WP-017",
-    "WP-018",
-    "WP-019",
-    "WP-020",
-    "WP-021",
-    "WP-022",
-    "WP-023",
-    "WP-024",
-    "WP-025",
-    "WP-025b",
-    "WP-026",
-    "WP-026b",
-    "WP-027",
-    "WP-028",
-    "WP-029",
-    "WP-030",
-    "WP-031",
-    "WP-032",
-    "WP-033",
-    "WP-034",
-    "WP-035",
-    "WP-036",
-    "WP-037",
-    "WP-040",
-    "WP-041",
-    "WP-041b",
-    "WP-042",
-    "WP-042b",
-    "WP-043",
-    "WP-044",
-    "WP-045",
-    "WP-046",
-    "WP-047",
-    "WP-047b",
-    "WP-048",
-    "WP-049",
-    "WP-049b",
-    "WP-049c",
-    "WP-050",
-    "WP-050b",
-    "WP-051",
-    "WP-052",
-    "WP-053",
-    "WP-054",
-    "WP-055",
-    "WP-056",
-    "WP-056b",
-    "WP-057",
-    "WP-058",
-    "WP-059",
-    "WP-060",
-    "WP-061",
-    "WP-062",
-    "WP-063",
-    "WP-064",
-    "WP-065",
-    "WP-065b",
-    "WP-066",
-    "WP-067",
-    "WP-068",
-    "WP-070",
-    "WP-071",
-    "WP-072",
-    "WP-073",
-    "WP-073b",
-    "WP-074",
-    "WP-075",
-    "WP-080",
-    "WP-081",
-    "WP-082",
-    "WP-083",
-    "WP-084",
-    "WP-085",
-    "WP-085b",
-    "WP-086",
-    "WP-087",
-    "WP-088",
-    "WP-089"
+  "WP-003": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+  },
+  "WP-004": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+  },
+  "WP-005": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+  },
+  "WP-006": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:36:15.128Z",
+   "finishedAt": "2026-09-10T05:36:15.128Z",
+   "commit": "d36611e",
+   "evidence": [
+    "EVD-001"
+   ],
+   "notes": "Phase 0; commit recorded in WORKLOG at first commit"
+  },
+  "WP-010": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T05:50:28.681Z",
+   "finishedAt": "2026-09-10T06:05:33.778Z",
+   "commit": "1889525",
+   "evidence": [
+    "EVD-003"
+   ],
+   "notes": "+9 tests; ids stateless per determinism rule"
+  },
+  "WP-011": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T06:05:33.779Z",
+   "finishedAt": "2026-09-10T06:09:41.619Z",
+   "commit": "6f9cd87",
+   "evidence": [
+    "EVD-004"
+   ],
+   "notes": "+7 tests"
+  },
+  "WP-012": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T06:09:41.620Z",
+   "finishedAt": "2026-09-10T06:24:26.629Z",
+   "commit": "1168fd5",
+   "evidence": [
+    "EVD-005"
+   ],
+   "notes": "+8 tests; lock inside json.ts"
+  },
+  "WP-013": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T06:24:26.630Z",
+   "finishedAt": "2026-09-10T06:30:47.406Z",
+   "commit": "878b693",
+   "evidence": [
+    "EVD-006"
+   ],
+   "notes": "+7 tests; truncation-recovery bug found+fixed"
+  },
+  "WP-014": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T06:30:47.406Z",
+   "finishedAt": "2026-09-10T06:48:39.997Z",
+   "commit": "febac3e",
+   "evidence": [
+    "EVD-007"
+   ],
+   "notes": "+21 tests; planted-violation self-tests"
+  },
+  "WP-015": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T06:48:39.998Z",
+   "finishedAt": "2026-09-10T07:14:00.056Z",
+   "commit": "6d32acc",
+   "evidence": [
+    "EVD-008"
+   ],
+   "notes": "+19 tests; drive-relative + system-dir refusals added; audit EVD-043: HOME-T02 test added, T03..T07 labeled at covering tests"
+  },
+  "WP-015b": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T07:14:00.057Z",
+   "finishedAt": "2026-09-10T07:25:15.211Z",
+   "commit": "2cc0935",
+   "evidence": [
+    "EVD-009"
+   ],
+   "notes": "SEC-T10/T11 green; union not replace"
+  },
+  "WP-016": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T07:25:15.213Z",
+   "finishedAt": "2026-09-10T07:57:14.914Z",
+   "commit": "03ed953",
+   "evidence": [
+    "EVD-010"
+   ],
+   "notes": "+9 tests; 3 self-defects caught+fixed; BOOT-T02 race green"
+  },
+  "WP-017": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T07:57:14.915Z",
+   "finishedAt": "2026-09-10T08:09:04.485Z",
+   "commit": "c784c45",
+   "evidence": [
+    "EVD-011"
+   ],
+   "notes": "+13 tests; SEC-T08 zero false positives on multilingual corpus"
+  },
+  "WP-018": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T08:09:04.487Z",
+   "finishedAt": "2026-09-10T08:26:10.153Z",
+   "commit": "19f245d",
+   "evidence": [
+    "EVD-012"
+   ],
+   "notes": "+8 tests; MIG-T01..T05 green; interrupted-check reordered first"
+  },
+  "WP-019": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T08:26:10.154Z",
+   "finishedAt": "2026-09-10T09:09:58.252Z",
+   "commit": "cd9cee3",
+   "evidence": [
+    "EVD-013"
+   ],
+   "notes": "+8 tests; DOC-T01/T03 green; CLI --repair wired"
+  },
+  "WP-020": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T09:09:58.254Z",
+   "finishedAt": "2026-09-10T09:21:21.177Z",
+   "commit": "972585c",
+   "evidence": [
+    "EVD-014"
+   ],
+   "notes": "+8 tests; unions exhaustive; validator live"
+  },
+  "WP-021": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T09:21:21.178Z",
+   "finishedAt": "2026-09-10T09:33:36.410Z",
+   "commit": "981e897",
+   "evidence": [
+    "EVD-015"
+   ],
+   "notes": "+7 tests; MEM-CON-T01 20-proc race + T04 kill green; audit repair EVD-043: T02 (20-proc same-candidate merge) and T03 (correction race) tests added, T05..T07 labeled at covering tests"
+  },
+  "WP-022": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T09:33:36.411Z",
+   "finishedAt": "2026-09-10T09:46:23.653Z",
+   "commit": "e66ac93",
+   "evidence": [
+    "EVD-016"
+   ],
+   "notes": "+4 tests; revalidation-before-approval proven"
+  },
+  "WP-023": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T09:46:23.653Z",
+   "finishedAt": "2026-09-10T10:02:57.049Z",
+   "commit": "c7c6ca1",
+   "evidence": [
+    "EVD-017"
+   ],
+   "notes": "+13 tests; 3 Unicode-folding defects fixed"
+  },
+  "WP-024": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T10:02:57.050Z",
+   "finishedAt": "2026-09-10T10:12:42.769Z",
+   "commit": "d73f51c",
+   "evidence": [
+    "EVD-018"
+   ],
+   "notes": "+8 tests; retraction=review proven"
+  },
+  "WP-025": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T10:12:42.770Z",
+   "finishedAt": "2026-09-10T10:21:37.261Z",
+   "commit": "4d092f2",
+   "evidence": [
+    "EVD-019"
+   ],
+   "notes": "+9 tests; selection pure; skips audited"
+  },
+  "WP-025b": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T11:28:38.571Z",
+   "finishedAt": "2026-09-10T11:45:41.262Z",
+   "commit": "e9cedb7",
+   "evidence": [
+    "EVD-024"
+   ],
+   "notes": "+3 tests; MEM-T08/T09; memory-pending split for size ceiling"
+  },
+  "WP-026": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T10:21:37.262Z",
+   "finishedAt": "2026-09-10T10:35:31.860Z",
+   "commit": "84aec83",
+   "evidence": [
+    "EVD-020"
+   ],
+   "notes": "+8 tests; CTX-T03..T06 green; frozen snapshot + overlay live"
+  },
+  "WP-026b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T03:10:00.000Z",
+   "finishedAt": "2026-09-11T03:55:00.000Z",
+   "commit": "4fa7157",
+   "evidence": [
+    "EVD-044"
+   ],
+   "notes": "attached-context 25/50 guard (54 \u00a711.1); context-guard.ts engine + archive read/scroll wiring; 982 pass"
+  },
+  "WP-027": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T10:35:31.861Z",
+   "finishedAt": "2026-09-10T10:48:12.047Z",
+   "commit": "b730b18",
+   "evidence": [
+    "EVD-021"
+   ],
+   "notes": "+4 tests; byte-identical round-trip proven"
+  },
+  "WP-028": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T10:48:12.048Z",
+   "finishedAt": "2026-09-10T11:01:44.230Z",
+   "commit": "e0cbfc2",
+   "evidence": [
+    "EVD-022"
+   ],
+   "notes": "+5 tests; PMEM-T03/T04 green; lock transient hardening (D-006)"
+  },
+  "WP-029": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T11:01:44.231Z",
+   "finishedAt": "2026-09-10T11:28:38.570Z",
+   "commit": "455691f",
+   "evidence": [
+    "EVD-023"
+   ],
+   "notes": "+7 CLI e2e tests; all 10 \u00a712 operations reachable"
+  },
+  "WP-030": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T17:35:00.000Z",
+   "finishedAt": "2026-09-10T18:42:48.000Z",
+   "commit": "0532964",
+   "evidence": [
+    "EVD-025"
+   ],
+   "notes": "+4 tests; 869 pass total; quarantine redirect to events/quarantine.jsonl"
+  },
+  "WP-031": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T18:45:00.000Z",
+   "finishedAt": "2026-09-10T19:00:00.000Z",
+   "commit": "d0c2b6c",
+   "evidence": [
+    "EVD-026"
+   ],
+   "notes": "+2 tests; 871 pass total; persistEvent redaction chokepoint + source scan"
+  },
+  "WP-032": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T18:45:00.000Z",
+   "finishedAt": "2026-09-10T19:10:00.000Z",
+   "commit": "671be7e",
+   "evidence": [
+    "EVD-027"
+   ],
+   "notes": "+2 tests; 873 pass total; resume capsule + chat-only null"
+  },
+  "WP-033": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T19:10:00.000Z",
+   "finishedAt": "2026-09-10T19:20:00.000Z",
+   "commit": "9d6a496",
+   "evidence": [
+    "EVD-028"
+   ],
+   "notes": "+7 tests; 880 pass total; deterministic search with NFC + Devanagari"
+  },
+  "WP-034": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T13:59:57.583Z",
+   "finishedAt": "2026-09-10T17:05:47.167Z",
+   "evidence": [
+    "EVD-029"
+   ],
+   "notes": "derived index, health classification, scan fallback, future-schema refusal",
+   "commit": "1d8a5cf"
+  },
+  "WP-035": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T17:16:28.079Z",
+   "finishedAt": "2026-09-10T17:16:28.080Z",
+   "evidence": [
+    "EVD-030"
+   ],
+   "notes": "retention prune (dry-run, evidence-refusal, pinned, idempotent) + scoped export with re-redaction",
+   "commit": "2a3cace"
+  },
+  "WP-036": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T17:40:12.871Z",
+   "finishedAt": "2026-09-10T17:40:12.872Z",
+   "evidence": [
+    "EVD-031"
+   ],
+   "notes": "capture engine + L1 MCP tools (apex_archive_*) + L2 hook wiring; verifications link V- ids",
+   "commit": "31db678"
+  },
+  "WP-037": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T17:53:05.697Z",
+   "finishedAt": "2026-09-10T17:53:05.698Z",
+   "evidence": [
+    "EVD-032"
+   ],
+   "notes": "CLI discover/browse/read/scroll with provenance; historical-record framing",
+   "commit": "be5da80"
+  },
+  "WP-040": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T18:29:01.188Z",
+   "finishedAt": "2026-09-10T18:53:51.023Z",
+   "evidence": [
+    "EVD-033"
+   ],
+   "notes": "frontmatter subset parser + 41\u00a710 header validation + 18\u00a74 body check + advisory linter (18\u00a78) in engines/skill-linter.ts",
+   "commit": "6ee26a6"
+  },
+  "WP-041": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T18:57:07.841Z",
+   "finishedAt": "2026-09-10T19:06:19.523Z",
+   "evidence": [
+    "EVD-034"
+   ],
+   "notes": "3-level disclosure: catalog store (index/body/resource) + Cortex skills section, budget-guarded",
+   "commit": "2369444"
+  },
+  "WP-041b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T03:55:00.000Z",
+   "finishedAt": "2026-09-11T04:25:00.000Z",
+   "commit": "b80db3e",
+   "evidence": [
+    "EVD-045"
+   ],
+   "notes": "54 \u00a75/\u00a76 activation already present (SKL-T06/T07); added banned-env-name rejection + value drop + SEC-T09 sweep"
+  },
+  "WP-042": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T19:10:25.934Z",
+   "finishedAt": "2026-09-10T19:18:09.632Z",
+   "evidence": [
+    "EVD-035"
+   ],
+   "notes": "hash-bound trust grants, deny never overridable, no self-trust, no execution path",
+   "commit": "e5e7598"
+  },
+  "WP-042b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T00:00:00.000Z",
+   "finishedAt": "2026-09-11T00:00:00.000Z",
+   "evidence": [
+    "EVD-046"
+   ],
+   "notes": "source tiers, scan caching by content hash + policy version (SKSEC-T07), deny never overridable, fresh-cache-object fix",
+   "commit": "4552d28"
+  },
+  "WP-043": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T19:20:11.794Z",
+   "finishedAt": "2026-09-10T19:28:56.881Z",
+   "evidence": [
+    "EVD-036"
+   ],
+   "notes": "skillApplicable engine: lifecycle/platform/requires/fallbackFor/env gates, reasons stated, trust outside",
+   "commit": "7f98482"
+  },
+  "WP-044": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T19:32:24.227Z",
+   "finishedAt": "2026-09-10T19:48:17.381Z",
+   "evidence": [
+    "EVD-037"
+   ],
+   "notes": "LRNT-T01..T05: gate-gated extraction, fact/skill/none classify, failure as riskFlags, no store writes",
+   "commit": "a858dae"
+  },
+  "WP-045": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T19:49:51.310Z",
+   "finishedAt": "2026-09-10T20:03:49.375Z",
+   "evidence": [
+    "EVD-038"
+   ],
+   "notes": "FORGE-T01..T05: transition table, 3-gate promotion, patch-over-rewrite with version history, use-based demotion",
+   "commit": "d04ed1c"
+  },
+  "WP-046": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T20:08:06.379Z",
+   "finishedAt": "2026-09-10T20:17:48.049Z",
+   "evidence": [
+    "EVD-039"
+   ],
+   "notes": "usage sidecar: buffered in-session, one SESSION_END flush, additive merge; SKILL.md never rewritten by use",
+   "commit": "ea62f84"
+  },
+  "WP-047": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T20:19:10.440Z",
+   "finishedAt": "2026-09-10T20:24:17.010Z",
+   "evidence": [
+    "EVD-040"
+   ],
+   "notes": "curator: conservative vocabulary, interval guard, pinned protection, archive-not-delete",
+   "commit": "21df2e5"
+  },
+  "WP-047b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T00:00:00.000Z",
+   "finishedAt": "2026-09-11T00:00:00.000Z",
+   "evidence": [
+    "EVD-047"
+   ],
+   "notes": "archive dir, pinning, curator min-interval; skills pin/unpin CLI added",
+   "commit": "17f19f0"
+  },
+  "WP-048": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T20:27:25.309Z",
+   "finishedAt": "2026-09-10T20:37:44.129Z",
+   "evidence": [
+    "EVD-041"
+   ],
+   "notes": "DelegateResult + validateChildResult: proposals are data, global writes flagged, pending is the legal seam",
+   "commit": "2f9d62a"
+  },
+  "WP-049": {
+   "status": "DONE",
+   "startedAt": "2026-09-10T20:40:36.678Z",
+   "finishedAt": "2026-09-10T20:50:24.860Z",
+   "evidence": [
+    "EVD-042"
+   ],
+   "notes": "skills CLI (gates intact), core/15-SKILLS.md doctrine, payload ships it",
+   "commit": "204aa94"
+  },
+  "WP-049b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T00:00:00.000Z",
+   "finishedAt": "2026-09-11T00:00:00.000Z",
+   "evidence": [
+    "EVD-048"
+   ],
+   "notes": "seed skill library (6 BUILTIN), non-clobbering payload sync, reset --restore",
+   "commit": "c9c7a5a"
+  },
+  "WP-049c": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T00:00:00.000Z",
+   "finishedAt": "2026-09-11T00:00:00.000Z",
+   "evidence": [
+    "EVD-049"
+   ],
+   "notes": "bundles, 3-body selection limit, skills run/bundle CLI, maxBodiesPerTask config",
+   "commit": "bfa367e"
+  },
+  "WP-050": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T02:00:00.000Z",
+   "finishedAt": "2026-09-11T03:02:00.000Z",
+   "evidence": [
+    "EVD-050"
+   ],
+   "notes": "effects taxonomy + Governor adapter",
+   "commit": "ccae2df"
+  },
+  "WP-050b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T04:05:00.000Z",
+   "finishedAt": "2026-09-11T05:00:00.000Z",
+   "evidence": [
+    "EVD-050b"
+   ],
+   "notes": "code-intelligence ids (code.*) + diagnostics evidence row between parse and types",
+   "commit": "5cacee2"
+  },
+  "WP-051": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T03:05:00.000Z",
+   "finishedAt": "2026-09-11T04:02:00.000Z",
+   "evidence": [
+    "EVD-051"
+   ],
+   "notes": "capability registry: descriptors, alias index, conservative inference, availability, trust, mayExpose",
+   "commit": "6eb9e84"
+  },
+  "WP-052": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T02:40:00.000Z",
+   "finishedAt": "2026-09-11T04:45:00.000Z",
+   "evidence": [
+    "EVD-052"
+   ],
+   "notes": "host discovery: secondary HostCapabilities interface, registerHostTools pipeline, bounded refresh, apex://capabilities compact index",
+   "commit": "5a5296c"
+  },
+  "WP-053": {
+   "status": "DONE",
+   "evidence": "EVD-053",
+   "startedAt": "2026-09-11T04:45:00.000Z",
+   "finishedAt": "2026-09-11T05:40:00.000Z",
+   "notes": "capability search + compact index: deterministic scorer, schemaBudgetTokens default 1000, honest deferred, TLS-T01 1,000 tools, TLS-T07",
+   "sha": "ac29aa1"
+  },
+  "WP-054": {
+   "status": "DONE",
+   "evidence": "EVD-054",
+   "startedAt": "2026-09-11T05:40:00.000Z",
+   "finishedAt": "2026-09-11T06:30:00.000Z",
+   "notes": "lazy schema cache: provider+tool key, structural hash, validate before cache, disconnect/hash-drift invalidation, loadSchema door; TLS-T02/T03/T04",
+   "sha": "0e0dedc"
+  },
+  "WP-055": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T05:40:00.000Z",
+   "finishedAt": "2026-09-11T05:01:47.000Z",
+   "evidence": "EVD-055",
+   "notes": "capability loss recovery: DEGRADED mark, bounded refresh (RCV-T04), effects-gated equivalent, FAIL- records with attemptFingerprint (27 \u00a714), replanAfterCapabilityLoss with do-not-reissue, provider invalidation (CAP-T06)",
+   "commit": "98de6d3"
+  },
+  "WP-056": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T05:10:10.000Z",
+   "finishedAt": "2026-09-11T05:55:00.000Z",
+   "evidence": "EVD-056",
+   "notes": "extension contract: manifest-first data-only discovery (EXT-T01), hash-bound grants in trust/extensions.json (EXT-T03, 54 \u00a715 same mechanism), project extensions never self-trust (EXT-T02), Governor-mediated mutations (EXT-T04/T06), external dirs UNSUPPORTED (EXT-T05), crash isolation + session quarantine (EXT-T07); trust store split for module budget",
+   "commit": "ed34b4a"
+  },
+  "WP-056b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T06:10:00.000Z",
+   "finishedAt": "2026-09-11T07:15:00.000Z",
+   "evidence": "EVD-056b",
+   "notes": "hook fail-open/closed classes by 54 \u00a715 (EXT-T08..T10), 23 \u00a711 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json \u2014 same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
+   "commit": "16b8660"
+  },
+  "WP-057": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T07:30:00.000Z",
+   "finishedAt": "2026-09-11T07:40:00.000Z",
+   "evidence": "EVD-057",
+   "notes": "capability doctrine: +core/16-CAPABILITIES.md (48 \u00a72 routing; one effects taxonomy; mayExpose != mayExecute; 48 \u00a75 canonical UNAVAILABLE statement + forbiddens; progressive disclosure; CAP-T05), ~START-HERE.md row, payload sync; packaging tests pass inside npm run verify",
+   "commit": "176f1c4"
+  },
+  "WP-058": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T07:45:00.000Z",
+   "finishedAt": "2026-09-11T09:04:54.000Z",
+   "evidence": "EVD-058",
+   "notes": "capability invoke bridge + 3-tier disclosure (54 \u00a72\u2013\u00a74, \u00a720): CapabilityBridge search/describe/invoke through Governor (invoke is NOT an authorization path \u2014 validate args locally per 22 \u00a78, toOperationKind, Governor.decide; CAPABILITY_NOT_IN_CATALOG / ARGS_INVALID / BLOCKED / CALL_FAILED; TOOL_NOT_FOUND \u2192 markStructuralFailure; mayExpose gates describe+invoke); assembleDisclosure tiers 0/1/2, budget=min(schemaBudgetTokens, 25% context) eager-when-it-fits (54 \u00a74), CORE trust + requiredIds never deferred (PERF-T10 seam for WP-060); plugin.capabilitySurface with bridge/disclosure/registry + plugin.block events; 33 new tests (TLS-T08..T11, PERF-T09/T10)",
+   "commit": "c6369d8"
+  },
+  "WP-059": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T06:30:00.000Z",
+   "finishedAt": "2026-09-11T04:28:52.000Z",
+   "evidence": "EVD-059",
+   "notes": "ExecutionContext on the operation record: EXECUTION_CONTEXTS const, Operation.context?, VerificationRecord.context, detectExecutionContext, normalize/renderContext, disposable-context relaxation (54 \u00a713), audit+evidence carry context, apex_check context param",
+   "commit": "9a5962e"
+  },
+  "WP-060": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T10:35:00.000Z",
+   "finishedAt": "2026-09-11T11:30:00.000Z",
+   "commit": "b51dc31",
+   "evidence": [
+    "EVD-060"
+   ],
+   "notes": "TaskContract envelope + resume validation (25, 41 S15): pure envelope, no second DB, parent/child close guard, conversion rule, fingerprint revalidation, auditable supersession, pointer-rich handoff; 1272 pass"
+  },
+  "WP-061": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T11:35:00.000Z",
+   "finishedAt": "2026-09-11T11:50:00.000Z",
+   "commit": "7248fba",
+   "evidence": [
+    "EVD-061"
+   ],
+   "notes": "domain verifier registry (24 S3, 41 S16): code authoritative, research sourced, evidence-free PASS coerced to FAIL, no write path; 1279 pass"
+  },
+  "WP-062": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T11:50:00.000Z",
+   "finishedAt": "2026-09-11T12:05:00.000Z",
+   "commit": "2684520",
+   "evidence": [
+    "EVD-062"
+   ],
+   "notes": "deliverable validation (24 S4): existence, open, required sections, placeholder scan; AUT-T07; 1285 pass"
+  },
+  "WP-063": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T12:05:00.000Z",
+   "finishedAt": "2026-09-11T12:20:00.000Z",
+   "commit": "1ce68bd",
+   "evidence": [
+    "EVD-063"
+   ],
+   "notes": "capability-first planning (24 S7): feasibility vs registry, replan-or-block, never fake call; AUT-T03; 1289 pass"
+  },
+  "WP-064": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T12:20:00.000Z",
+   "finishedAt": "2026-09-11T12:40:00.000Z",
+   "commit": "5dace68",
+   "evidence": [
+    "EVD-064"
+   ],
+   "notes": "failure taxonomy + recovery ladder (27): fingerprint gate, canonical classes, bounded escalation, check-deletion refused; RCV-T01..T06; 1295 pass"
+  },
+  "WP-065": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T12:40:00.000Z",
+   "finishedAt": "2026-09-11T13:00:00.000Z",
+   "commit": "c192b38",
+   "evidence": [
+    "EVD-065"
+   ],
+   "notes": "fleet delegation contracts (26 S3/S6): explicit scopes, overlap serialize, child-never-closes-parent, parent reconciles, slice-only context; FLT-T01/T03/T05/T06; 1300 pass"
+  },
+  "WP-065b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:00:00.000Z",
+   "finishedAt": "2026-09-11T13:20:00.000Z",
+   "commit": "a94bc21",
+   "evidence": [
+    "EVD-065b"
+   ],
+   "notes": "child limits (54 S12): blocked list, depth gate, budget BLOCKED-with-partials, stall interrupt, cleanup checklist; FLT-T07..T11; 1305 pass"
+  },
+  "WP-066": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:20:00.000Z",
+   "finishedAt": "2026-09-11T13:40:00.000Z",
+   "commit": "ba3b8f6",
+   "evidence": [
+    "EVD-066"
+   ],
+   "notes": "council triggers (26 S8/S9): migration_design, skill_promotion, security_boundary; consensus never verifies; FLT-T04; 1309 pass"
+  },
+  "WP-067": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:40:00.000Z",
+   "finishedAt": "2026-09-11T14:00:00.000Z",
+   "commit": "e232d02",
+   "evidence": [
+    "EVD-067"
+   ],
+   "notes": "completion states + Gate integration (24 S11, 45 S3.3): five states, limitation required, subjective never objective; apex_gate contract; 1313 pass"
+  },
+  "WP-068": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T14:00:00.000Z",
+   "finishedAt": "2026-09-11T14:20:00.000Z",
+   "commit": "64a7230",
+   "evidence": [
+    "EVD-068"
+   ],
+   "notes": "PHASE 6 COMPLETE: durable-state doctrine (48 S9) with exact implemented paths + routing row + payload sync; phase gate \u2014 code/research/artifact/system share one governed loop; 1313 pass"
+  },
+  "WP-070": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T15:40:00.000Z",
+   "finishedAt": "2026-09-11T16:20:00.000Z",
+   "evidence": [
+    "EVD-070"
+   ],
+   "notes": "START-HERE V2: home modes, readiness contract, WHAT-SURVIVES-WHAT, core item 8, degraded disclaimer; SH-T04 fix (project memory now wrapped); SH-T01..T07 tests. 1327 pass."
+  },
+  "WP-071": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T16:25:00.000Z",
+   "finishedAt": "2026-09-11T16:45:00.000Z",
+   "evidence": [
+    "EVD-071"
+   ],
+   "notes": "Durable-state + capability paragraphs in all 5 adapters, host does/does-not-enforce split. Payload sync clean. 913 unit pass."
+  },
+  "WP-072": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T17:00:00.000Z",
+   "finishedAt": "2026-09-11T18:00:00.000Z",
+   "evidence": [
+    "EVD-072"
+   ],
+   "notes": "13 MCP tools in new src/mcp/state-tools.ts (MOD-T05 split); registry travels with tools/call; 23 tests. 1350 pass."
+  },
+  "WP-073": {
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-073.md",
+   "committed": "WP-073: CLI surface completion (53 \u00a73) \u2014 session/home groups, show/pending/off, trust, --reason gates, per-command --help"
+  },
+  "WP-073b": {
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-073b.md",
+   "committed": "WP-073b: memory journey / skills journey (54 \u00a717, UX-T07) \u2014 chronological learned-record with evidence ids and --forget"
+  },
+  "WP-074": {
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-074.md",
+   "committed": "WP-074: templates + config migration (44 ss1-6) \u2014 global/project merge with provenance, MIG-config-1-to-2, CFG-T01..T09"
+  },
+  "WP-075": {
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-075.md",
+   "committed": "WP-075: documentation refresh (53) - CHANGELOG + SCHEMA-CHANGELOG, README/ATTACH/EXAMPLES V4 refresh, docs.test.ts UX-T03 guard, CURRENT_SCHEMA.config=2 registry fix"
+  },
+  "WP-080": {
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-080.md",
+   "committed": "WP-080: security fixture suite (30 s15, 33 s13) - SEC-T01..T08 fixture-driven, fake secrets only, 2 mutation checks (archive redaction, extension self-trust), 1397 pass"
+  },
+  "WP-081": {
+   "status": "PENDING"
+  },
+  "WP-082": {
+   "status": "PENDING"
+  },
+  "WP-083": {
+   "status": "PENDING"
+  },
+  "WP-084": {
+   "status": "PENDING"
+  },
+  "WP-085": {
+   "status": "PENDING"
+  },
+  "WP-085b": {
+   "status": "PENDING"
+  },
+  "WP-086": {
+   "status": "PENDING"
+  },
+  "WP-087": {
+   "status": "PENDING"
+  },
+  "WP-088": {
+   "status": "PENDING"
+  },
+  "WP-089": {
+   "status": "PENDING"
+  }
+ },
+ "packetOrder": [
+  "WP-001",
+  "WP-002",
+  "WP-003",
+  "WP-004",
+  "WP-005",
+  "WP-006",
+  "WP-010",
+  "WP-011",
+  "WP-012",
+  "WP-013",
+  "WP-014",
+  "WP-015",
+  "WP-015b",
+  "WP-016",
+  "WP-017",
+  "WP-018",
+  "WP-019",
+  "WP-020",
+  "WP-021",
+  "WP-022",
+  "WP-023",
+  "WP-024",
+  "WP-025",
+  "WP-025b",
+  "WP-026",
+  "WP-026b",
+  "WP-027",
+  "WP-028",
+  "WP-029",
+  "WP-030",
+  "WP-031",
+  "WP-032",
+  "WP-033",
+  "WP-034",
+  "WP-035",
+  "WP-036",
+  "WP-037",
+  "WP-040",
+  "WP-041",
+  "WP-041b",
+  "WP-042",
+  "WP-042b",
+  "WP-043",
+  "WP-044",
+  "WP-045",
+  "WP-046",
+  "WP-047",
+  "WP-047b",
+  "WP-048",
+  "WP-049",
+  "WP-049b",
+  "WP-049c",
+  "WP-050",
+  "WP-050b",
+  "WP-051",
+  "WP-052",
+  "WP-053",
+  "WP-054",
+  "WP-055",
+  "WP-056",
+  "WP-056b",
+  "WP-057",
+  "WP-058",
+  "WP-059",
+  "WP-060",
+  "WP-061",
+  "WP-062",
+  "WP-063",
+  "WP-064",
+  "WP-065",
+  "WP-065b",
+  "WP-066",
+  "WP-067",
+  "WP-068",
+  "WP-070",
+  "WP-071",
+  "WP-072",
+  "WP-073",
+  "WP-073b",
+  "WP-074",
+  "WP-075",
+  "WP-080",
+  "WP-081",
+  "WP-082",
+  "WP-083",
+  "WP-084",
+  "WP-085",
+  "WP-085b",
+  "WP-086",
+  "WP-087",
+  "WP-088",
+  "WP-089"
+ ],
+ "dependencies": {
+  "WP-001": [],
+  "WP-002": [
+   "WP-001"
   ],
-  "dependencies": {
-    "WP-001": [],
-    "WP-002": [
-      "WP-001"
-    ],
-    "WP-003": [
-      "WP-002"
-    ],
-    "WP-004": [
-      "WP-002"
-    ],
-    "WP-005": [
-      "WP-001"
-    ],
-    "WP-006": [
-      "WP-002"
-    ],
-    "WP-010": [
-      "WP-006"
-    ],
-    "WP-011": [
-      "WP-010"
-    ],
-    "WP-012": [
-      "WP-010"
-    ],
-    "WP-013": [
-      "WP-012"
-    ],
-    "WP-014": [
-      "WP-013"
-    ],
-    "WP-015": [
-      "WP-011"
-    ],
-    "WP-015b": [
-      "WP-015"
-    ],
-    "WP-016": [
-      "WP-015",
-      "WP-012"
-    ],
-    "WP-017": [
-      "WP-006"
-    ],
-    "WP-018": [
-      "WP-011",
-      "WP-013",
-      "WP-016"
-    ],
-    "WP-019": [
-      "WP-016",
-      "WP-018"
-    ],
-    "WP-020": [
-      "WP-019"
-    ],
-    "WP-021": [
-      "WP-020",
-      "WP-013"
-    ],
-    "WP-022": [
-      "WP-021"
-    ],
-    "WP-023": [
-      "WP-020"
-    ],
-    "WP-024": [
-      "WP-023",
-      "WP-021"
-    ],
-    "WP-025": [
-      "WP-024"
-    ],
-    "WP-025b": [
-      "WP-025"
-    ],
-    "WP-026": [
-      "WP-025"
-    ],
-    "WP-026b": [
-      "WP-026"
-    ],
-    "WP-027": [
-      "WP-026"
-    ],
-    "WP-028": [
-      "WP-027"
-    ],
-    "WP-029": [
-      "WP-022",
-      "WP-025"
-    ],
-    "WP-030": [
-      "WP-029"
-    ],
-    "WP-031": [
-      "WP-030",
-      "WP-017"
-    ],
-    "WP-032": [
-      "WP-030"
-    ],
-    "WP-033": [
-      "WP-030"
-    ],
-    "WP-034": [
-      "WP-033"
-    ],
-    "WP-035": [
-      "WP-034"
-    ],
-    "WP-036": [
-      "WP-031"
-    ],
-    "WP-037": [
-      "WP-035"
-    ],
-    "WP-040": [
-      "WP-037"
-    ],
-    "WP-041": [
-      "WP-040"
-    ],
-    "WP-041b": [
-      "WP-043"
-    ],
-    "WP-042": [
-      "WP-040",
-      "WP-017"
-    ],
-    "WP-042b": [
-      "WP-042"
-    ],
-    "WP-043": [
-      "WP-041"
-    ],
-    "WP-044": [
-      "WP-029",
-      "WP-032"
-    ],
-    "WP-045": [
-      "WP-044",
-      "WP-042"
-    ],
-    "WP-046": [
-      "WP-045"
-    ],
-    "WP-047": [
-      "WP-046"
-    ],
-    "WP-047b": [
-      "WP-047"
-    ],
-    "WP-048": [
-      "WP-044"
-    ],
-    "WP-049": [
-      "WP-045"
-    ],
-    "WP-049b": [
-      "WP-045"
-    ],
-    "WP-049c": [
-      "WP-049"
-    ],
-    "WP-050": [
-      "WP-019"
-    ],
-    "WP-050b": [
-      "WP-051"
-    ],
-    "WP-051": [
-      "WP-050"
-    ],
-    "WP-052": [
-      "WP-051"
-    ],
-    "WP-053": [
-      "WP-051"
-    ],
-    "WP-054": [
-      "WP-053"
-    ],
-    "WP-055": [
-      "WP-054"
-    ],
-    "WP-056": [
-      "WP-051",
-      "WP-042"
-    ],
-    "WP-056b": [
-      "WP-056"
-    ],
-    "WP-058": [
-      "WP-054"
-    ],
-    "WP-059": [
-      "WP-050"
-    ],
-    "WP-060": [
-      "WP-029",
-      "WP-049",
-      "WP-057"
-    ],
-    "WP-061": [
-      "WP-060"
-    ],
-    "WP-062": [
-      "WP-061"
-    ],
-    "WP-063": [
-      "WP-053",
-      "WP-060"
-    ],
-    "WP-064": [
-      "WP-060"
-    ],
-    "WP-065": [
-      "WP-064"
-    ],
-    "WP-065b": [
-      "WP-065"
-    ],
-    "WP-066": [
-      "WP-065"
-    ],
-    "WP-067": [
-      "WP-061",
-      "WP-060"
-    ],
-    "WP-068": [
-      "WP-067"
-    ],
-    "WP-070": [
-      "WP-068"
-    ],
-    "WP-071": [
-      "WP-070"
-    ],
-    "WP-072": [
-      "WP-058",
-      "WP-029",
-      "WP-049"
-    ],
-    "WP-073": [
-      "WP-072"
-    ],
-    "WP-073b": [
-      "WP-073"
-    ],
-    "WP-074": [
-      "WP-073"
-    ],
-    "WP-075": [
-      "WP-074"
-    ],
-    "WP-080": [
-      "WP-075"
-    ],
-    "WP-081": [
-      "WP-080"
-    ],
-    "WP-082": [
-      "WP-081"
-    ],
-    "WP-083": [
-      "WP-018",
-      "WP-074"
-    ],
-    "WP-084": [
-      "WP-070"
-    ],
-    "WP-085": [
-      "WP-070"
-    ],
-    "WP-085b": [
-      "WP-085"
-    ],
-    "WP-086": [
-      "WP-085"
-    ],
-    "WP-087": [
-      "WP-083"
-    ],
-    "WP-088": [
-      "WP-087"
-    ],
-    "WP-089": [
-      "WP-088"
-    ],
-    "WP-057": [
-      "WP-055"
-    ]
-  },
-  "descoped": {},
-  "blocked": [],
-  "openQuestions": []
+  "WP-003": [
+   "WP-002"
+  ],
+  "WP-004": [
+   "WP-002"
+  ],
+  "WP-005": [
+   "WP-001"
+  ],
+  "WP-006": [
+   "WP-002"
+  ],
+  "WP-010": [
+   "WP-006"
+  ],
+  "WP-011": [
+   "WP-010"
+  ],
+  "WP-012": [
+   "WP-010"
+  ],
+  "WP-013": [
+   "WP-012"
+  ],
+  "WP-014": [
+   "WP-013"
+  ],
+  "WP-015": [
+   "WP-011"
+  ],
+  "WP-015b": [
+   "WP-015"
+  ],
+  "WP-016": [
+   "WP-015",
+   "WP-012"
+  ],
+  "WP-017": [
+   "WP-006"
+  ],
+  "WP-018": [
+   "WP-011",
+   "WP-013",
+   "WP-016"
+  ],
+  "WP-019": [
+   "WP-016",
+   "WP-018"
+  ],
+  "WP-020": [
+   "WP-019"
+  ],
+  "WP-021": [
+   "WP-020",
+   "WP-013"
+  ],
+  "WP-022": [
+   "WP-021"
+  ],
+  "WP-023": [
+   "WP-020"
+  ],
+  "WP-024": [
+   "WP-023",
+   "WP-021"
+  ],
+  "WP-025": [
+   "WP-024"
+  ],
+  "WP-025b": [
+   "WP-025"
+  ],
+  "WP-026": [
+   "WP-025"
+  ],
+  "WP-026b": [
+   "WP-026"
+  ],
+  "WP-027": [
+   "WP-026"
+  ],
+  "WP-028": [
+   "WP-027"
+  ],
+  "WP-029": [
+   "WP-022",
+   "WP-025"
+  ],
+  "WP-030": [
+   "WP-029"
+  ],
+  "WP-031": [
+   "WP-030",
+   "WP-017"
+  ],
+  "WP-032": [
+   "WP-030"
+  ],
+  "WP-033": [
+   "WP-030"
+  ],
+  "WP-034": [
+   "WP-033"
+  ],
+  "WP-035": [
+   "WP-034"
+  ],
+  "WP-036": [
+   "WP-031"
+  ],
+  "WP-037": [
+   "WP-035"
+  ],
+  "WP-040": [
+   "WP-037"
+  ],
+  "WP-041": [
+   "WP-040"
+  ],
+  "WP-041b": [
+   "WP-043"
+  ],
+  "WP-042": [
+   "WP-040",
+   "WP-017"
+  ],
+  "WP-042b": [
+   "WP-042"
+  ],
+  "WP-043": [
+   "WP-041"
+  ],
+  "WP-044": [
+   "WP-029",
+   "WP-032"
+  ],
+  "WP-045": [
+   "WP-044",
+   "WP-042"
+  ],
+  "WP-046": [
+   "WP-045"
+  ],
+  "WP-047": [
+   "WP-046"
+  ],
+  "WP-047b": [
+   "WP-047"
+  ],
+  "WP-048": [
+   "WP-044"
+  ],
+  "WP-049": [
+   "WP-045"
+  ],
+  "WP-049b": [
+   "WP-045"
+  ],
+  "WP-049c": [
+   "WP-049"
+  ],
+  "WP-050": [
+   "WP-019"
+  ],
+  "WP-050b": [
+   "WP-051"
+  ],
+  "WP-051": [
+   "WP-050"
+  ],
+  "WP-052": [
+   "WP-051"
+  ],
+  "WP-053": [
+   "WP-051"
+  ],
+  "WP-054": [
+   "WP-053"
+  ],
+  "WP-055": [
+   "WP-054"
+  ],
+  "WP-056": [
+   "WP-051",
+   "WP-042"
+  ],
+  "WP-056b": [
+   "WP-056"
+  ],
+  "WP-058": [
+   "WP-054"
+  ],
+  "WP-059": [
+   "WP-050"
+  ],
+  "WP-060": [
+   "WP-029",
+   "WP-049",
+   "WP-057"
+  ],
+  "WP-061": [
+   "WP-060"
+  ],
+  "WP-062": [
+   "WP-061"
+  ],
+  "WP-063": [
+   "WP-053",
+   "WP-060"
+  ],
+  "WP-064": [
+   "WP-060"
+  ],
+  "WP-065": [
+   "WP-064"
+  ],
+  "WP-065b": [
+   "WP-065"
+  ],
+  "WP-066": [
+   "WP-065"
+  ],
+  "WP-067": [
+   "WP-061",
+   "WP-060"
+  ],
+  "WP-068": [
+   "WP-067"
+  ],
+  "WP-070": [
+   "WP-068"
+  ],
+  "WP-071": [
+   "WP-070"
+  ],
+  "WP-072": [
+   "WP-058",
+   "WP-029",
+   "WP-049"
+  ],
+  "WP-073": [
+   "WP-072"
+  ],
+  "WP-073b": [
+   "WP-073"
+  ],
+  "WP-074": [
+   "WP-073"
+  ],
+  "WP-075": [
+   "WP-074"
+  ],
+  "WP-080": [
+   "WP-075"
+  ],
+  "WP-081": [
+   "WP-080"
+  ],
+  "WP-082": [
+   "WP-081"
+  ],
+  "WP-083": [
+   "WP-018",
+   "WP-074"
+  ],
+  "WP-084": [
+   "WP-070"
+  ],
+  "WP-085": [
+   "WP-070"
+  ],
+  "WP-085b": [
+   "WP-085"
+  ],
+  "WP-086": [
+   "WP-085"
+  ],
+  "WP-087": [
+   "WP-083"
+  ],
+  "WP-088": [
+   "WP-087"
+  ],
+  "WP-089": [
+   "WP-088"
+  ],
+  "WP-057": [
+   "WP-055"
+  ]
+ },
+ "descoped": {},
+ "blocked": [],
+ "openQuestions": []
 }

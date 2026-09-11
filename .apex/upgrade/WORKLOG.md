@@ -1741,3 +1741,10 @@ Next: WP-075 (documentation refresh, doc 53).
 - Evidence: `.apex/upgrade/EVIDENCE/EVD-075.md`.
 
 Next: WP-080 (Phase 7B — security fixture suite).
+
+## 2026-09-11 — WP-080 DONE (security fixture suite)
+- `runtime/test/security/security-fixture.test.ts`: SEC-T01..T08, one per requirement (30 §15), driven by `test/fixtures/security/` (fake secrets only).
+- Proven live: injection text stays inside the 48 §4 data wrapper (policy precedence untouched); archive redaction covers event AND raw disk JSONL; root/drive-relative/empty/system-dir homes refused incl. the ARMY_HOME alias; traversal fixture lines refused by homeSubdir + assertContained + catalog readResource; project extension self-grant refused, hash drift untrusts; hostile skill's script bytes untouched on discovery, bidi body denies trust; no POSIX claims in home warnings or doctor output on Windows; Devanagari memory round-trips, is selected and renders intact.
+- Mutation checks: redaction removed → SEC-T02 fails; PROJECT self-grant guard short-circuited → SEC-T05 fails. Both restored byte-identical.
+- Verify: 1397 pass / 0 fail (was 1389). No production code changed.
+- Evidence: EVD-080.md. Next: WP-081 (CI matrix).
