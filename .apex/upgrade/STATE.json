@@ -706,8 +706,18 @@
    "notes": "fleet delegation contracts (26 S3/S6): explicit scopes, overlap serialize, child-never-closes-parent, parent reconciles, slice-only context; FLT-T01/T03/T05/T06; 1300 pass"
   },
   "WP-065b": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:00:00.000Z",
+   "finishedAt": "2026-09-11T13:20:00.000Z",
+   "commit": "a94bc21",
+   "evidence": [
+    "EVD-065b"
+   ],
+   "notes": "child limits (54 S12): blocked list, depth gate, budget BLOCKED-with-partials, stall interrupt, cleanup checklist; FLT-T07..T11; 1305 pass"
+  },
+  "WP-066": {
    "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T13:00:00.000Z"
+   "startedAt": "2026-09-11T13:20:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
