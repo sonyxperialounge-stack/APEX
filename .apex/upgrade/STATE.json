@@ -666,14 +666,18 @@
    "notes": "domain verifier registry (24 S3, 41 S16): code authoritative, research sourced, evidence-free PASS coerced to FAIL, no write path; 1279 pass"
   },
   "WP-062": {
-   "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T11:50:00.000Z"
-  },
-  "WP-062": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T11:50:00.000Z",
+   "finishedAt": "2026-09-11T12:05:00.000Z",
+   "commit": "2684520",
+   "evidence": [
+    "EVD-062"
+   ],
+   "notes": "deliverable validation (24 S4): existence, open, required sections, placeholder scan; AUT-T07; 1285 pass"
   },
   "WP-063": {
-   "status": "PENDING"
+   "status": "IN_PROGRESS",
+   "startedAt": "2026-09-11T12:05:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
