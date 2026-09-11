@@ -1425,4 +1425,9 @@ Surprises: schema validation fires BEFORE the blocklist — a blocked-write test
   at 240 vs 200 context tokens the same catalogue sits on either side of the tier-1 band.
   sourcescan flags `from "..."` in comments — the "INVERTED from \"defer when large\"" header
   had to be reworded. CapabilityInvoker["call"] is a method type, not a descriptor.
-Next: Phase 5 exit gate (final verify + plain-language phase report; WP-050..WP-059 all DONE).
+Next: PHASE 5 COMPLETE (WP-050..WP-057 + second-pass WP-059, WP-050b, WP-058, WP-056b all DONE).
+  Exit gate: `npm run verify` -> 1261 pass, 0 fail, exit 0 — the 150-capability synthetic
+  catalogue stays prompt-efficient (tier 2 disclosure with a bridge search hint; CORE entries
+  never deferred) and missing tools degrade honestly (CAPABILITY_NOT_IN_CATALOG /
+  ARGS_INVALID / BLOCKED / CALL_FAILED, not-found is structured, never fabricated; doctrine
+  16-CAPABILITIES.md + START-HERE row). Phase 6 (autonomy) at WP-060.
