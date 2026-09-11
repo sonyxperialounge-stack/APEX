@@ -1460,3 +1460,21 @@ Surprises: deterministic ids collide on identical injected inputs by design —
   production uses wall-clock + entropy. Also: `npm run test:unit -- <file>`
   ignores the file filter (hard-coded globs) yet still runs core+engines.
 Next: WP-061 (domain verifier registry).
+
+## WP-061 — Domain verifier registry · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/verifier.ts (+domain registry, cascade untouched),
+  ~runtime/test/engines/verifier.test.ts (+7),
+  +.apex/upgrade/EVIDENCE/EVD-061.md
+Decision: registry interprets, never replaces: the code cascade decides and
+  the code verifier only reads its verdict (AUT-T01); research fails without
+  cited primary sources, however confident (AUT-T02). No module singleton —
+  hosts build their own registry. Evidence-free PASS coerced to FAIL
+  centrally, so no single verifier manufactures truth. No new imports, no
+  write path (source-asserted per 42 §4).
+Verify: `npm run verify` -> 1279 pass, 0 fail, 0 cancelled, exit 0 (~44s)
+  (was 1272; +7 new).
+Evidence: EVD-061 (AUT-T01, AUT-T02, no-manufacture, 42 §4).
+Surprises: the no-write regex also matches innocent `confirm(` — new code
+  avoids that word family entirely.
+Next: WP-062 (deliverable validation).

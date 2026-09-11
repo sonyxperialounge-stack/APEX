@@ -503,3 +503,191 @@ export function extractFailingTests(output: string): string[] {
   for (const m of output.matchAll(/^test (\S+) \.\.\. FAILED$/gm)) add(m[1]) // rust
   return [...found].sort()
 }
+
+// ── WP-061 — domain verifier registry (24 §3, 40 §10, 41 §16) ────────────────
+//
+// The code cascade above stays authoritative for code: this registry never
+// replaces it, it only interprets its result alongside domain-appropriate
+// evidence. Research, artifact, data, system and planning checks each speak
+// through the same verdict vocabulary, and no verifier may manufacture PASS
+// without evidence — the registry coerces an evidence-free PASS to FAIL.
+
+/** Domains from the evidence profiles (24 §3). Open-ended: unknown strings route to NOT_APPLICABLE. */
+export const AUTONOMY_DOMAINS = ["code", "research", "artifact", "data", "system", "planning"] as const
+export type AutonomyDomain = (typeof AUTONOMY_DOMAINS)[number]
+
+/** The only verdicts a domain verifier may return (41 §16). */
+export const DOMAIN_VERDICTS = ["PASS", "FAIL", "NOT_RUN", "NOT_APPLICABLE"] as const
+export type DomainVerdict = (typeof DOMAIN_VERDICTS)[number]
+
+export interface DomainSource {
+  uri: string
+  accessedAt?: string
+  corroborated?: boolean
+}
+
+export interface DomainVerificationInput {
+  domain: string
+  evidenceIds?: string[]
+  /** Code domain: the cascade outcome, decided by Verifier.cascade first. */
+  cascadePassed?: boolean
+  /** Research domain: primary-source citations for the claimed findings. */
+  sources?: DomainSource[]
+  limitations?: string[]
+}
+
+export interface DomainVerificationOutcome {
+  result: DomainVerdict
+  evidenceIds: string[]
+  limitations: string[]
+  reason: string
+}
+
+/** A domain check (41 §16). Pure: it reads the input it is given and returns a verdict. */
+export interface DomainVerifier {
+  id: string
+  supports(domain: string): boolean
+  verify(input: DomainVerificationInput): DomainVerificationOutcome | Promise<DomainVerificationOutcome>
+}
+
+export interface DomainVerifierRegistry {
+  register(verifier: DomainVerifier): void
+  verify(input: DomainVerificationInput): Promise<DomainVerificationOutcome>
+  ids(): string[]
+}
+
+/** No module-level singleton: tests and hosts build their own registry. */
+export function createDomainVerifierRegistry(): DomainVerifierRegistry {
+  const verifiers: DomainVerifier[] = []
+  return {
+    register(verifier: DomainVerifier): void {
+      if (!verifier.id.trim()) throw new Error("A domain verifier needs an id.")
+      if (verifiers.some((v) => v.id === verifier.id)) {
+        throw new Error(`Domain verifier "${verifier.id}" is already registered.`)
+      }
+      verifiers.push(verifier)
+    },
+    ids(): string[] {
+      return verifiers.map((v) => v.id)
+    },
+    async verify(input: DomainVerificationInput): Promise<DomainVerificationOutcome> {
+      const match = verifiers.find((v) => {
+        try {
+          return v.supports(input.domain)
+        } catch {
+          return false
+        }
+      })
+      if (!match) {
+        return {
+          result: "NOT_APPLICABLE",
+          evidenceIds: [],
+          limitations: [],
+          reason: `No domain verifier supports "${input.domain}". Add one before claiming verification.`,
+        }
+      }
+      const outcome = await match.verify(input)
+      // A PASS with no evidence is manufactured, not measured — refuse it here
+      // so no single verifier can mint truth on its own (WP-061 done-when).
+      if (outcome.result === "PASS" && outcome.evidenceIds.length === 0) {
+        return {
+          result: "FAIL",
+          evidenceIds: [],
+          limitations: outcome.limitations,
+          reason:
+            `Verifier "${match.id}" returned PASS with no evidence ids. ` +
+            "A claim without evidence is not verified; cite the cascade record, sources, or artifact checks.",
+        }
+      }
+      return outcome
+    },
+  }
+}
+
+/**
+ * Code domain (AUT-T01). The cascade decides; this verifier only reads its
+ * verdict. PASS needs BOTH a passing cascade AND at least one evidence id.
+ */
+export const codeDomainVerifier: DomainVerifier = {
+  id: "code",
+  supports(domain: string): boolean {
+    return domain === "code"
+  },
+  verify(input: DomainVerificationInput): DomainVerificationOutcome {
+    const evidence = (input.evidenceIds ?? []).filter((id) => id.trim().length > 0)
+    if (input.cascadePassed === undefined) {
+      return {
+        result: "NOT_RUN",
+        evidenceIds: [],
+        limitations: [],
+        reason: "No cascade result was supplied. Run the code checks first; their absence is never a pass.",
+      }
+    }
+    if (!input.cascadePassed) {
+      return {
+        result: "FAIL",
+        evidenceIds: evidence,
+        limitations: [],
+        reason: "The code checks failed. Inspect the cascade record; a failing suite never verifies.",
+      }
+    }
+    if (evidence.length === 0) {
+      return {
+        result: "FAIL",
+        evidenceIds: [],
+        limitations: [],
+        reason: "The cascade passed but cited no evidence id. Cite the verification record before claiming PASS.",
+      }
+    }
+    return { result: "PASS", evidenceIds: evidence, limitations: [], reason: "The cascade passed and the record is cited." }
+  },
+}
+
+/**
+ * Research domain (AUT-T02). Model recall is never evidence: a claim with no
+ * primary-source citation fails, however confident it sounds.
+ */
+export const researchDomainVerifier: DomainVerifier = {
+  id: "research",
+  supports(domain: string): boolean {
+    return domain === "research"
+  },
+  verify(input: DomainVerificationInput): DomainVerificationOutcome {
+    const evidence = (input.evidenceIds ?? []).filter((id) => id.trim().length > 0)
+    const sources = (input.sources ?? []).filter((s) => s.uri.trim().length > 0)
+    if (sources.length === 0) {
+      return {
+        result: "FAIL",
+        evidenceIds: evidence,
+        limitations: ["unsourced model recall is not research evidence"],
+        reason:
+          "No primary-source citation was supplied. Research verification needs cited sources " +
+          "with access dates and cross-source corroboration; model recall alone never passes (AUT-T02).",
+      }
+    }
+    if (evidence.length === 0) {
+      return {
+        result: "FAIL",
+        evidenceIds: [],
+        limitations: [],
+        reason: "Sources were cited but no evidence id links them to the record. Cite the evidence before claiming PASS.",
+      }
+    }
+    const corroborated = sources.filter((s) => s.corroborated).length
+    return {
+      result: "PASS",
+      evidenceIds: evidence,
+      limitations:
+        corroborated > 0
+          ? []
+          : ["single-source finding: verified against one primary source, not yet corroborated"],
+      reason: `Verified against ${sources.length} cited source(s).`,
+    }
+  },
+}
+
+/** The autonomy loop's default set: code stays authoritative, research stays sourced. */
+export function registerAutonomyVerifiers(registry: DomainVerifierRegistry): void {
+  registry.register(codeDomainVerifier)
+  registry.register(researchDomainVerifier)
+}

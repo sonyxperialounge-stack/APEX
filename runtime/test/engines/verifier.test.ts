@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Verifier, extractFailingTests, appendTestPath } from "../../src/engines/verifier.ts"
+import { Verifier, extractFailingTests, appendTestPath, createDomainVerifierRegistry, registerAutonomyVerifiers } from "../../src/engines/verifier.ts"
 import { Ledger } from "../../src/engines/ledger.ts"
 import { FakeCommandRunner, RealCommandRunner } from "../../src/core/exec.ts"
 import { setLogDir } from "../../src/core/log.ts"
@@ -534,5 +534,82 @@ describe("WP-050b — diagnostics evidence slot", () => {
     const suite = records.find((r) => r.type === "suite")
     assert.ok(suite, "the suite tier still runs — diagnostics are evidence, not a substitute")
     assert.equal(suite!.result, "NOT_RUN") // no pytest here; honest NOT_RUN
+  })
+})
+
+// ── WP-061 — domain verifier registry (24 §3, AUT-T01, AUT-T02) ──────────────
+
+describe("WP-061 domain verifier registry (24 §3)", () => {
+  test("AUT-T01: a coding task keeps the cascade semantics", async () => {
+    const registry = createDomainVerifierRegistry()
+    registerAutonomyVerifiers(registry)
+    const pass = await registry.verify({ domain: "code", cascadePassed: true, evidenceIds: ["V-001"] })
+    assert.equal(pass.result, "PASS")
+    assert.deepEqual(pass.evidenceIds, ["V-001"])
+    const failed = await registry.verify({ domain: "code", cascadePassed: false, evidenceIds: ["V-002"] })
+    assert.equal(failed.result, "FAIL")
+    const missing = await registry.verify({ domain: "code", evidenceIds: ["V-003"] })
+    assert.equal(missing.result, "NOT_RUN")
+  })
+
+  test("AUT-T01: a passing cascade without evidence never manufactures PASS", async () => {
+    const registry = createDomainVerifierRegistry()
+    registerAutonomyVerifiers(registry)
+    const naked = await registry.verify({ domain: "code", cascadePassed: true, evidenceIds: [] })
+    assert.equal(naked.result, "FAIL")
+    assert.match(naked.reason, /no evidence/i)
+  })
+
+  test("AUT-T02: research without cited sources fails, however confident", async () => {
+    const registry = createDomainVerifierRegistry()
+    registerAutonomyVerifiers(registry)
+    const recall = await registry.verify({ domain: "research", evidenceIds: ["V-010"] })
+    assert.equal(recall.result, "FAIL")
+    assert.match(recall.reason, /primary-source/i)
+    const sourced = await registry.verify({
+      domain: "research",
+      evidenceIds: ["V-011"],
+      sources: [{ uri: "https://example.invalid/spec", accessedAt: "2026-09-11", corroborated: true }],
+    })
+    assert.equal(sourced.result, "PASS")
+    const unlinked = await registry.verify({
+      domain: "research",
+      evidenceIds: [],
+      sources: [{ uri: "https://example.invalid/spec" }],
+    })
+    assert.equal(unlinked.result, "FAIL")
+  })
+
+  test("an unknown domain is NOT_APPLICABLE, never a guessed PASS", async () => {
+    const registry = createDomainVerifierRegistry()
+    registerAutonomyVerifiers(registry)
+    const outcome = await registry.verify({ domain: "no-such-domain", evidenceIds: ["V-099"] })
+    assert.equal(outcome.result, "NOT_APPLICABLE")
+    assert.notEqual(outcome.result, "PASS")
+  })
+
+  test("a verifier that manufactures PASS is coerced to FAIL by the registry", async () => {
+    const registry = createDomainVerifierRegistry()
+    registry.register({
+      id: "liar",
+      supports: (domain) => domain === "artifact",
+      verify: () => ({ result: "PASS", evidenceIds: [], limitations: [], reason: "trust me" }),
+    })
+    const outcome = await registry.verify({ domain: "artifact", evidenceIds: [] })
+    assert.equal(outcome.result, "FAIL")
+    assert.match(outcome.reason, /manufactured|no evidence/i)
+  })
+
+  test("duplicate verifier ids are refused", async () => {
+    const registry = createDomainVerifierRegistry()
+    registerAutonomyVerifiers(registry)
+    assert.throws(() =>
+      registry.register({ id: "code", supports: () => true, verify: () => ({ result: "FAIL", evidenceIds: [], limitations: [], reason: "x" }) }),
+    )
+  })
+
+  test("the registry adds no write path to the verifier (42 §4)", async () => {
+    const text = await fsp.readFile(path.join(import.meta.dirname, "../../src/engines/verifier.ts"), "utf8")
+    assert.ok(!/writeFile|writeText|writeJson|unlink|rename|rm\(/.test(text), "domain verifiers return records; someone else persists them")
   })
 })
