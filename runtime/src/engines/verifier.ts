@@ -37,6 +37,7 @@ import {
 } from "../core/types.ts"
 import type { Ledger } from "./ledger.ts"
 import { readTextOrNull, parseJsonLenient, existsSync } from "../core/json.ts"
+import { detectExecutionContext } from "../core/context.ts"
 import { log } from "../core/log.ts"
 
 const TIMEOUTS: Record<VerifyType, number> = {
@@ -292,6 +293,9 @@ export class Verifier {
     options: CascadeOptions = {},
   ): Promise<VerificationRecord[]> {
     const commands = await this.ensureCommands()
+    // WP-059 — 54 §13 CAP-T09: every verification record carries where the work
+    // ran, so "the tests passed" is never detached from its environment.
+    const context = detectExecutionContext(this.cfg)
     const stopAtFirstFailure = options.stopAtFirstFailure !== false
     const maxIndex = options.maxTier ? CASCADE_ORDER.indexOf(options.maxTier) : CASCADE_ORDER.length - 1
     const records: VerificationRecord[] = []
@@ -327,6 +331,7 @@ export class Verifier {
             exitCode: null,
             result: "NOT_RUN",
             reason: `No ${tier} command is configured for this project.`,
+            context,
           }),
         )
         continue
@@ -350,6 +355,7 @@ export class Verifier {
             result: "NOT_RUN",
             reason: `Tool not available in this environment: \`${command.split(" ")[0]}\`. Install it, or run this check elsewhere.`,
             durationMs: result.durationMs,
+            context,
           }),
         )
         continue
@@ -368,6 +374,7 @@ export class Verifier {
             result: "FAIL",
             reason: `Timed out after ${TIMEOUTS[tier]}ms and was killed.`,
             durationMs: result.durationMs,
+            context,
           }),
         )
         if (stopAtFirstFailure) break
@@ -394,6 +401,7 @@ export class Verifier {
           result: passed ? "PASS" : "FAIL",
           reason,
           durationMs: result.durationMs,
+          context,
         }),
       )
 
@@ -431,6 +439,7 @@ export class Verifier {
               ? "Host provided no semantic diagnostics; their absence is never reported as failure."
               : "Host-provided semantic diagnostics are clean for this edit — strong for THIS edit, weaker than the test suite for the system.",
           durationMs: 0,
+          context: detectExecutionContext(this.cfg),
         }),
       )
     }

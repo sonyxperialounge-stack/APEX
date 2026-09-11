@@ -35,6 +35,7 @@ import type {
   AutonomyMode,
   CapabilityEffect,
   Decision,
+  ExecutionContext,
   Operation,
   RollbackReport,
   SnapshotFileRef,
@@ -45,6 +46,7 @@ import { containsSecret } from "../core/redact.ts"
 import { checkSensitiveRead } from "../core/sensitive.ts"
 import { existsSync } from "../core/json.ts"
 import { event, log } from "../core/log.ts"
+import { detectExecutionContext } from "../core/context.ts"
 
 export interface GitClient {
   isRepo(): Promise<boolean>
@@ -178,6 +180,21 @@ export function isDestructive(effects: CapabilityEffect[]): boolean {
   return effects.includes("DESTRUCTIVE")
 }
 
+/**
+ * WP-059 — 54 §13: absent context is `unknown`, governed as the most
+ * conservative assumption, `local`. An unrecognized declared value is
+ * governed the same way rather than slipping through unclassified.
+ */
+export function normalizeContext(context?: ExecutionContext): ExecutionContext {
+  if (context === undefined || context === "unknown") return "local"
+  return context
+}
+
+/** WP-059 — a human-readable context label used in decisions and events. */
+export function renderContext(context?: ExecutionContext): string {
+  return context ?? "unknown"
+}
+
 export class Governor {
   cfg: ApexConfig
   private git: GitClient | null
@@ -208,7 +225,12 @@ export class Governor {
           requiresSnapshot: false,
           ask: false,
         }
-        event("governor.block", { rule: rule.id, kind: op.kind, path: op.path })
+        event("governor.block", {
+          rule: rule.id,
+          kind: op.kind,
+          path: op.path,
+          context: renderContext(op.context),
+        })
         return decision
       }
     }
@@ -217,6 +239,12 @@ export class Governor {
 
   private modePolicy(op: Operation): Decision {
     const mode: AutonomyMode = this.cfg.autonomy
+    // WP-059 — 54 §13: an absent or unclassified context is governed as `local`,
+    // the most conservative assumption (CAP-T08). A disposable `container` or
+    // `worktree` may LOWER the approval bar in modePolicy; the hard RULES
+    // blocklist above never relaxes with context.
+    const context = normalizeContext(op.context)
+    const disposableContext = context === "container" || context === "worktree"
     const risky = this.isRisky(op)
     // WP-050 — 42 §6: DESTRUCTIVE raises the snapshot bar on the operation's own
     // kind and forces approval in EVERY mode, including FULL_AUTO.
@@ -244,12 +272,22 @@ export class Governor {
           ? allow("MANUAL: reading is always permitted")
           : ask("MANUAL: propose the change and wait for an explicit yes")
       case "GUARDED":
+        if (disposableContext && (risky || destructive)) {
+          return allow(
+            `GUARDED: ${this.riskLabel(op)} inside a throwaway ${context} — disposable state, nothing persistent at risk`,
+          )
+        }
         return risky || destructive
           ? ask(`GUARDED: ${this.riskLabel(op)} needs a one-time confirmation`)
           : allow("GUARDED: routine operation")
       case "AUTO":
       case "FULL_AUTO":
         if (destructive) {
+          if (disposableContext) {
+            return allow(
+              `${mode}: DESTRUCTIVE (42 §6) inside a throwaway ${context} — disposable state only, snapshot still recorded`,
+            )
+          }
           return ask(
             "FULL_AUTO: this capability is declared DESTRUCTIVE (42 §6) and always needs explicit human approval, " +
               "even in autonomous mode",
@@ -454,7 +492,12 @@ export class Governor {
       timestamp: new Date().toISOString(),
     }
     await writeManifest(path.join(dir, "manifest.json"), ref)
-    event("governor.snapshot", { id, reqId, files: refs.length })
+    event("governor.snapshot", {
+      id,
+      reqId,
+      files: refs.length,
+      context: detectExecutionContext(this.cfg),
+    })
     return ref
   }
 
@@ -477,7 +520,12 @@ export class Governor {
     const preExisting = new Set(ref.preExistingDirty.map((p) => canonicalCase(p)))
     const unexpected = dirtyNow.filter((p) => !restoredRel.has(canonicalCase(p)) && !preExisting.has(canonicalCase(p)))
 
-    event("governor.rollback", { id: ref.id, restored: restored.length, unexpected: unexpected.length })
+    event("governor.rollback", {
+      id: ref.id,
+      restored: restored.length,
+      unexpected: unexpected.length,
+      context: detectExecutionContext(this.cfg),
+    })
     return { restored, preserved: ref.preExistingDirty, unexpected }
   }
 }

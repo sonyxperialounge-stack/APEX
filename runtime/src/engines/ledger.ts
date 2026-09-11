@@ -33,6 +33,7 @@ import {
   REQ_STATUSES,
   type ApexConfig,
   type DecisionRecord,
+  type ExecutionContext,
   type Finding,
   type LedgerStatus,
   type ProgressEntry,
@@ -466,6 +467,12 @@ export class Ledger {
     result: VerifyResult
     reason?: string
     durationMs?: number
+    /**
+     * WP-059 — 54 §13 CAP-T09: where the verified work ran, recorded alongside
+     * the verdict. Absent means "unknown", recorded as the most conservative
+     * assumption, `local`.
+     */
+    context?: ExecutionContext
   }): Promise<VerificationRecord> {
    return this.mutate(async () => {
     if (input.result === "NOT_RUN" && !input.reason?.trim()) {
@@ -487,6 +494,7 @@ export class Ledger {
       result: input.result,
       reason: input.reason?.trim() ?? "",
       durationMs: input.durationMs ?? 0,
+      context: input.context ?? "local",
       timestamp: new Date().toISOString(),
     }
     all.push(record)
@@ -841,6 +849,9 @@ export class Ledger {
         result: (field(block, "Result") || "NOT_RUN") as VerifyResult,
         reason: field(block, "Reason"),
         durationMs: Number(field(block, "Duration") || "0"),
+        // WP-059 — a verification written before execution context existed ran
+        // in the most conservative assumption: local (54 §13, CAP-T09).
+        context: (field(block, "Context") || "local") as ExecutionContext,
         timestamp: field(block, "Timestamp"),
       })
     }
@@ -981,6 +992,7 @@ function renderVerificationDetail(v: VerificationRecord): string {
     `- **Result:** ${v.result}`,
     `- **Exit code:** ${v.exitCode === null ? "null" : v.exitCode}`,
     `- **Duration:** ${v.durationMs}`,
+    `- **Context:** ${v.context}`,
     `- **Timestamp:** ${v.timestamp}`,
     `- **Reason:** ${v.reason}`,
     ``,

@@ -1234,3 +1234,27 @@ Surprises: fixture descriptors left toolName undefined, colliding host.a/host.b 
   realistic descriptors (discovery always names the tool) fixed the test; an unparseable string
   is caught by the JSON gate, so the non-object assertion must accept both messages.
 Next: WP-059 (ExecutionContext on the operation record, 54 §13).
+
+## WP-059 — ExecutionContext on the operation record (54 §13)
+
+Date: 2026-09-11 · Status: DONE
+
+What: Operations and verification evidence now carry where they ran. Types:
+`EXECUTION_CONTEXTS` + `Operation.context?` (absent ⇒ unknown ⇒ governed as
+local) + `VerificationRecord.context`. New `core/context.ts` detects the
+process context from container env markers → worktree isolation → CI markers →
+local, never fabricating unknown. Governor: `normalizeContext`/`renderContext`;
+a disposable container/worktree lowers the GUARDED bar for risky ops and the
+FULL_AUTO/AUTO bar for DESTRUCTIVE ops (snapshot still required); hard
+blocklist, local/remote/unknown never relax (CAP-T08). Audit events
+(governor.block/snapshot/rollback) and every verification record carry the
+context (CAP-T09); ledger renders and round-trips it, legacy records load as
+local. `apex_check` accepts and forwards a context parameter.
+
+Verify: `npm run verify` -> 1156 pass, 0 fail, exit 0 (~34s).
+Evidence: EVD-059 (CAP-T08, CAP-T09).
+Surprises: apex_init on an existing ledger is a no-op for config (tests must
+set doNotTouch on first init); rendered context line has bold markers
+`**Context:**`; the disposable relaxation applies ONLY to worktree/container —
+an early test draft over-asserted that worktree must never relax.
+Next: WP-055 (capability loss recovery).

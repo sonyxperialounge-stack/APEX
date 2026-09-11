@@ -419,6 +419,30 @@ describe("MCP-011 — works with no host server present", () => {
     assert.match(res.bulkNote ?? "", /Narrow it/)
   })
 
+  test("WP-059 — apex_check accepts and forwards an execution context", async () => {
+    await call("apex_init", { projectRoot: dir, doNotTouch: ["config/prod.yaml"] })
+    await fsp.mkdir(path.join(dir, "config"), { recursive: true })
+    await fsp.writeFile(path.join(dir, "config", "prod.yaml"), "x", "utf8")
+    // GUARDED alone asks before a risky command…
+    const without = await callJson<{ allowed: boolean; ask: boolean }>("apex_check", {
+      kind: "bash", command: "git push origin main",
+    })
+    assert.equal(without.allowed, false)
+    assert.equal(without.ask, true)
+    // …a disposable context lowers the bar (54 §13); the decision names it.
+    const withCtx = await callJson<{ allowed: boolean; reason: string }>("apex_check", {
+      kind: "bash", command: "git push origin main", context: "worktree",
+    })
+    assert.equal(withCtx.allowed, true)
+    assert.match(withCtx.reason, /throwaway worktree/)
+    // The hard blocklist still never relaxes with context.
+    const blocked = await callJson<{ allowed: boolean; reason: string }>("apex_check", {
+      kind: "write", path: "config/prod.yaml", context: "container",
+    })
+    assert.equal(blocked.allowed, false)
+    assert.match(blocked.reason, /APEX BLOCKED/)
+  })
+
   test("snapshot and rollback round-trip through the tools", async () => {
     await call("apex_init", { projectRoot: dir })
     const file = path.join(dir, "src", "a.ts")

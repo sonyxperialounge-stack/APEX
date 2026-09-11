@@ -100,6 +100,12 @@ export interface VerificationRecord {
   reason: string
   durationMs: number
   timestamp: string
+  /**
+   * WP-059 — where the verified work ran (54 §13, CAP-T09): "the tests
+   * passed" means something different inside a throwaway container. Defaults
+   * to "local", the most conservative assumption.
+   */
+  context: ExecutionContext
 }
 
 // ── Autonomy and delegation ─────────────────────────────────────────────────
@@ -231,6 +237,16 @@ export const CAPABILITY_EFFECTS = [
 ] as const
 export type CapabilityEffect = (typeof CAPABILITY_EFFECTS)[number]
 
+/**
+ * WP-059 — where an operation runs (54 §13). The same command has a different
+ * blast radius in a throwaway container than on the local machine; APEX
+ * records the context the host exposes and lets policy weigh it. APEX never
+ * creates a context — it only detects and records it. Absent is "unknown",
+ * governed as the most conservative option: `local` (CAP-T08).
+ */
+export const EXECUTION_CONTEXTS = ["local", "worktree", "container", "remote", "unknown"] as const
+export type ExecutionContext = (typeof EXECUTION_CONTEXTS)[number]
+
 export interface Operation {
   kind: OperationKind
   path?: string
@@ -243,6 +259,13 @@ export interface Operation {
    * forces explicit approval in every mode, including FULL_AUTO.
    */
   destructive?: boolean
+  /**
+   * WP-059 — where this operation will run (54 §13). Absent means "unknown",
+   * which the Governor treats as `local` — the most conservative assumption
+   * (CAP-T08). A disposable `container`/`worktree` may lower the approval bar
+   * for an otherwise-risky operation; hard blocks never relax with context.
+   */
+  context?: ExecutionContext
 }
 
 export interface Decision {

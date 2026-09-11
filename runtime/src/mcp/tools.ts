@@ -161,6 +161,13 @@ export const TOOLS: ToolDefinition[] = [
         kind: { type: "string", enum: ["read", "write", "delete", "bash", "network", "deploy", "payment", "message"] },
         path: str("The file the operation targets, if any."),
         command: str("The shell command, if any."),
+        context: {
+          type: "string",
+          enum: ["local", "worktree", "container", "remote"],
+          description:
+            "WP-059 (54 §13) — where the operation would run. Disposable worktree/container contexts lower the approval " +
+            "bar for risky operations; omit it and the Governor assumes the most conservative context, local.",
+        },
       },
       required: ["kind"],
     },
@@ -787,6 +794,9 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
         kind: args.kind as never,
         path: args.path ? String(args.path) : undefined,
         command: args.command ? String(args.command) : undefined,
+        // WP-059 — validated against the enum by the schema; absent means
+        // "unknown", governed as the most conservative context, local (54 §13).
+        context: args.context ? (String(args.context) as never) : undefined,
       }
       const decision = governor.decide(op)
       const violations =

@@ -180,6 +180,72 @@ describe("VER-003 — cascade order and short-circuit", () => {
   })
 })
 
+// ── WP-059 — CAP-T09: every verification record carries execution context ───
+
+describe("WP-059 — verification records carry execution context (CAP-T09)", () => {
+  const MARKERS = ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "BUILDKITE", "CIRCLECI", "TRAVIS",
+    "TEAMCITY_VERSION", "BITBUCKET_BUILD_NUMBER", "TF_BUILD",
+    "CONTAINER_ID", "KUBERNETES_SERVICE_HOST", "DOCKER_CONTAINER"]
+  const saved = new Map<string, string | undefined>()
+
+  beforeEach(() => {
+    for (const name of MARKERS) {
+      saved.set(name, process.env[name])
+      delete process.env[name]
+    }
+  })
+  afterEach(() => {
+    for (const name of MARKERS) {
+      const value = saved.get(name)
+      if (value === undefined) delete process.env[name]
+      else process.env[name] = value
+    }
+  })
+
+  test("a plain run records its context as local", async () => {
+    const runner = new FakeCommandRunner({ pytest: { code: 0, stdout: "10 passed" } })
+    const v = makeVerifier(runner, { verifyCommands: { suite: "pytest" } })
+    const records = await v.cascade([], ["REQ-001"], { maxTier: "suite" })
+    assert.ok(records.length > 0)
+    for (const r of records) assert.equal(r.context, "local")
+    // CAP-T09 — the context is in the ledger and survives a reload (round-trip).
+    for (const r of records) assert.equal((await ledger.listVerifications()).find((v) => v.id === r.id)!.context, "local")
+  })
+
+  test("worktree isolation is recorded in every record", async () => {
+    const runner = new FakeCommandRunner({ pytest: { code: 0, stdout: "10 passed" } })
+    const v = makeVerifier(runner, {
+      verifyCommands: { suite: "pytest" },
+      delegation: { ...config.delegation, isolation: "worktree" },
+    })
+    const records = await v.cascade([], ["REQ-001"], { maxTier: "suite" })
+    for (const r of records) assert.equal(r.context, "worktree")
+  })
+
+  test("a CI marker records remote", async () => {
+    process.env.GITHUB_ACTIONS = "true"
+    const runner = new FakeCommandRunner({ pytest: { code: 0, stdout: "10 passed" } })
+    const v = makeVerifier(runner, { verifyCommands: { suite: "pytest" } })
+    const records = await v.cascade([], ["REQ-001"], { maxTier: "suite" })
+    for (const r of records) assert.equal(r.context, "remote")
+  })
+
+  test("a container marker records container", async () => {
+    process.env.CONTAINER_ID = "abc"
+    const runner = new FakeCommandRunner({ pytest: { code: 0, stdout: "10 passed" } })
+    const v = makeVerifier(runner, { verifyCommands: { suite: "pytest" } })
+    const records = await v.cascade([], ["REQ-001"], { maxTier: "suite" })
+    for (const r of records) assert.equal(r.context, "container")
+  })
+
+  test("NOT_RUN records carry the context too", async () => {
+    const v = makeVerifier(new FakeCommandRunner(), { verifyCommands: {} })
+    const records = await v.cascade([], ["REQ-001"], { maxTier: "lint" })
+    assert.ok(records.length > 0)
+    for (const r of records) assert.equal(r.context, "local")
+  })
+})
+
 describe("VER-004 — literal output is captured", () => {
   test("stdout and stderr are preserved verbatim", async () => {
     const output = "FAILED tests/test_a.py::test_x - AssertionError: 1 != 2\n1 failed, 3 passed"

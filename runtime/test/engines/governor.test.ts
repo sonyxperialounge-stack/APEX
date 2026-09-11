@@ -525,3 +525,106 @@ describe("WP-050 destructive modifier on the Governor", () => {
     assert.equal(d.allowed, false, "a destructive capability cannot bypass the Governor")
   })
 })
+
+// ── WP-059 — execution context on the operation record (54 §13, CAP-T08) ────
+
+describe("WP-059 — absent context is governed as local (CAP-T08)", () => {
+  const CASE = ["undefined", "unknown"] as const
+  for (const label of CASE) {
+    test(`${label} context behaves exactly like local`, () => {
+      const expected = gov({ autonomy: "GUARDED" }).decide({ kind: "bash", command: "git push origin main" })
+      const d = gov({ autonomy: "GUARDED" }).decide({
+        kind: "bash",
+        command: "git push origin main",
+        context: label === "undefined" ? undefined : ("unknown" as const),
+      })
+      assert.equal(d.allowed, expected.allowed)
+      assert.equal(d.ask, expected.ask)
+      assert.equal(d.requiresSnapshot, expected.requiresSnapshot)
+      assert.equal(d.rule, expected.rule)
+    })
+  }
+
+  test("a risky op in local context still requires a one-time confirmation", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({ kind: "bash", command: "git push origin main", context: "local" })
+    assert.equal(d.allowed, false)
+    assert.equal(d.ask, true)
+  })
+
+  test("an unrecognized declared context is governed as local, never unclassified", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({
+      kind: "bash",
+      command: "git push origin main",
+      context: "bogus" as never,
+    })
+    assert.equal(d.allowed, false, "hard blocks never relax with context")
+    assert.equal(d.ask, true)
+  })
+
+  test("the hard blocklist never relaxes with context", () => {
+    const d = gov({ autonomy: "FULL_AUTO" }).decide({
+      kind: "delete",
+      path: "config/prod.yaml",
+      context: "container",
+    })
+    assert.equal(d.allowed, false)
+    assert.equal(d.rule, "protected-write")
+  })
+})
+
+describe("WP-059 — disposable context lowers the GUARDED bar (54 §13)", () => {
+  test("container context allows a risky op GUARDED would otherwise ask about", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({
+      kind: "bash",
+      command: "git push origin main",
+      context: "container",
+    })
+    assert.equal(d.allowed, true)
+    assert.match(d.reason, /throwaway container/)
+  })
+
+  test("worktree context does the same", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({ kind: "delete", path: "build/", context: "worktree" })
+    assert.equal(d.allowed, true)
+    assert.match(d.reason, /throwaway worktree/)
+  })
+
+  test("remote context does NOT lower the bar — remote is not disposable", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({ kind: "bash", command: "git push origin main", context: "remote" })
+    assert.equal(d.allowed, false)
+    assert.equal(d.ask, true)
+  })
+})
+
+describe("WP-059 — DESTRUCTIVE in a disposable context", () => {
+  test("the bar relaxes only inside a throwaway container; the snapshot stays required", () => {
+    const d = gov({ autonomy: "FULL_AUTO" }).decide({
+      kind: "delete",
+      path: "var/tmp/",
+      destructive: true,
+      context: "container",
+    })
+    assert.equal(d.allowed, true)
+    assert.match(d.reason, /throwaway container/)
+    assert.equal(d.requiresSnapshot, true, "the snapshot bar never relaxes with context")
+  })
+
+  test("DESTRUCTIVE on local/unknown/remote still demands explicit approval everywhere", () => {
+    // container/worktree are the only contexts that relax — they are disposable by
+    // definition (54 §13); everything else keeps the FULL_AUTO ceiling.
+    for (const context of [undefined, "local", "remote"] as const) {
+      const d = gov({ autonomy: "FULL_AUTO" }).decide({ kind: "delete", destructive: true, context })
+      assert.equal(d.allowed, false, `context ${String(context)} must not relax a DESTRUCTIVE op`)
+      assert.equal(d.ask, true)
+    }
+  })
+
+  test("GUARDED asks for a destructive op on local, allows it in a throwaway worktree", () => {
+    const local = gov({ autonomy: "GUARDED" }).decide({ kind: "delete", destructive: true, context: "local" })
+    assert.equal(local.allowed, false)
+    assert.equal(local.ask, true)
+    const wt = gov({ autonomy: "GUARDED" }).decide({ kind: "delete", destructive: true, context: "worktree" })
+    assert.equal(wt.allowed, true)
+    assert.match(wt.reason, /throwaway worktree/)
+  })
+})

@@ -278,6 +278,54 @@ describe("LED-005 — evidence is mandatory for VERIFIED_COMPLETE", () => {
   })
 })
 
+// ── WP-059 — execution context on verification records (54 §13, CAP-T09) ────
+
+describe("WP-059 — verification records carry execution context", () => {
+  test("absent context defaults to the most conservative assumption, local", async () => {
+    const r = await addReq()
+    const record = await pass(r.id)
+    assert.equal(record.context, "local")
+    const reloaded = (await ledger.listVerifications()).find((v) => v.id === record.id)!
+    assert.equal(reloaded.context, "local", "the context survives the markdown round-trip")
+  })
+
+  test("an explicit context is preserved through write and reload", async () => {
+    const r = await addReq()
+    const record = await ledger.addVerification({
+      reqIds: [r.id],
+      type: "unit",
+      command: "pytest",
+      expected: "pass",
+      actual: "1 passed",
+      exitCode: 0,
+      result: "PASS",
+      context: "container",
+    })
+    assert.equal(record.context, "container")
+    const reloaded = (await ledger.listVerifications()).find((v) => v.id === record.id)!
+    assert.equal(reloaded.context, "container")
+    const text = await readTextOrNull(ledger.file("VERIFICATION.md"))
+    assert.ok(text?.includes("**Context:** container"), "the rendered log carries the context for human readers")
+  })
+
+  test("a verification written before contexts existed loads as local", async () => {
+    await ledger.addVerification({
+      reqIds: ["REQ-001"],
+      type: "unit",
+      command: "pytest",
+      expected: "pass",
+      actual: "1 passed",
+      exitCode: 0,
+      result: "PASS",
+    })
+    const text = await readTextOrNull(ledger.file("VERIFICATION.md"))
+    const stripped = text!.replace("- **Context:** local\n", "")
+    await fsp.writeFile(ledger.file("VERIFICATION.md"), stripped, "utf8")
+    const reloaded = (await ledger.listVerifications())[0]!
+    assert.equal(reloaded.context, "local", "an old record is assumed to have run locally")
+  })
+})
+
 describe("LED-006 — reasons are mandatory", () => {
   test("BLOCKED without evidence is rejected", async () => {
     const r = await addReq()

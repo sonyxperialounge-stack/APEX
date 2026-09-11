@@ -3,7 +3,7 @@
   "plan": "army-update-plan",
   "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
   "startedAt": "2026-09-10T05:36:15.128Z",
-  "updatedAt": "2026-09-11T06:30:00.000Z",
+  "updatedAt": "2026-09-11T04:28:52.000Z",
   "baseline": {
     "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
     "dirtyAtStart": false,
@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "5",
-  "currentPacket": "WP-059",
+  "currentPacket": "WP-055",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -613,7 +613,12 @@
       "status": "PENDING"
     },
     "WP-059": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T06:30:00.000Z",
+      "finishedAt": "2026-09-11T04:28:52.000Z",
+      "evidence": "EVD-059",
+      "notes": "ExecutionContext on the operation record: EXECUTION_CONTEXTS const, Operation.context?, VerificationRecord.context, detectExecutionContext, normalize/renderContext, disposable-context relaxation (54 §13), audit+evidence carry context, apex_check context param",
+      "commit": "PENDING"
     },
     "WP-060": {
       "status": "PENDING"
