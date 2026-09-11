@@ -1656,3 +1656,23 @@ Verify: `npm run verify` -> 1350 pass, 0 fail, exit 0 (~37s) (was 1327).
 Surprises: the MOD-T05 budget test fired as designed and dictated the
   module split; staging mints the record id (the store refuses empty ids).
 Next: WP-073 (CLI surface completion).
+
+## WP-073 — CLI surface completion (53 §3) — DONE
+
+- Every command in `53 §3` exists and is tested: `memory show|pending|off`, scope +
+  category filters, `--scope project`; `skills list [--stale] [--candidates]`, `show`,
+  `--i-accept-unverified`, `trust` (hash-bound, scanner-gated); new `session` group
+  (list/search/show/prune with `--dry-run` -> `--yes` discipline); new `home` group
+  (show / export --out / migrate-from-army — one-time marker, non-clobbering copy,
+  source never deleted).
+- Destructive commands now demand their justification: `memory retract --reason`,
+  `skills retire --reason` (both audited via `event()`); `session prune` refuses a real
+  run without a previewed `--yes`.
+- Per-command `--help` checked BEFORE the command runs; unknown subs exit non-zero.
+- Cross-check fixes inside the packet: global `--project/--json/--repair/--host` flags no
+  longer leak into group subcommand args (`groupArgs`); bare-flag presence checks fixed in
+  `promote`/`reset`; `migrate-from-army` refuses legacy==current-home.
+- Tests: 1362 pass / 0 fail (was 1350). New `test/cli/wp073-cli-surface.test.ts` (12).
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-073.md`.
+
+Next: WP-073b (memory journey / skills journey, 54 §17, UX-T07).

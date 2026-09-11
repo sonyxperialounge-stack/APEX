@@ -112,7 +112,7 @@ describe("WP-029 memory CLI — 10 §12 operations", () => {
 
     const corrected = runMemoryArgs(["list", "--status", "active"])
     const correctionId = /(MEM-[0-9a-z]+-[0-9a-z]+)/.exec(corrected.out)![1]!
-    const retract = runMemoryArgs(["retract", correctionId])
+    const retract = runMemoryArgs(["retract", correctionId, "--reason", "the correction itself went stale"])
     assert.equal(retract.code, 0, retract.out)
     assert.match(retract.out, /Retracted/)
     // The subject now has NO active value: review state, no silent revert.

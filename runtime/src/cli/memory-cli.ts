@@ -17,12 +17,15 @@
  */
 
 /**
- * The memory user surface (10 §12, 30 §13) — WP-029.
+ * The memory user surface (10 §12, 30 §13) — WP-029, completed to the 53 §3
+ * command surface by WP-073.
  *
  * Every durable-memory operation a user needs, without editing internal files:
- * list, inspect (provenance), add, correct, retract, approve/reject pending,
- * export, disable per project. Plain language in, plain language out; JSON on
- * request. Reads never mutate; writes go through the store's transactional paths.
+ * list, inspect/show (provenance), add (global or project scope), correct,
+ * retract --reason, pending, approve/reject, export, off per project. Plain
+ * language in, plain language out; JSON on request. Reads never mutate; writes
+ * go through the store's transactional paths. Destructive commands demand the
+ * reason that justifies them (53 §3 design rules).
  */
 
 import path from "node:path"
@@ -31,8 +34,8 @@ import { openMemoryStore } from "../stores/memory-store.ts"
 import { openGlobalHome } from "../stores/global-home.ts"
 import { resolveCandidate } from "../engines/memory-librarian.ts"
 import { scan } from "../core/redact.ts"
-import { say } from "../core/log.ts"
-import { toIsoString } from "../core/ids.ts"
+import { event, say } from "../core/log.ts"
+import { projectKey, toIsoString } from "../core/ids.ts"
 import type { MemoryRecordV1, MemoryCandidate } from "../core/types.ts"
 
 export interface MemoryCliArgs {
@@ -52,16 +55,37 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
     const i = args.indexOf(name)
     return i >= 0 ? args[i + 1] : undefined
   }
-  const positional = (): string[] => args.filter((a, i) => !a.startsWith("--") && (i === 0 || args[i - 1] !== "--kind") && (i === 0 || args[i - 1] !== "--key"))
+  // Positionals = every arg that is neither a flag nor a flag's value. The flag set
+  // is closed (this surface defines every flag it accepts), so a stray "--foo" is
+  // treated as a positional and lands in the text — visible, not silently swallowed.
+  // `--project|--global` on `list` are bare scope switches, not value flags.
+  const FLAGS_WITH_VALUES = new Set(["--kind", "--key", "--status", "--category", "--scope", "--out", "--reason", "--project", "-p"])
+  const positional = (): string[] => {
+    const out: string[] = []
+    for (let i = 0; i < args.length; i++) {
+      if (FLAGS_WITH_VALUES.has(args[i]!)) i++ // skip the flag AND its value
+      else if (!args[i]!.startsWith("--")) out.push(args[i]!)
+    }
+    return out
+  }
 
   switch (sub) {
+    case "help":
+    case "--help":
+    case "-h":
+      usageMemory()
+      return
+
     case "list": {
       const state = await store.read()
-      const kind = flag("--kind")
+      const kind = flag("--kind") ?? flag("--category")
       const status = flag("--status")
       let records = state.records
       if (kind) records = records.filter((r) => r.kind === kind)
       if (status) records = records.filter((r) => r.status === status)
+      // 53 §3: `--project|--global` narrows by scope. Absent flags mean both.
+      if (args.includes("--project")) records = records.filter((r) => r.scope.kind === "project")
+      if (args.includes("--global")) records = records.filter((r) => r.scope.kind === "global")
       if (json) {
         process.stderr.write(JSON.stringify({ revision: state.revision, count: records.length, records }, null, 2) + "\n")
         return
@@ -80,7 +104,8 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       return
     }
 
-    case "inspect": {
+    case "inspect":
+    case "show": {
       const id = positional()[0]
       if (!id) return usageMemory()
       const state = await store.read()
@@ -126,6 +151,16 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       if (!text) return usageMemory()
       const kind = flag("--kind") ?? "fact"
       const key = flag("--key") ?? `fact.${kind}`
+      // 53 §3: `--scope global|project` — a project-scoped fact is keyed to THIS
+      // project and stays invisible to every other project (C-020).
+      const scopeName = flag("--scope") ?? "global"
+      if (scopeName !== "global" && scopeName !== "project") {
+        say(`--scope must be "global" or "project", got "${scopeName}".`)
+        process.exitCode = 1
+        return
+      }
+      const scope: MemoryCandidate["scope"] =
+        scopeName === "project" ? { kind: "project", projectKey: projectKey(projectRoot) } : { kind: "global" }
       const verdict = scan(text, "memory")
       if (verdict.verdict === "deny") {
         say(`Refused: the scanner denied this text (${verdict.findings.map((f) => f.rule).join(", ")}). Nothing was stored.`)
@@ -135,7 +170,7 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       const candidate: MemoryCandidate = {
         text,
         semanticKey: key,
-        scope: { kind: "global" },
+        scope,
         kind: kind as MemoryCandidate["kind"],
         provenance: { sourceType: "explicit_user", observedAt: toIsoString(Date.now()) },
       }
@@ -149,8 +184,15 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
     case "correct":
     case "retract": {
       const targetId = positional()[0]
-      const text = positional().slice(1).join(" ")
+      const text = sub === "retract" ? (flag("--reason") ?? "") : positional().slice(1).join(" ")
       if (!targetId) return usageMemory()
+      // 53 §3 design rules: a destructive command carries its justification. The
+      // reason is recorded on the audit trail next to the store change.
+      if (sub === "retract" && !text.trim()) {
+        say(`Refused: retract needs --reason "<why>" — a retraction without a reason cannot be audited.`)
+        process.exitCode = 1
+        return
+      }
       const state = await store.read()
       const candidate: MemoryCandidate = {
         text,
@@ -176,6 +218,7 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       }
       const rev = await store.commit(state.revision, out.records)
       say(`${sub === "correct" ? "Corrected" : "Retracted"} — store revision ${rev}. ${out.actions[0]!.reason}`)
+      if (sub === "retract") event("memory.retracted", { id: targetId, reason: text.trim() })
       return
     }
 
@@ -209,7 +252,30 @@ export async function runMemoryCli(input: MemoryCliArgs): Promise<void> {
       return
     }
 
-    case "disable": {
+    case "pending": {
+      // 53 §3: the staged-writes queue, on its own — the "Staged, not committed"
+      // remedy from the troubleshooting table (53 §4).
+      const pending = await store.listPending()
+      if (json) {
+        process.stderr.write(JSON.stringify({ count: pending.length, pending }, null, 2) + "\n")
+        return
+      }
+      if (pending.length === 0) {
+        say(`\nNothing is pending — no staged writes await approval.`)
+        return
+      }
+      say(`\n${pending.length} pending mutation(s) awaiting approval:`)
+      for (const m of pending) {
+        say(`  ${m.id}  ${m.operation} — ${m.gist}`)
+        say(`      staged ${m.createdAt} against revision ${m.baseRevision} · scanner: ${m.scanner.verdict}`)
+      }
+      say(`\nApprove or reject each one: apex-agent memory approve <id> | reject <id>`)
+      say("")
+      return
+    }
+
+    case "disable":
+    case "off": {
       // Per-project disable: writes memory.useGlobal=false into the project's config.
       const configFile = path.join(projectRoot, ".apex", "config.json")
       const { readJson, mergeConfigFile } = await import("../core/json.ts")
@@ -238,13 +304,19 @@ function usageMemory(): void {
   say(`
 apex-agent memory <sub> [args]
 
-  list [--kind K] [--status S]            list records and pending mutations
-  inspect <id>                            full record + provenance (or pending mutation)
-  add <text> [--kind K] [--key key.name]   remember an explicit durable fact
-  correct <id> <new text>                 supersede a record with a correction
-  retract <id>                            retract a record (corrections leave review state)
-  approve <id> | reject <id>              resolve a staged pending mutation
-  export [--out file.json]                export durable state (redacted)
-  disable                                 disable global memory retrieval for THIS project
+  list [--kind K] [--category C] [--status S] [--project|--global]
+                                        list records and pending mutations
+  show <id>                             full record + provenance (or pending mutation)
+  add <text> [--kind K] [--key key.name] [--scope global|project]
+                                        remember an explicit durable fact
+  correct <id> <new text>               supersede a record with a correction
+  retract <id> --reason "<why>"         retract a record; the reason is audited
+  pending                               staged writes awaiting approval
+  approve <id> | reject <id>            resolve a staged pending mutation
+  export [--out file.json]              export durable state (redacted)
+  off                                   disable global memory retrieval for THIS project
+
+Corrections always win over what was learned earlier; nothing is ever deleted
+silently — retractions keep the record with a retracted status.
 `)
 }

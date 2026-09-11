@@ -127,7 +127,7 @@ describe("WP-049 skills CLI (18 §5)", () => {
     const promote = runSkills(["promote", id])
     assert.notEqual(promote.code, 0, "refused without evidence")
     assert.match(promote.out, /insufficient-evidence/)
-    assert.match(promote.out, /--user-override/, "the remedy is named")
+    assert.match(promote.out, /--i-accept-unverified/, "the remedy is named (53 §3 spelling)")
   })
 
   test("a draft with lint errors is refused at stage, with the errors shown", async () => {
@@ -156,7 +156,7 @@ describe("WP-049 skills CLI (18 §5)", () => {
     assert.match(search.out, /engineering\/searchable-skill/)
     assert.match(search.out, /Verifies the CLI/)
 
-    const retire = runSkills(["retire", "searchable-skill"])
+    const retire = runSkills(["retire", "searchable-skill", "--reason", "superseded by a better procedure"])
     assert.equal(retire.code, 0, retire.out)
     assert.match(retire.out, /archived to .+\.archive/, "retirement says where it went")
     assert.match(retire.out, /Nothing is deleted/, "the no-delete policy is stated")

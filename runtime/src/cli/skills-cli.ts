@@ -17,10 +17,11 @@
  */
 
 /**
- * The skills user surface (18 §5; WP-049): search / view / stage / promote / retire
- * from the CLI, without editing internal files by hand. Every write goes through
- * the forge's gates — the CLI is a keyboard onto the same discipline, not a
- * side door around it.
+ * The skills user surface (18 §5; WP-049, completed to the 53 §3 command surface
+ * by WP-073): search / list / view / stage / promote / retire / trust from the
+ * CLI, without editing internal files by hand. Every write goes through the
+ * forge's gates — the CLI is a keyboard onto the same discipline, not a side
+ * door around it. Trust is explicit and hash-bound, never automatic (20 §§2–4).
  */
 
 import path from "node:path"
@@ -31,10 +32,11 @@ import { openUsageSidecar } from "../stores/skill-usage.ts"
 import { openGlobalHome } from "../stores/global-home.ts"
 import { openBundledSync } from "../stores/bundled-sync.ts"
 import { openSkillBundles } from "../stores/skill-bundles.ts"
+import { openTrustStore, hashSkillContent } from "../stores/trust-store.ts"
 import { composeSkillInstruction } from "../engines/skill-composer.ts"
 import { lintSkill } from "../engines/skill-linter.ts"
 import { newId, toIsoString } from "../core/ids.ts"
-import { say } from "../core/log.ts"
+import { event, say } from "../core/log.ts"
 import { writeText } from "../core/json.ts"
 import type { SkillLifecycle } from "../engines/skill-forge.ts"
 
@@ -69,6 +71,12 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
   }
 
   switch (sub) {
+    case "help":
+    case "--help":
+    case "-h":
+      usageSkills()
+      return
+
     case "search": {
       const query = positional().join(" ")
       if (!query) return usageSkills()
@@ -99,7 +107,56 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
       return
     }
 
-    case "view": {
+    case "list": {
+      // 53 §3: `skills list [--stale] [--candidates]` — the whole catalog at a
+      // glance, or just the parts that need the owner's attention.
+      if (args.includes("--candidates")) {
+        const pendingDir = path.join(skillsRoot, "pending")
+        const files = await fsp.readdir(pendingDir).catch(() => [] as string[])
+        if (json) {
+          process.stderr.write(JSON.stringify({ candidates: files }, null, 2) + "\n")
+          return
+        }
+        if (files.length === 0) {
+          say(`\nNo candidates awaiting promotion.`)
+          return
+        }
+        say(`\n${files.length} candidate(s) awaiting promotion:`)
+        for (const f of files) say(`  ${f.replace(/\.json$/, "")}`)
+        say(`\nPromote with: apex-agent skills promote <id> --i-accept-unverified (or with evidence)`)
+        say("")
+        return
+      }
+      const index = await catalog.readIndex()
+      let entries = index
+      if (args.includes("--stale")) {
+        const staleOnly: typeof index = []
+        for (const e of index) {
+          const sidecar = openUsageSidecar(path.join(skillsRoot, ...e.id.split("/")))
+          const usage = await sidecar.read()
+          if (usage && usage.staleReasons.length > 0) staleOnly.push(e)
+        }
+        entries = staleOnly
+      }
+      if (json) {
+        process.stderr.write(JSON.stringify({ count: entries.length, skills: entries }, null, 2) + "\n")
+        return
+      }
+      if (entries.length === 0) {
+        say(args.includes("--stale") ? `\nNo stale skills — the catalog is clean.` : `\nNo skills in the catalog yet.`)
+        return
+      }
+      say(`\n${entries.length} skill(s) in the catalog:`)
+      for (const e of entries) {
+        say(`  ${e.id}  [${e.status}] ${e.description.slice(0, 90)}`)
+      }
+      say(`\nRead one: apex-agent skills show <category/name>`)
+      say("")
+      return
+    }
+
+    case "view":
+    case "show": {
       const id = positional()[0]
       if (!id) return usageSkills()
       const skill = await catalog.readSkill(id)
@@ -158,20 +215,23 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
       }
       say(`Staged ${id} as a CANDIDATE. It is NOT active.`)
       say(`Promote with evidence:  apex-agent skills promote ${id}`)
-      say(`Or fast-promote (yours, flagged): apex-agent skills promote ${id} --user-override`)
+      say(`Or fast-promote (yours, flagged): apex-agent skills promote ${id} --i-accept-unverified`)
       return
     }
 
     case "promote": {
       const id = positional()[0]
       if (!id) return usageSkills()
+      // 53 §3 names the override `--i-accept-unverified`; `--user-override` is the
+      // original spelling, kept working. Both are bare switches — presence, not value.
+      const override = args.includes("--user-override") || args.includes("--i-accept-unverified")
       const out = await forge.promote(id, {
-        userOverride: flag("--user-override") !== undefined,
+        userOverride: override,
       })
       if (!out.ok) {
         say(`\nPromotion refused: ${out.reason}.`)
         say(out.reason === "insufficient-evidence"
-          ? `Candidates need evidence, or your explicit --user-override (recorded as unverified).`
+          ? `Candidates need evidence, or your explicit --i-accept-unverified (recorded as unverified).`
           : `Fix the finding and stage a corrected candidate.`)
         process.exitCode = 1
         return
@@ -189,6 +249,13 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
     case "retire": {
       const name = positional()[0]
       if (!name) return usageSkills()
+      // 53 §3 design rules: retirement is destructive enough to demand its reason.
+      const reason = flag("--reason") ?? ""
+      if (!reason.trim()) {
+        say(`Refused: retire needs --reason "<why>" — a retirement without a reason cannot be audited.`)
+        process.exitCode = 1
+        return
+      }
       // Retirement archives rather than deletes (54 §9.3): the body moves to
       // .archive/, and the report says exactly where it went.
       const archiveDir = path.join(skillsRoot, ".archive")
@@ -201,7 +268,9 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
         await fsp.mkdir(archiveDir, { recursive: true })
         const to = path.join(archiveDir, `${name}-${toIsoString(Date.now()).replace(/[:.]/g, "-")}`)
         await fsp.rename(skillDir, to)
-        say(`Retired ${name} — archived to ${to.replace(skillsRoot, "skills")}. Nothing is deleted.`)
+        event("skill.retired", { id: name, reason: reason.trim() })
+        say(`Retired ${name} — archived to ${to.replace(skillsRoot, "skills")}. Reason recorded: "${reason.trim()}".`)
+        say(`Nothing is deleted.`)
         found = true
         break
       }
@@ -210,6 +279,51 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
         process.exitCode = 1
       }
       return
+    }
+
+    case "trust": {
+      // 53 §3: `skills trust <path>` — explicit, hash-bound, never automatic. The
+      // grant is recorded against the exact content hash of what was scanned;
+      // change the content and the grant goes inert (20 §§2–4).
+      const target = positional()[0]
+      if (!target) return usageSkills()
+      const resolved = path.resolve(target)
+      const stat = await fsp.stat(resolved).catch(() => null)
+      const file = stat?.isDirectory() ? path.join(resolved, "SKILL.md") : resolved
+      const content = await fsp.readFile(file, "utf8").catch(() => null)
+      if (content === null) {
+        say(`Cannot read ${target} — no SKILL.md found there.`)
+        process.exitCode = 1
+        return
+      }
+      const skillId = path.basename(stat?.isDirectory() ? resolved : path.dirname(resolved))
+      const contentHash = await hashSkillContent(file)
+      const trust = openTrustStore(home.resolution.path)
+      try {
+        const grant = await trust.grant(
+          {
+            skillId,
+            contentHash,
+            tier: "USER",
+            grantedBy: "cli:user",
+            override: args.includes("--override"),
+            justification: flag("--justification"),
+          },
+          content,
+        )
+        if (json) {
+          process.stderr.write(JSON.stringify(grant, null, 2) + "\n")
+          return
+        }
+        say(`Trusted ${skillId} at content hash ${grant.contentHash} (tier USER).`)
+        say(`This grant covers exactly this content — edit the skill and it must be trusted again.`)
+        return
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        say(`Trust refused: ${message}`)
+        process.exitCode = 1
+        return
+      }
     }
 
     case "pin": {
@@ -353,7 +467,7 @@ export async function runSkillsCli(input: SkillsCliArgs): Promise<void> {
     case "reset": {
       const name = positional()[0]
       if (!name) return usageSkills()
-      const restore = flag("--restore") !== undefined
+      const restore = args.includes("--restore")
       const out = await bundled.reset(name, { restore, payloadSkillsRoot: bundledPayload })
       if (json) {
         process.stderr.write(JSON.stringify(out, null, 2) + "\n")
@@ -403,11 +517,13 @@ function usageSkills(): void {
 apex-agent skills <sub> [args]
 
   search <term>                 search the skill catalog (compact index)
-  view <category/name>          read one skill: header, usage, body
+  list [--stale] [--candidates] list the catalog; stale ones, or pending candidates
+  show <category/name>          read one skill: header, usage, body
   stage <file.md>               stage a draft as a CANDIDATE (gates checked first)
   pending                       list staged candidates awaiting promotion
-  promote <id> [--user-override]  promote through the forge gates
-  retire <name>                 archive a shipped skill (never deletes)
+  promote <id> [--i-accept-unverified]  promote through the forge gates
+  retire <name> --reason "<why>"  archive a shipped skill (never deletes)
+  trust <path>                  record an explicit, hash-bound trust grant
   pin <name>                    protect a shipped skill from staleness and archival
   unpin <name>                  lift the protection
   reset <name> [--restore]      clear a bundled skill's manifest entry; --restore
@@ -418,6 +534,7 @@ apex-agent skills <sub> [args]
 
 Skills are future instruction: promotion needs evidence, or your explicit
 override — recorded as unverified, and demoted on its first real failure.
-Pinned skills are protected from automatic staleness and archival (54 §9.4).
+Trust is bound to the exact content hash; edits invalidate it. Pinned skills
+are protected from automatic staleness and archival (54 §9.4).
 `)
 }

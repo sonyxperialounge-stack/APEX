@@ -39,18 +39,124 @@ APEX ${VERSION} — an operating doctrine for AI coding agents
   apex-agent attach [--host <name>] [--all-hosts]        install into ONE host (the deepest available)
   apex-agent detach [--host <name>]                      remove cleanly, restoring your original config
   apex-agent doctor [--project <path>] [--repair]           what is installed, what is broken, how to fix it
-  apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, inspect, add,
-                                                             correct, retract, approve, reject, export, disable
-  apex-agent archive <sub> [args] [--project <path>]       session archive: discover, browse, read, scroll
-  apex-agent skills <sub> [args] [--project <path>]       skills: search, view, stage, pending, promote, retire
+  apex-agent memory <sub> [args] [--project <path>]         durable personal memory: list, show, add,
+                                                             correct, retract, pending, approve, reject,
+                                                             export, off
+  apex-agent session <sub> [args] [--project <path>]      session archive: list, search, show, prune
+  apex-agent archive <sub> [args] [--project <path>]       the same archive, archival names: discover,
+                                                             browse, read, scroll
+  apex-agent skills <sub> [args] [--project <path>]       skills: list, search, show, stage, pending,
+                                                             promote, retire, trust, run
+  apex-agent home <sub> [args]                            global home: show, export, migrate-from-army
   apex-agent init [--project <path>]                     create .apex/ only, no host changes
   apex-agent status [--project <path>]                   ledger summary for a project
   apex-agent gate [--project <path>]                     run the completion gate
   apex-agent mcp [--project <path>]                      run the MCP stdio server (hosts call this)
   apex-agent --version
 
-Hosts: ${KNOWN_HOSTS.join(", ")}
+Every command takes --help. Hosts: ${KNOWN_HOSTS.join(", ")}
 `.trim()
+
+/** Per-command help (53 §3: every command prints useful --help). */
+const COMMAND_HELP: Record<string, string> = {
+  attach: `
+apex-agent attach [--host <name>] [--all-hosts]
+
+  Detect the host you are running (or take --host) and install the deepest
+  binding it supports: tools where possible, instruction files otherwise.
+  Never asks for a credential; writes only inside the host's own config.
+  Follow with \`apex-agent doctor\` to check the result.
+`,
+  detach: `
+apex-agent detach [--host <name>]
+
+  Remove the APEX binding from the host config, restoring your originals from
+  the backups made at attach time. Never deletes memory, skills, archives, or
+  anything in your project's .apex/ — those are yours, not APEX's.
+`,
+  doctor: `
+apex-agent doctor [--project <path>] [--repair]
+
+  Read-only diagnostic report: what is installed, what is broken, how to fix
+  it, plus the durable-state checks (home, memory, skills, archive, locks).
+  --repair applies ONLY the four sanctioned reversible repairs; everything
+  else stays report-only. Safe to run any time — start here when anything
+  feels wrong.
+`,
+  memory: `
+apex-agent memory <sub> [args]
+
+  list [--kind K] [--category C] [--status S] [--project|--global]
+  show <id> | add <text> [--kind K] [--key key.name] [--scope global|project]
+  correct <id> <new text> | retract <id> --reason "<why>"
+  pending | approve <id> | reject <id>
+  export [--out file.json] | off
+
+  Durable personal memory. Corrections always win; retractions are audited;
+  nothing is deleted silently. \`apex-agent memory --help\` has the details.
+`,
+  session: `
+apex-agent session <sub> [args]
+
+  list [--project-key K] [--limit N] | search "<query>" | show <SES-id>
+  prune --dry-run [--older-than DAYS]    then prune --yes to run it for real
+
+  The durable session archive. Everything shown is historical record — what a
+  prior session did — never silently promoted to current truth.
+`,
+  archive: `
+apex-agent archive <sub> [args]
+
+  discover <query> | browse [--project-key K] | read <sessionId> | scroll <sessionId>
+
+  The session archive under its archival names — the same surface as
+  \`apex-agent session\`.
+`,
+  skills: `
+apex-agent skills <sub> [args]
+
+  list [--stale] [--candidates] | search <term> | show <category/name>
+  stage <file.md> | pending | promote <id> [--i-accept-unverified]
+  retire <name> --reason "<why>" | trust <path>
+  pin <name> | unpin <name> | reset <name> [--restore]
+  run <name-or-bundle> | bundle list|create|delete
+
+  The skill library. Promotion needs evidence or your explicit override
+  (recorded as unverified); trust is hash-bound and never automatic.
+`,
+  home: `
+apex-agent home <sub>
+
+  show                  path, mode, risks and sizes (read-only)
+  export [--out file]   everything personal, in one redacted file
+  migrate-from-army     one-time copy of a legacy ~/.army (never deletes it)
+
+  The global home holds memory, skills, the session archive and trust grants.
+`,
+  init: `
+apex-agent init [--project <path>]
+
+  Create .apex/ in the project — the ledger and config only. Makes no host
+  changes; use \`attach\` for that.
+`,
+  status: `
+apex-agent status [--project <path>] [--json]
+
+  Ledger summary for a project: level, requirement counts, what is blocked,
+  and the resume point for the next session.
+`,
+  gate: `
+apex-agent gate [--project <path>]
+
+  Run the completion gate. Exits non-zero while any requirement lacks real
+  verification evidence — that refusal is the product working, not a bug.
+`,
+  mcp: `
+apex-agent mcp [--project <path>]
+
+  Run the MCP stdio server. Hosts launch this themselves — you rarely need to.
+`,
+}
 
 interface Args {
   command: string
@@ -59,10 +165,11 @@ interface Args {
   json: boolean
   allHosts: boolean
   repair: boolean
+  help: boolean
 }
 
 export function parseArgs(argv: string[]): Args {
-  const out: Args = { command: argv[0] ?? "help", json: false, allHosts: false, repair: false }
+  const out: Args = { command: argv[0] ?? "help", json: false, allHosts: false, repair: false, help: false }
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--host") out.host = argv[++i] as HostName
@@ -70,6 +177,7 @@ export function parseArgs(argv: string[]): Args {
     else if (arg === "--json") out.json = true
     else if (arg === "--all-hosts") out.allHosts = true
     else if (arg === "--repair") out.repair = true
+    else if (arg === "--help" || arg === "-h") out.help = true
   }
   if (out.host && !KNOWN_HOSTS.includes(out.host)) {
     throw new Error(`Unknown host "${out.host}". Known: ${KNOWN_HOSTS.join(", ")}`)
@@ -77,9 +185,41 @@ export function parseArgs(argv: string[]): Args {
   return out
 }
 
+/**
+ * The global flags parseArgs consumed must not leak into group subcommands as
+ * unknown tokens: `--project <path>` / `-p <path>` / `--host <name>` pairs and
+ * the boolean switches are the TOP level's vocabulary. One exception: a BARE
+ * `--project` survives, because the memory group reuses it as the 53 §3 scope
+ * switch (`memory list --project|--global`).
+ */
+function groupArgs(argv: string[]): string[] {
+  const out: string[] = []
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i]!
+    if (arg === "--project" || arg === "-p") {
+      const next = argv[i + 1]
+      // A valued pair was consumed at the top level; a bare flag belongs to the group.
+      if (next !== undefined && !next.startsWith("--")) i++
+      else out.push(arg)
+      continue
+    }
+    if (arg === "--host") { i++; continue }
+    if (arg === "--json" || arg === "--repair" || arg === "--all-hosts") continue
+    out.push(arg)
+  }
+  return out
+}
+
 export async function main(argv: string[]): Promise<void> {
   const args = parseArgs(argv)
   const projectRoot = path.resolve(args.project ?? detectProjectRoot())
+
+  // 53 §3: every command prints useful --help and exits zero. Checked BEFORE the
+  // command runs — `doctor --help` must not run diagnostics.
+  if (args.help && args.command !== "help" && args.command !== "--help" && args.command !== "-h") {
+    say((COMMAND_HELP[args.command] ?? USAGE).trim())
+    return
+  }
 
   switch (args.command) {
     case "mcp":
@@ -207,7 +347,7 @@ export async function main(argv: string[]): Promise<void> {
     case "memory": {
       // WP-029 — the memory user surface (10 §12): every durable-personal-memory
       // operation reachable without editing internal files by hand.
-      const rest = argv.slice(1)
+      const rest = groupArgs(argv)
       const sub = rest[0] ?? "list"
       const restArgs = rest.slice(1)
       const { runMemoryCli } = await import("./memory-cli.ts")
@@ -218,7 +358,7 @@ export async function main(argv: string[]): Promise<void> {
     case "archive": {
       // WP-037 — the archive user surface (16 §5): discover / browse / read / scroll
       // over the durable session archive, always with provenance.
-      const rest = argv.slice(1)
+      const rest = groupArgs(argv)
       const sub = rest[0] ?? "browse"
       const restArgs = rest.slice(1)
       const { runArchiveCli } = await import("./archive-cli.ts")
@@ -226,10 +366,31 @@ export async function main(argv: string[]): Promise<void> {
       return
     }
 
+    case "session": {
+      // WP-073 — the session surface (53 §3): list / search / show / prune. The
+      // reads delegate to the archive surface; prune enforces retention (16 §7).
+      const rest = groupArgs(argv)
+      const sub = rest[0] ?? "list"
+      const restArgs = rest.slice(1)
+      const { runSessionCli } = await import("./session-cli.ts")
+      await runSessionCli({ sub, args: restArgs, json: args.json, projectRoot })
+      return
+    }
+
+    case "home": {
+      // WP-073 — the home surface (53 §3): show / export / migrate-from-army.
+      const rest = groupArgs(argv)
+      const sub = rest[0] ?? "show"
+      const restArgs = rest.slice(1)
+      const { runHomeCli } = await import("./home-cli.ts")
+      await runHomeCli({ sub, args: restArgs, json: args.json, projectRoot })
+      return
+    }
+
     case "skills": {
       // WP-049 — the skills user surface (18 §5): search / view / stage / promote /
       // retire, every write through the forge's gates.
-      const rest = argv.slice(1)
+      const rest = groupArgs(argv)
       const sub = rest[0] ?? "search"
       const restArgs = rest.slice(1)
       const { runSkillsCli } = await import("./skills-cli.ts")
