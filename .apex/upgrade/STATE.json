@@ -579,7 +579,7 @@
         "EVD-052"
       ],
       "notes": "host discovery: secondary HostCapabilities interface, registerHostTools pipeline, bounded refresh, apex://capabilities compact index",
-      "commit": "PENDING"
+      "commit": "5a5296c"
     },
     "WP-053": {
       "status": "PENDING"
