@@ -716,8 +716,18 @@
    "notes": "child limits (54 S12): blocked list, depth gate, budget BLOCKED-with-partials, stall interrupt, cleanup checklist; FLT-T07..T11; 1305 pass"
   },
   "WP-066": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:20:00.000Z",
+   "finishedAt": "2026-09-11T13:40:00.000Z",
+   "commit": "ba3b8f6",
+   "evidence": [
+    "EVD-066"
+   ],
+   "notes": "council triggers (26 S8/S9): migration_design, skill_promotion, security_boundary; consensus never verifies; FLT-T04; 1309 pass"
+  },
+  "WP-067": {
    "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T13:20:00.000Z"
+   "startedAt": "2026-09-11T13:40:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
