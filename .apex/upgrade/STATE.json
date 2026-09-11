@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "7A",
-  "currentPacket": "WP-086",
+  "currentPacket": "WP-087",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -828,7 +828,9 @@
       "committed": "see WORKLOG 2026-09-11 entry 7"
     },
     "WP-086": {
-      "status": "PENDING"
+      "status": "DONE",
+      "evidence": "docs/L2-MANUAL-CHECKS.md (status matrix + dated release-scope statement; no separate EVD — the doc IS the record)",
+      "committed": "see WORKLOG 2026-09-11 entry 8"
     },
     "WP-087": {
       "status": "PENDING"

@@ -1793,3 +1793,8 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation: Cortex eviction disabled -> budget-pressure eval fails "1310 > 600"; reverted byte-identical.
 - Verify: 1426 pass / 0 fail (evals deliberately outside the unit suite). Evals: 7/7, recorded.
 - Evidence: EVD-085b.md. Next: WP-086 (L2 live checklist) + WP-087 (doctor completion).
+
+## 2026-09-11 — WP-086 DONE (L2 live manual checklist)
+- docs/L2-MANUAL-CHECKS.md: L2M-T01..T04 written as concrete, runnable procedures for the real OpenCode host (protected-path hard block, runtime level reporting, disconnect/reconnect refresh matching markStructuralFailure semantics, completion hook refusing missing evidence) + a dated status matrix + the release-scope statement.
+- Honest status: all four rows PENDING — no live OpenCode host exists in this build environment; the release-scope statement makes the deferral explicit and notes which engine behaviours ARE covered by automated tests. Satisfies 49's "or the release scope explicitly excludes L2" branch.
+- Evidence: docs/L2-MANUAL-CHECKS.md. Next: WP-087 (doctor completion, DOC-T01..T06).
