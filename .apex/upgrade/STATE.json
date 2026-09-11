@@ -656,7 +656,18 @@
    "notes": "TaskContract envelope + resume validation (25, 41 S15): pure envelope, no second DB, parent/child close guard, conversion rule, fingerprint revalidation, auditable supersession, pointer-rich handoff; 1272 pass"
   },
   "WP-061": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T11:35:00.000Z",
+   "finishedAt": "2026-09-11T11:50:00.000Z",
+   "commit": "7248fba",
+   "evidence": [
+    "EVD-061"
+   ],
+   "notes": "domain verifier registry (24 S3, 41 S16): code authoritative, research sourced, evidence-free PASS coerced to FAIL, no write path; 1279 pass"
+  },
+  "WP-062": {
+   "status": "IN_PROGRESS",
+   "startedAt": "2026-09-11T11:50:00.000Z"
   },
   "WP-062": {
    "status": "PENDING"
