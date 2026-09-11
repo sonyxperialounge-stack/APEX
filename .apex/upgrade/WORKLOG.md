@@ -1764,3 +1764,10 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation: "payload/" removed from files → PKG-T01 + PKG-T05 fail; reverted byte-identical.
 - Verify: 1406 pass / 0 fail (was 1397).
 - Evidence: EVD-082.md. Next: WP-083 (migration fixture suite).
+
+## 2026-09-11 — WP-083 DONE (migration fixture suite)
+- test/migrations/migration-fixtures.test.ts: MIG-F01 forward (V3 versionless config -> v2, keys preserved in order, backup + COMPLETED journal), MIG-F02 idempotent re-run (sha-identical, no new entries), MIG-F03 interrupted (STARTED journal -> runner refuses -> doctor --repair terminals FAILED -> re-run completes), MIG-F04 future-schema (runner refuses pre-lock; Ledger reads read-only; doctor repair refuses on future home), MIG-F05 legacy adoption v0->1 with ID preservation + no-op re-run.
+- Wiring note for WP-087: doctor MIG reads the HOME journal; migrateConfigFile writes the PROJECT journal — the fixture suite wires the store to the home journal via opts.journalDir (the recovery surface as built).
+- Mutation: interrupted detection short-circuited -> MIG-F03 fails; reverted clean.
+- Verify: 1411 pass / 0 fail (was 1406).
+- Evidence: EVD-083.md. Next: WP-084 (perf/budget regressions).

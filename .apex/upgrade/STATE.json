@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "7A",
- "currentPacket": "WP-083",
+ "currentPacket": "WP-084",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -808,7 +808,9 @@
    "committed": "WP-082: packed artifact smoke (33 s5, s16) - PKG-T01..T08 + MCP stdio handshake in packaging.test.ts; fixed shipped tree lies (CHANGELOG/docs/build/install) + 3 dead links in runtime README; CI packed job gained MCP smoke; mutation: payload/ removal from files caught by T01+T05; 1406 pass"
   },
   "WP-083": {
-   "status": "PENDING"
+   "status": "DONE",
+   "evidence": ".apex/upgrade/EVIDENCE/EVD-083.md",
+   "committed": "WP-083: migration fixture suite (33 s12, 43 s5) - forward/idempotent/interrupted+doctor-recovery/future-read-only/legacy-adoption across runner + Ledger config migration; mutation: interrupted-detection off caught by MIG-F03; 1411 pass"
   },
   "WP-084": {
    "status": "PENDING"
