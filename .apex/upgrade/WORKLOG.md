@@ -1785,3 +1785,11 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation: registry.select fabricated availability (best ?? null) -> L0C-T02 fails; reverted byte-identical.
 - Verify: 1426 pass / 0 fail (was 1419).
 - Evidence: EVD-085.md. Next: WP-085b (runtime/evals behavioural suite).
+
+## 2026-09-11 — WP-085b DONE (runtime/evals behavioural suite)
+- runtime/evals/ per 54 §16: 7 scenarios (l0-conformance, memory-lifecycle, resume-across-models, capability-degradation, delegation-scope, skill-promotion, budget-pressure), each with a header declaring inputs/simulated-host-constraints/deterministic-assertions, driving the real engines in tempdirs; runner `npm run evals` prints the matrix and records results/last-run.json with model: none (deterministic engine simulation) — no live-model claim.
+- Key semantics the evals encode: memory corrections supersede transactionally (11 §7) and retrieval returns only the corrected text; select refuses DEGRADED capabilities until re-registration; CHILD_ALWAYS_BLOCKED + misscoped-writer refusal + spawn-depth bound; unevidenced/lint-failing candidates promote NOTHING while verified work promotes ACTIVE with an honest sidecar; tight budgets evict skills/globalMemory from the bottom while protected/autonomy/active/state and the requirement text survive.
+- EVAL-T02: PKG-T03 now asserts the tarball has no evals/ tree.
+- Mutation: Cortex eviction disabled -> budget-pressure eval fails "1310 > 600"; reverted byte-identical.
+- Verify: 1426 pass / 0 fail (evals deliberately outside the unit suite). Evals: 7/7, recorded.
+- Evidence: EVD-085b.md. Next: WP-086 (L2 live checklist) + WP-087 (doctor completion).

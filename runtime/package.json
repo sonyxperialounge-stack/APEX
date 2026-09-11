@@ -24,6 +24,7 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
+    "evals": "node evals/run.mjs",
     "test:unit": "node --test --experimental-strip-types \"test/core/*.test.ts\" \"test/engines/*.test.ts\"",
     "test:integration": "node --test --experimental-strip-types \"test/mcp/*.test.ts\" \"test/cli/*.test.ts\"",
     "prepack": "npm run sync:payload && npm run clean && npm run build",

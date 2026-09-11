@@ -198,6 +198,8 @@ describe("PKG-T01..T08 — the packed artifact (33 §5, §16)", () => {
     const BAD_TEXT = /army-update-plan|D:\\APEX/i
     const badText = readTexts(extract).filter((f) => BAD_TEXT.test(f.text)).map((f) => f.file)
     assert.deepEqual(badText, [], "scratch/research paths named in shipped file contents")
+    // EVAL-T02 — the behavioural eval suite stays a repository harness, never ships.
+    assert.equal(fs.existsSync(path.join(extract, "evals")), false, "the evals/ tree does not ship")
   })
 
   test("PKG-T04 — markdown links to package-local docs resolve", () => {
