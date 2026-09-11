@@ -726,8 +726,18 @@
    "notes": "council triggers (26 S8/S9): migration_design, skill_promotion, security_boundary; consensus never verifies; FLT-T04; 1309 pass"
   },
   "WP-067": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T13:40:00.000Z",
+   "finishedAt": "2026-09-11T14:00:00.000Z",
+   "commit": "e232d02",
+   "evidence": [
+    "EVD-067"
+   ],
+   "notes": "completion states + Gate integration (24 S11, 45 S3.3): five states, limitation required, subjective never objective; apex_gate contract; 1313 pass"
+  },
+  "WP-068": {
    "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T13:40:00.000Z"
+   "startedAt": "2026-09-11T14:00:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
