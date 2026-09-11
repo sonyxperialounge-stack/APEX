@@ -33,6 +33,7 @@ import type { Ledger } from "./ledger.ts"
 import type { Governor } from "./governor.ts"
 import type { HostClient, ModelRef } from "../host/types.ts"
 import type { ApexConfig, SubagentRecord, SubagentState } from "../core/types.ts"
+import { createHash } from "node:crypto"
 import { ApexError, UserDecisionRequired } from "../core/errors.ts"
 import { isUnder } from "../core/paths.ts"
 import { event, log } from "../core/log.ts"
@@ -983,5 +984,246 @@ export function validateChildResult(child: DelegateResult, globalHomeRoot: strin
     },
     globalWriteAttempts,
     proposalCount,
+  }
+}
+
+// ── failure taxonomy + recovery ladder (27; WP-064) ──────────────────────────
+//
+// Self-healing is evidence-driven recovery: classify, fingerprint the
+// attempt, refuse equivalent retries without a changed prerequisite, take a
+// materially different step, and escalate to BLOCKED inside a bound. Pure:
+// these helpers read what they are given and never touch a store.
+
+/** Canonical failure classes (27 §2). Unknown stays unknown — never guessed. */
+export const RECOVERY_FAILURE_CLASSES = [
+  "CAPABILITY_UNAVAILABLE",
+  "CAPABILITY_CHANGED",
+  "PERMISSION_DENIED",
+  "ENVIRONMENT_MISMATCH",
+  "VERSION_UNSUPPORTED",
+  "VALIDATION_FAILED",
+  "VERIFICATION_FAILED",
+  "TEST_INFRA_FAILURE",
+  "LOCK_CONTENTION",
+  "STALE_LOCK",
+  "SCHEMA_FUTURE_VERSION",
+  "MIGRATION_FAILED",
+  "MEMORY_CONFLICT",
+  "SKILL_STALE",
+  "EXTENSION_UNTRUSTED",
+  "HOST_DISCONNECTED",
+  "RESOURCE_EXHAUSTED",
+  "USER_CONSTRAINT_BLOCK",
+  "UNKNOWN",
+] as const
+export type RecoveryFailureClass = (typeof RECOVERY_FAILURE_CLASSES)[number]
+
+export interface AttemptInput {
+  actionKind: string
+  command?: string
+  cwd?: string
+  inputs?: string
+  envFingerprint?: string
+}
+
+/**
+ * Attempt fingerprint (27 §4): sha256 over the normalized action shape,
+ * first 16 hex. Two runs of the same failing command share a fingerprint;
+ * a changed prerequisite changes the inputs and therefore the print.
+ */
+export function fingerprintAttempt(attempt: AttemptInput): string {
+  const normalizedCommand = (attempt.command ?? "").trim().replace(/\s+/g, " ")
+  const shape = [
+    attempt.actionKind.trim(),
+    normalizedCommand,
+    (attempt.cwd ?? "").trim(),
+    (attempt.inputs ?? "").trim(),
+    (attempt.envFingerprint ?? "").trim(),
+  ].join("|")
+  return createHash("sha256").update(shape).digest("hex").slice(0, 16)
+}
+
+/**
+ * Equivalent-attempt gate (27 §4): the second identical failure needs a
+ * documented changed prerequisite before another try. Returns the
+ * EQUIVALENT_ATTEMPT_BLOCKED code when the retry is refused (45 §2.8).
+ */
+export function checkEquivalentRetry(
+  previousFingerprint: string,
+  nextFingerprint: string,
+  prereqChanged: boolean,
+): { allowed: boolean; reason: string; code: string } {
+  if (previousFingerprint !== nextFingerprint) {
+    return { allowed: true, reason: "the attempt differs from the last failure; a fresh try is legitimate", code: "" }
+  }
+  if (prereqChanged) {
+    return {
+      allowed: true,
+      reason: "the attempt repeats, but a changed prerequisite is documented; one more try is legitimate",
+      code: "",
+    }
+  }
+  return {
+    allowed: false,
+    reason:
+      "the same attempt failed twice with no changed prerequisite. " +
+      "Document what changed before retrying; an unchanged retry cannot loop (EQUIVALENT_ATTEMPT_BLOCKED).",
+    code: "EQUIVALENT_ATTEMPT_BLOCKED",
+  }
+}
+
+/**
+ * Map a reported code to the canonical class (27 §2). Anything unrecognized
+ * stays UNKNOWN (27 §13, RCV-T06): an unknown failure is captured, never
+ * relabeled into a convenient cause.
+ */
+export function classifyRecoveryFailure(reported: string): RecoveryFailureClass {
+  const code = (reported ?? "").trim().toUpperCase()
+  if ((RECOVERY_FAILURE_CLASSES as readonly string[]).includes(code)) {
+    return code as RecoveryFailureClass
+  }
+  if (code === "TOOL_NOT_FOUND" || code === "CAPABILITY_NOT_IN_CATALOG") return "CAPABILITY_UNAVAILABLE"
+  if (code === "CAPABILITY_SCHEMA_INVALID" || code === "CAPABILITY_CHANGED") return "CAPABILITY_CHANGED"
+  if (code === "LOCK_TIMEOUT") return "LOCK_CONTENTION"
+  if (code === "SCHEMA_FUTURE" || code === "READ_ONLY_FUTURE_SCHEMA") return "SCHEMA_FUTURE_VERSION"
+  if (code === "MIGRATION_INTERRUPTED" || code === "MIGRATION_MISSING") return "MIGRATION_FAILED"
+  return "UNKNOWN"
+}
+
+export type RecoveryAction =
+  | "retry-same"
+  | "replan-different"
+  | "bounded-refresh"
+  | "stage-patch"
+  | "read-only"
+  | "escalate-blocked"
+  | "capture-diagnostics"
+
+export interface RecoveryPlan {
+  action: RecoveryAction
+  reason: string
+}
+
+/**
+ * The ladder step for one failure (27 §3–§13). Bounded: past maxAttempts the
+ * only honest outcome is escalation to BLOCKED with what was tried.
+ */
+export function planRecovery(
+  failureClass: RecoveryFailureClass,
+  attempt: number,
+  maxAttempts = 3,
+): RecoveryPlan {
+  if (attempt >= maxAttempts) {
+    return {
+      action: "escalate-blocked",
+      reason:
+        `attempt ${attempt} of ${maxAttempts} failed as ${failureClass}. ` +
+        "Bounded recovery is spent; escalate as BLOCKED with the evidence, never silently stop.",
+    }
+  }
+  switch (failureClass) {
+    case "SCHEMA_FUTURE_VERSION":
+      return {
+        action: "read-only",
+        reason:
+          "A newer store schema is read-only here. Open it read-only where safely parseable, " +
+          "name the required newer runtime, and never downgrade or rewrite it (RCV-T02).",
+      }
+    case "SKILL_STALE":
+      return {
+        action: "stage-patch",
+        reason:
+          "Record the skill failure separately from the skill body. Retry direct reasoning where safe, " +
+          "and stage a patch candidate only after the cause is understood — never rewrite the active skill in place (RCV-T03).",
+      }
+    case "HOST_DISCONNECTED":
+    case "CAPABILITY_UNAVAILABLE":
+    case "CAPABILITY_CHANGED":
+      return {
+        action: "bounded-refresh",
+        reason:
+          "Refresh the affected capability exactly once, search for a safe equivalent, " +
+          "and replan onto it — or report UNAVAILABLE with the fallback. No pretend call is ever issued (RCV-T04).",
+      }
+    case "LOCK_CONTENTION":
+    case "STALE_LOCK":
+      return {
+        action: "retry-same",
+        reason:
+          "Wait a bounded jittered interval, re-read the lock state, and retry once. " +
+          "A live lock is never taken; a stale one recovers only under policy.",
+      }
+    case "UNKNOWN":
+      return {
+        action: "capture-diagnostics",
+        reason:
+          "Unknown means unknown. Capture diagnostics and stop inventing causes; " +
+          "report UNKNOWN with what was observed (RCV-T06).",
+      }
+    default:
+      return {
+        action: "replan-different",
+        reason:
+          `Classify as ${failureClass}, inspect the evidence, and choose a materially different action. ` +
+          "An unchanged retry is refused by the equivalent-attempt gate.",
+      }
+  }
+}
+
+/**
+ * A failing check is never "recovered" by deleting the check (27 §7,
+ * RCV-T05). A strategy that deletes, disables, removes or skips a check is
+ * refused unless the requirement itself changed with a reviewed rationale.
+ */
+export function validateRecoveryStrategy(
+  strategy: string,
+  requirementChanged: boolean,
+): { allowed: boolean; reason: string } {
+  const text = (strategy ?? "").toLowerCase()
+  const dropsACheck =
+    /delete[^.]{0,40}test/.test(text) ||
+    /disable[^.]{0,40}test/.test(text) ||
+    /remove[^.]{0,40}test/.test(text) ||
+    /skip[^.]{0,40}test/.test(text)
+  if (dropsACheck && !requirementChanged) {
+    return {
+      allowed: false,
+      reason:
+        "The strategy drops a failing check without a requirement change. " +
+        "A red check is evidence; deleting it manufactures green. Change the requirement with a reviewed rationale first (RCV-T05).",
+    }
+  }
+  return { allowed: true, reason: "the strategy keeps every failing check visible" }
+}
+
+/** Recovery evidence (27 §14): what failed, what was tried, what happened. */
+export interface LadderRecoveryRecord {
+  failureId: string
+  class: RecoveryFailureClass
+  observed: string
+  attemptFingerprint: string
+  recoveryAction: string
+  outcome: "RETRYING" | "RECOVERED" | "BLOCKED" | "UNKNOWN"
+  evidenceIds: string[]
+}
+
+/** Pure constructor for the 27 §14 record shape. */
+export function buildRecoveryRecord(input: {
+  failureId: string
+  class: RecoveryFailureClass
+  observed: string
+  attempt: AttemptInput
+  recoveryAction: string
+  outcome: LadderRecoveryRecord["outcome"]
+  evidenceIds?: string[]
+}): LadderRecoveryRecord {
+  return {
+    failureId: input.failureId,
+    class: input.class,
+    observed: input.observed,
+    attemptFingerprint: fingerprintAttempt(input.attempt),
+    recoveryAction: input.recoveryAction,
+    outcome: input.outcome,
+    evidenceIds: input.evidenceIds ?? [],
   }
 }

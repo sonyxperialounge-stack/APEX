@@ -1511,3 +1511,21 @@ Evidence: EVD-063 (AUT-T03).
 Surprises: a mid-packet edit deleted the capsule-validator signature —
   restored on read-back; always re-read the seam.
 Next: WP-064 (failure taxonomy + recovery ladder).
+
+## WP-064 — Failure taxonomy + recovery ladder · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/warden.ts (+pure ladder, supervision untouched),
+  +runtime/test/engines/recovery.test.ts (6),
+  +.apex/upgrade/EVIDENCE/EVD-064.md
+Decision: evidence-driven recovery per 27 (classify → fingerprint → refuse
+  equivalent retries → materially different step → bounded BLOCKED
+  escalation). Unknown stays unknown; a red check is never recovered by
+  deleting it; future schemas never downgrade; stale skills stage patches,
+  never silent rewrites. Named `LadderRecoveryRecord` — the bare
+  `RecoveryRecord` already belongs to the capability registry.
+Verify: `npm run verify` -> 1295 pass, 0 fail, 0 cancelled, exit 0 (~38s)
+  (was 1289; +6 new).
+Evidence: EVD-064 (RCV-T01..T06).
+Surprises: new-record name collided with an existing import (TS2440) —
+  renamed at the cause, suite green.
+Next: WP-065 (fleet delegation contracts).
