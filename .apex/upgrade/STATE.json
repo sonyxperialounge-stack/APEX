@@ -603,7 +603,7 @@
    "finishedAt": "2026-09-11T05:01:47.000Z",
    "evidence": "EVD-055",
    "notes": "capability loss recovery: DEGRADED mark, bounded refresh (RCV-T04), effects-gated equivalent, FAIL- records with attemptFingerprint (27 §14), replanAfterCapabilityLoss with do-not-reissue, provider invalidation (CAP-T06)",
-   "commit": "PENDING"
+   "commit": "98de6d3"
   },
   "WP-056": {
    "status": "PENDING"
