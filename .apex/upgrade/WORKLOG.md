@@ -1183,3 +1183,29 @@ Surprises: a config-file loader cannot carry functions - removed dead loadHostCa
   the seam; register() normalizes aliases (lowercase) so tests expect normalized forms; two distinct
   host names mapping to one canonical id stay two candidates (CAP-T01).
 Next: WP-053 (capability search + compact index, TLS-T01 with 1,000 synthetic tools).
+
+## WP-053 — Capability search + compact index
+
+Date: 2026-09-11 | Packet: WP-053 | Branch: upgrade/army-v4 | Dep: WP-051
+Files:
+  +runtime/src/engines/capability-search.ts (search, describe, compactIndex),
+  ~runtime/src/core/types.ts (ApexCapabilitiesConfig.schemaBudgetTokens),
+  ~runtime/src/engines/ledger.ts (DEFAULT_CONFIG capability => schemaBudgetTokens: 1000),
+  ~templates/config.json + ~runtime/payload/templates/config.json (schemaBudgetTokens + note),
+  +runtime/test/engines/capability-search.test.ts (18),
+  +.apex/upgrade/EVIDENCE/EVD-053.md
+Decision: In-memory deterministic scorer (22 §3): exact id (1e6) > exact alias (5e5) > id-prefix
+  (2.5e5) > weighted token overlap (id 10 / aliases 8 / title 5 / description 3 / effects 4 /
+  platforms 2), ties break on canonical id ascending (22 §4). tokens split identifiers on
+  [^a-z0-9]+ so host.delete_file matches "delete file". onlyAvailable defaults to true.
+  compactIndex(budgetTokens) fills id-ascending via estimateTokens (chars/4) within
+  capabilities.schemaBudgetTokens (44 §3, default 1000); everything beyond is counted in
+  `deferred`, never silently dropped (54 §4); budget <= 0 defers all. describe() is the tier-2
+  door via registry.select (TLS-T07). Config key added once in DEFAULT_CONFIG - both merge sites
+  spread DEFAULT_CONFIG.capabilities.
+Verify: `npm run verify` -> 1113 pass, 0 fail, exit 0 (~37s).
+Evidence: EVD-053 (TLS-T01 with 1,000 synthetic tools; TLS-T07).
+Surprises: /\W+/ tokenization glued underscores - host.delete_file could not match "delete file"
+  and lost ties by id order; split on [^a-z0-9]+ instead. Descriptor has title not summary;
+  availability changes are re-registration, not mutation; effects exclude SEARCH/MODIFY.
+Next: WP-054 (lazy schema cache).
