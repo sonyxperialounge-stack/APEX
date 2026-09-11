@@ -619,7 +619,7 @@
    "finishedAt": "2026-09-11T07:15:00.000Z",
    "evidence": "EVD-056b",
    "notes": "hook fail-open/closed classes by 54 §15 (EXT-T08..T10), 23 §11 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json — same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
-   "commit": "PENDING"
+   "commit": "16b8660"
   },
   "WP-057": {
    "status": "PENDING"
