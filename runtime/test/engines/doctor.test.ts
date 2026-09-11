@@ -25,6 +25,9 @@ import os from "node:os"
 import path from "node:path"
 import { runDoctor, REPAIRABLE } from "../../src/engines/doctor.ts"
 import { openGlobalHome } from "../../src/stores/global-home.ts"
+import { openArchiveStore } from "../../src/stores/archive-store.ts"
+import { CapabilityRegistry } from "../../src/engines/capability-registry.ts"
+import { Ledger } from "../../src/engines/ledger.ts"
 import { readJson } from "../../src/core/json.ts"
 import { setLogDir } from "../../src/core/log.ts"
 
@@ -118,8 +121,15 @@ describe("WP-019 runDoctor", () => {
     assert.ok(canonical.includes("MEM-000000001-aaaaaa"), "canonical bytes untouched by the repair")
   })
 
-  test("--repair is bounded to the four sanctioned actions (31 §12)", () => {
-    assert.deepEqual([...REPAIRABLE], ["home-ensure", "home-tempfiles", "mig-journal", "lock-stale"])
+  test("--repair is bounded to the sanctioned actions (31 §12 + 45 §4 derived-state repairs)", () => {
+    // The original four from 31 §12, plus the three 45 §4 sanctions that act ONLY
+    // on derived state: the archive index (DOC-ARC-02), the memory hot views
+    // (DOC-MEM-02) and the payload sync (DOC-PKG-01). Canonical stores are never
+    // written by any of them.
+    assert.deepEqual(
+      [...REPAIRABLE],
+      ["home-ensure", "home-tempfiles", "mig-journal", "lock-stale", "index-rebuild", "hot-view", "payload-sync"],
+    )
   })
 
   test("repair reconstructs a missing home structure (sanctioned home-ensure)", async () => {
@@ -143,5 +153,150 @@ describe("WP-019 runDoctor", () => {
     assert.ok(resolve.remediation, "names how to fix it")
     // A refused home short-circuits HOME checks but the report itself completes.
     assert.ok(report.checks.length >= 1)
+  })
+})
+
+describe("WP-087 — Doctor completion (45 §4 registry; DOC-T02, T04, T05, T06)", () => {
+  test("DOC-T02: derived index corruption is detected and rebuildable", async () => {
+    const home = await openGlobalHome(homePath)
+    await home.ensure()
+    // Seed one real session with one real event through the store.
+    const archive = openArchiveStore(path.join(homePath, "archive"))
+    const sid = await archive.appendSession({ startedAt: new Date().toISOString() })
+    await archive.persistEvent({ sessionId: sid, type: "decision", text: "doc-t02 evidence event", refs: [], hostLabel: "test" })
+    // Corrupt the DERIVED index only — canonical events stay intact.
+    const indexFile = path.join(homePath, "archive", "index", "index.json")
+    await fsp.mkdir(path.dirname(indexFile), { recursive: true })
+    await fsp.writeFile(indexFile, "{not json at all", "utf8")
+
+    const plain = await runDoctor({ projectRoot: dir, homePath })
+    const corrupt = plain.checks.find((c) => c.id === "DOC-ARC-INDEX")
+    assert.equal(corrupt?.status, "DEGRADED", "corruption is detected, not hidden")
+    assert.match(corrupt!.summary, /corrupt/i)
+    assert.equal(plain.repaired.length, 0, "read-only by default")
+
+    const repaired = await runDoctor({ projectRoot: dir, homePath }, { repair: true })
+    assert.ok(repaired.repaired.includes("index-rebuild"), "rebuild is a sanctioned repair")
+    const fixed = repaired.checks.find((c) => c.id === "DOC-ARC-INDEX")
+    assert.equal(fixed?.status, "OK")
+    const canonical = await fsp.readFile(path.join(homePath, "archive", "sessions.jsonl"), "utf8")
+    assert.ok(canonical.includes(sid), "canonical sessions untouched by the rebuild")
+  })
+
+  test("DOC-T04: the audit log never stores a seeded secret in clear text", async () => {
+    const home = await openGlobalHome(homePath)
+    await home.ensure()
+    const SECRET = "sk-FAKE-doct04-not-a-real-key-000111"
+    // A memory record whose text carries the secret: the doctor READS the store.
+    await fsp.mkdir(path.join(homePath, "memory"), { recursive: true })
+    await fsp.writeFile(
+      path.join(homePath, "memory", "records.jsonl"),
+      JSON.stringify({
+        schemaVersion: 1, id: "MEM-doct040001-aaaaaa", scope: { kind: "global" }, kind: "fact",
+        semanticKey: "fact.secret.key", text: `the staging key is ${SECRET}`, status: "active", confidence: 1,
+        provenance: [{ sourceType: "explicit_user", observedAt: "2026-09-11T00:00:00.000Z" }],
+        createdAt: "2026-09-11T00:00:00.000Z", updatedAt: "2026-09-11T00:00:00.000Z",
+        revision: 1, scanner: { verdict: "allow", reasons: [] },
+      }) + "\n",
+      "utf8",
+    )
+
+    const report = await runDoctor({ projectRoot: dir, homePath })
+    assert.equal(JSON.stringify(report).includes(SECRET), false, "the report never quotes the secret")
+    // And the audit trail the run wrote is redacted too.
+    const events = await fsp.readFile(path.join(dir, "logs", "events.jsonl"), "utf8").catch(() => "")
+    assert.equal(events.includes(SECRET), false, "the event log never stores the secret in clear")
+  })
+
+  test("DOC-T05: broken cross-store references are surfaced (dependsOn, evidence)", async () => {
+    const ledger = new Ledger(dir)
+    await ledger.init()
+    await ledger.addRequirement({ source: "user", text: "a", acceptance: "a passes", verifyBy: "true" })
+    await ledger.addRequirement({ source: "user", text: "b", acceptance: "b passes", verifyBy: "true" })
+    const reqFile = path.join(dir, ".apex", "REQUIREMENTS.md")
+    let md = await fsp.readFile(reqFile, "utf8")
+    // Claim VERIFIED_COMPLETE with no evidence, and depend on an id that does not exist.
+    md = md.replace(/- \*\*Status:\*\* NOT_STARTED/, "- **Status:** VERIFIED_COMPLETE")
+    md = md.replace(/- \*\*Depends on:\*\* (REQ-002)?/, "- **Depends on:** REQ-999")
+    await fsp.writeFile(reqFile, md, "utf8")
+
+    const report = await runDoctor({ projectRoot: dir, homePath })
+    const refs = report.checks.find((c) => c.id === "DOC-PROJ-REFS")
+    assert.equal(refs?.status, "DEGRADED", "a dangling dependsOn is surfaced")
+    assert.ok(refs!.evidence?.some((e) => e.includes("REQ-999")), "the broken id is named")
+    const evidence = report.checks.find((c) => c.id === "DOC-PROJ-EVIDENCE")
+    assert.equal(evidence?.status, "DEGRADED", "VERIFIED_COMPLETE without a PASS record is surfaced")
+  })
+
+  test("DOC-T06: unavailable and policy-blocked are reported distinctly", async () => {
+    const registry = new CapabilityRegistry({})
+    registry.register({
+      id: "fs.read", title: "Read", description: "readable", aliases: [],
+      source: { kind: "host", providerId: "h", toolName: "read" }, availability: "AVAILABLE",
+      effects: ["READ"], trust: "TRUSTED", lastCheckedAt: "2026-09-11T00:00:00.000Z",
+    })
+    registry.register({
+      id: "shell.exec", title: "Exec", description: "destructive and untrusted", aliases: [],
+      source: { kind: "host", providerId: "h", toolName: "exec" }, availability: "AVAILABLE",
+      effects: ["DESTRUCTIVE"], trust: "UNTRUSTED", lastCheckedAt: "2026-09-11T00:00:00.000Z",
+    })
+    registry.register({
+      id: "cloud.sync", title: "Sync", description: "host lacks it", aliases: [],
+      source: { kind: "host", providerId: "h", toolName: "sync" }, availability: "UNAVAILABLE",
+      effects: ["NETWORK"], trust: "TRUSTED", lastCheckedAt: "2026-09-11T00:00:00.000Z",
+    })
+    const report = await runDoctor({ projectRoot: dir, homePath, registry }, { areas: ["CAP"] })
+    const discovery = report.checks.find((c) => c.id === "DOC-CAP-DISCOVERY")
+    assert.equal(discovery?.status, "OK")
+    assert.match(discovery!.summary, /1 exposed/, "the trusted capability is exposed")
+    assert.match(discovery!.summary, /1 policy-blocked/, "UNTRUSTED+DESTRUCTIVE is policy-blocked — distinct from absent")
+    assert.match(discovery!.summary, /1 unavailable/, "a capability the host lacks is unavailable — distinct from blocked")
+    assert.ok(discovery!.evidence!.some((e) => e.includes("policy-blocked: shell.exec")))
+    assert.ok(discovery!.evidence!.some((e) => e.includes("unavailable: cloud.sync")))
+  })
+
+  test("the project migration journal is scanned and repairable (WP-083 wiring gap closed)", async () => {
+    // init() creates the ledger; migrateConfigFile journals into .apex/migrations/.
+    const ledger = new Ledger(dir)
+    await ledger.init()
+    const journalDir = path.join(dir, ".apex", "migrations")
+    await fsp.mkdir(journalDir, { recursive: true })
+    await fsp.writeFile(
+      path.join(journalDir, "journal.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        entries: [
+          { id: "MIG-config-1-to-2-deadbeef", store: "config", from: 1, to: 2, startedAt: "2026-01-01T00:00:00.000Z", status: "STARTED" },
+        ],
+      }),
+      "utf8",
+    )
+
+    const plain = await runDoctor({ projectRoot: dir, homePath }, { areas: ["MIG"] })
+    const proj = plain.checks.find((c) => c.id === "DOC-MIG-JOURNAL-PROJ")
+    assert.equal(proj?.status, "BLOCKED", "the project journal's interrupted entry is surfaced")
+
+    const repaired = await runDoctor({ projectRoot: dir, homePath }, { repair: true, areas: ["MIG"] })
+    const fixed = repaired.checks.find((c) => c.id === "DOC-MIG-JOURNAL-PROJ")
+    assert.equal(fixed?.status, "OK")
+    assert.ok(repaired.repaired.includes("mig-journal"))
+    const config = await fsp.readFile(path.join(dir, ".apex", "config.json"), "utf8")
+    assert.ok(config.length > 0, "the canonical config is untouched")
+  })
+
+  test("the 45 §4 registry surfaces: RUN mode, PKG sync/metadata, MEM/ARC/SKL/EXT areas", async () => {
+    const report = await runDoctor({ projectRoot: dir, homePath })
+    const ids = new Set(report.checks.map((c) => c.id))
+    for (const expected of [
+      "DOC-RUN-NODE", "DOC-RUN-MODE", "DOC-PKG-SCHEMAS", "DOC-PKG-METADATA", "DOC-PKG-SYNC",
+      "DOC-HOME-RESOLVE", "DOC-CAP-DISCOVERY", "DOC-MIG-JOURNAL",
+      "DOC-LOCK-01", "DOC-LOCK-02", "DOC-LOCK-03",
+    ]) {
+      assert.ok(ids.has(expected), `${expected} is reported`)
+    }
+    const sync = report.checks.find((c) => c.id === "DOC-PKG-SYNC")
+    assert.match(sync!.summary, /matches source|static as shipped/, "sync check runs the real --check path")
+    // The doctor run itself is read-only: nothing repaired, nothing canonical written.
+    assert.equal(report.repaired.length, 0)
   })
 })

@@ -227,7 +227,10 @@ export async function openGlobalHome(
         remediation: orphanTemps.length ? "Run `apex-agent doctor --repair` to clean them." : undefined,
       })
 
-      // Stale/active lock records: count lock files and their ages.
+      // 45 §4 DOC-LOCK-01..03 — three distinct lock checks. Writability rides the
+      // resolved home mode (a doctor check never writes a probe file); staleness
+      // uses the same-host age policy the lock manager itself enforces; liveness
+      // is informational only.
       const lockDir = path.join(resolution.path, "locks")
       let stale = 0
       let active = 0
@@ -248,11 +251,26 @@ export async function openGlobalHome(
         /* no locks dir yet */
       }
       checks.push({
-        id: "DOC-HOME-LOCKS",
-        area,
+        id: "DOC-LOCK-01",
+        area: "LOCK",
+        status: mode === "READ_WRITE" ? "OK" : "UNAVAILABLE",
+        summary:
+          mode === "READ_WRITE"
+            ? "Lock directory is writable (home resolved READ_WRITE)."
+            : "Home is not writable in this mode; locks cannot be taken.",
+      })
+      checks.push({
+        id: "DOC-LOCK-02",
+        area: "LOCK",
         status: stale > 0 ? "WARN" : "OK",
-        summary: `${active} active, ${stale} stale lock record(s).`,
+        summary: `${stale} stale lock record(s).`,
         remediation: stale > 0 ? "Stale same-host locks with absent pids are recoverable under policy; run doctor --repair." : undefined,
+      })
+      checks.push({
+        id: "DOC-LOCK-03",
+        area: "LOCK",
+        status: "OK",
+        summary: `${active} live lock record(s) (informational).`,
       })
 
       return checks

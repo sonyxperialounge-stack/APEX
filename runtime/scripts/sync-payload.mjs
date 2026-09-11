@@ -9,6 +9,7 @@
  */
 
 import fs from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -133,6 +134,55 @@ function main() {
   console.log("payload synced and rewritten for shipping, from", path.relative(process.cwd(), PROJECT))
 }
 
-if (import.meta.url === `file://${process.argv[1]?.split(path.sep).join("/")}` || process.argv[1]?.endsWith("sync-payload.mjs")) {
+/**
+ * `--check` (DOC-PKG-01, 45 §4) — rebuild the managed copy into a temp dir and
+ * compare, byte for byte, with what is on disk. Writes nothing to `payload/`.
+ * The comparison covers exactly the set this script manages (COPY_DIRS +
+ * COPY_FILES after rewrites); authored dirs (skills, opencode) are out of scope.
+ */
+function check() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "apex-sync-check-"))
+  try {
+    for (const dir of COPY_DIRS) {
+      const from = path.join(PROJECT, dir)
+      if (fs.existsSync(from)) copyDir(from, path.join(tmp, dir))
+    }
+    for (const file of COPY_FILES) {
+      const from = path.join(PROJECT, file)
+      if (fs.existsSync(from)) fs.copyFileSync(from, path.join(tmp, file))
+    }
+    rewriteAll(tmp)
+
+    const expected = listFiles(tmp)
+    const drift = []
+    for (const rel of expected) {
+      const live = path.join(PAYLOAD, rel)
+      if (!fs.existsSync(live)) drift.push(`missing ${rel}`)
+      else if (fs.readFileSync(path.join(tmp, rel)).equals(fs.readFileSync(live)) === false) drift.push(`stale ${rel}`)
+    }
+    if (drift.length > 0) {
+      for (const d of drift) console.log(`DRIFT ${d}`)
+      console.log(`payload drifted from source (${drift.length} of ${expected.length} managed file(s)); run the payload sync to repair.`)
+      process.exitCode = 1
+    } else {
+      console.log(`payload matches source (${expected.length} managed file(s) compared).`)
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+}
+
+function listFiles(dir, base = dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) listFiles(full, base, out)
+    else out.push(path.relative(base, full))
+  }
+  return out
+}
+
+const checkOnly = process.argv.includes("--check")
+if (checkOnly) check()
+else if (import.meta.url === `file://${process.argv[1]?.split(path.sep).join("/")}` || process.argv[1]?.endsWith("sync-payload.mjs")) {
   main()
 }

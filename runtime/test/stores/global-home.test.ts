@@ -144,7 +144,9 @@ describe("WP-016 describe() — Doctor checks (31 §5)", () => {
     const checks = await home.describe()
     assert.equal(checks.find((c) => c.id === "DOC-HOME-RESOLVE")?.status, "OK")
     assert.equal(checks.find((c) => c.id === "DOC-HOME-STRUCTURE")?.status, "OK")
-    assert.equal(checks.find((c) => c.id === "DOC-HOME-LOCKS")?.status, "OK")
+    assert.equal(checks.find((c) => c.id === "DOC-LOCK-01")?.status, "OK")
+    assert.equal(checks.find((c) => c.id === "DOC-LOCK-02")?.status, "OK")
+    assert.equal(checks.find((c) => c.id === "DOC-LOCK-03")?.status, "OK")
     assert.equal(checks.find((c) => c.id === "DOC-HOME-TEMPFILES")?.status, "OK")
   })
 
@@ -175,8 +177,10 @@ describe("WP-016 describe() — Doctor checks (31 §5)", () => {
       "utf8",
     )
     const checks = await home.describe()
-    const locks = checks.find((c) => c.id === "DOC-HOME-LOCKS")
+    const locks = checks.find((c) => c.id === "DOC-LOCK-02")
     assert.equal(locks?.status, "WARN")
     assert.ok(locks?.remediation, "names the repair path")
+    assert.equal(locks?.area, "LOCK", "45 §4 registers the lock checks under LOCK")
+    assert.equal(checks.find((c) => c.id === "DOC-LOCK-01")?.status, "OK", "writability is judged independently of staleness")
   })
 })
