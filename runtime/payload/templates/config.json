@@ -28,10 +28,21 @@
     "handoffAtContextPct": 80
   },
 
+  "_contextNote": "The attached-context guard's budget. context.budgetTokens is the token ceiling for the whole working context; attached content over 50% is refused, over 25% warns (54 §11.1).",
+  "context": {
+    "budgetTokens": 2000
+  },
+
   "council": {
     "enabled": false,
     "reviewerModel": null,
     "conveneOn": ["security", "irreversible", "architecture", "third_failure"]
+  },
+
+  "_skillsNote": "Model-facing skill selection (54 §8/§7). maxBodiesPerTask caps how many skill bodies load for one task; seedSkills ships the bundled seed library.",
+  "skills": {
+    "maxBodiesPerTask": 3,
+    "seedSkills": true
   },
 
   "_delegationNote": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",
