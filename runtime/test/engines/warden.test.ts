@@ -15,6 +15,47 @@ import { UserDecisionRequired, ApexError } from "../../src/core/errors.ts"
 import { setLogDir } from "../../src/core/log.ts"
 import type { ApexConfig } from "../../src/core/types.ts"
 
+// ── WP-055 — replan after a capability loss (21 §10) ───────────────────────
+
+interface LossLike {
+  outcome: "RECOVERED" | "BLOCKED" | "IGNORED"
+  replanned: boolean
+  selected: null
+  report: string
+  recovery: {
+    failureId: string
+    class: "CAPABILITY_UNAVAILABLE"
+    capabilityId: string
+    observed: string
+    attemptFingerprint: string
+    recoveryAction: string
+    outcome: "RECOVERED" | "BLOCKED" | "IGNORED"
+    evidenceIds: string[]
+    createdAt: string
+  }
+}
+
+function lossResult(over: Partial<LossLike> = {}): LossLike {
+  return {
+    outcome: "BLOCKED",
+    replanned: false,
+    selected: null,
+    report: "Capability unavailable after a bounded refresh.",
+    recovery: {
+      failureId: "FAIL-abc123",
+      class: "CAPABILITY_UNAVAILABLE",
+      capabilityId: "code.rename",
+      observed: "not found",
+      attemptFingerprint: "deadbeef12345678",
+      recoveryAction: "capability unavailable; reported UNAVAILABLE with fallback",
+      outcome: "BLOCKED",
+      evidenceIds: [],
+      createdAt: "2026-09-11T00:00:00.000Z",
+    },
+    ...over,
+  }
+}
+
 let dir: string
 let ledger: Ledger
 let cfg: ApexConfig
@@ -748,5 +789,53 @@ describe("WP-048 — children propose, parents promote (LRNT-T03, FLT-T02)", () 
       !validated.globalWriteAttempts.some((p) => p.includes("pending")),
       "staging a candidate in skills/pending/ is the LEGAL path, not a violation",
     )
+  })
+})
+
+// ── WP-055 — replan after a capability loss (21 §10) ────────────────────────
+
+describe("WP-055 — replan after a capability loss (21 §10)", () => {
+  test("a RECOVERED replan amends context and never re-issues the failed call", async () => {
+    const w = warden()
+    const replacement = {
+      id: "code.rename",
+      title: "Rename symbol",
+      description: "",
+      aliases: ["renameOne"],
+      source: { kind: "mcp" as const, providerId: "p2", toolName: "renameOne" },
+      availability: "AVAILABLE" as const,
+      effects: ["WRITE" as const],
+      trust: "TRUSTED" as const,
+      lastCheckedAt: "2026-09-11T00:00:00.000Z",
+    }
+    const loss = lossResult({ outcome: "RECOVERED", replanned: true, recovery: { ...lossResult().recovery, outcome: "RECOVERED", recoveryAction: "re-planned onto safe equivalent code.rename" } })
+    const replanned = await w.replanAfterCapabilityLoss(packet(), loss, replacement)
+    assert.equal(replanned.attempt, 2)
+    assert.ok(replanned.strategyChange.includes("equivalent"))
+    assert.ok(replanned.objective.includes("CAPABILITY LOSS"))
+    assert.ok(replanned.objective.includes("equivalent capability code.rename"))
+    assert.ok(replanned.objective.includes("Do not re-issue the failed call"))
+
+    const text = await fsp.readFile(ledger.file("PROGRESS.md"), "utf8")
+    assert.ok(text.includes("capability loss: code.rename"))
+    assert.ok(text.includes("FAIL-abc123"))
+    assert.ok(text.includes("CAPABILITY_UNAVAILABLE"))
+  })
+
+  test("a BLOCKED loss routes to the stated fallback in the packet context", async () => {
+    const w = warden()
+    const replanned = await w.replanAfterCapabilityLoss(packet(), lossResult(), null)
+    assert.ok(replanned.strategyChange.includes("UNAVAILABLE"))
+    assert.ok(replanned.objective.includes("fallback"))
+    assert.ok(replanned.objective.includes("Do not re-issue the failed call"))
+  })
+
+  test("attempt increments and survived work is carried forward", async () => {
+    const w = warden()
+    const original = packet({ alreadyExists: ["src/storage.py"] })
+    const replanned = await w.replanAfterCapabilityLoss(original, lossResult({ outcome: "RECOVERED", replanned: false }), null)
+    assert.equal(replanned.attempt, 2)
+    assert.deepEqual(replanned.alreadyExists, ["src/storage.py"])
+    assert.ok(replanned.strategyChange.includes("refreshed"))
   })
 })

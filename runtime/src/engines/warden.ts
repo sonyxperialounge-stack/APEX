@@ -36,6 +36,8 @@ import type { ApexConfig, SubagentRecord, SubagentState } from "../core/types.ts
 import { ApexError, UserDecisionRequired } from "../core/errors.ts"
 import { isUnder } from "../core/paths.ts"
 import { event, log } from "../core/log.ts"
+import type { CapabilityDescriptor } from "./capability-registry.ts"
+import type { HandleStructuralFailureResult, RecoveryRecord } from "./capability-registry.ts"
 
 // ── packets ─────────────────────────────────────────────────────────────────
 
@@ -588,6 +590,52 @@ export class Warden {
 
   // ── WAR-006, WAR-007, WAR-008 — recovery ──────────────────────────────────
 
+/**
+ * 21 §10 / WP-055 — re-plan a packet after a capability loss. The loss (the
+ * recovery record) is recorded in PROGRESS.md before anything else — a crash
+ * loses nothing (WAR-002 spirit); the packet's context is amended so the
+ * subagent knows it is being issued under a recovered/equivalent capability
+ * and must not re-issue the failed call itself. Honest outcome: RECOVERED and
+ * replanned only when a safe equivalent exists; otherwise the packet is told
+ * the capability is UNAVAILABLE with the fallback, and no pretend call is ever
+ * part of the replan (CAP-T05).
+ */
+async replanAfterCapabilityLoss(
+  packet: SubagentPacket,
+  loss: HandleStructuralFailureResult,
+  replacement: CapabilityDescriptor | null,
+): Promise<SubagentPacket> {
+  await this.ledger.appendProgress({
+    reqId: packet.reqIds[0] ?? "",
+    what: `capability loss: ${loss.recovery.capabilityId}`,
+    note: JSON.stringify(loss.recovery),
+  })
+  event("warden.replan", {
+    packet: packet.id,
+    capability: loss.recovery.capabilityId,
+    outcome: loss.recovery.outcome,
+  })
+
+  const survived = packet.alreadyExists.length
+    ? packet.alreadyExists
+    : packet.checkpointIntervalMs > 0
+      ? [packet.objective]
+      : []
+
+  return {
+    ...packet,
+    attempt: packet.attempt + 1,
+    strategyChange: strategyChangeForLoss(loss),
+    alreadyExists: survived,
+    objective:
+      loss.outcome === "RECOVERED" && replacement !== null
+        ? `${packet.objective} — CAPABILITY LOSS: ${loss.recovery.capabilityId} failed; continuing via equivalent capability ${replacement.id}. Do not re-issue the failed call.`
+        : `${packet.objective} — CAPABILITY LOSS: ${loss.recovery.capabilityId} is UNAVAILABLE; execute with the fallback this task's planner stated. Do not re-issue the failed call.`,
+  }
+}
+
+// ── WAR-006, WAR-007, WAR-008 — recovery ──────────────────────────────────
+
   /**
    * Build the replacement packet. Never restarts from zero: what survived on disk is
    * stated explicitly so the replacement cannot redo it.
@@ -829,6 +877,18 @@ export class Warden {
       `             ── ${report.dispatched} dispatched, ${report.terminal} terminal ${report.reconciles ? "✓" : "✗ DOES NOT RECONCILE"}`,
       ...(report.notes.length ? ["", ...report.notes.map((n) => `NOTE: ${n}`)] : []),
     ].join("\n")
+  }
+}
+
+/** 21 §10 — what the replacement packet must be told, per recovery outcome. */
+function strategyChangeForLoss(loss: HandleStructuralFailureResult): string {
+  switch (loss.outcome) {
+    case "RECOVERED":
+      return loss.replanned ? "The failed capability is gone; an equivalent conducts the work." : "Capability refreshed; the selected capability may originate from another provider."
+    case "BLOCKED":
+      return "Capability UNAVAILABLE; use the stated fallback, and report if the fallback also fails."
+    case "IGNORED":
+      return "The capability was already unavailable; no call was issued."
   }
 }
 

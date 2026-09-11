@@ -187,7 +187,9 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     },
   })
   await registerHostTools(registry, hostCaps, HOST_PROVIDER_ID)
-  const disposeDiscovery = onHostCapabilityChange(hostCaps, (reason) => registry.refresh(reason))
+  const disposeDiscovery = onHostCapabilityChange(hostCaps, (reason) => {
+    void registry.refresh(reason)
+  })
 
   return {
     cfg,

@@ -314,3 +314,216 @@ describe("WP-050b — code-intelligence ids (CAP-T10)", () => {
     assert.equal(r.select("code.diagnostics")!.source.toolName, "publishDiagnostics")
   })
 })
+
+// ── WP-055 — capability loss recovery (21 §10, 27 §§4–5, §14) ──────────────
+
+function advClock(start = NOW): () => number {
+  let t = start
+  return () => (t += 1000)
+}
+
+function lossCap(over: Partial<CapabilityDescriptor> = {}): CapabilityDescriptor {
+  return cap({ id: "code.rename", title: "Rename symbol", effects: ["WRITE"], availability: "AVAILABLE", ...over })
+}
+
+describe("WP-055 — a structural failure marks the descriptor DEGRADED (CAP-T05)", () => {
+  test("the selected descriptor is DEGRADED with the observed failure; no fake call", () => {
+    const r = new CapabilityRegistry({ now: FIXED })
+    r.register(lossCap())
+    const marked = r.markStructuralFailure("code.rename", "tool disappeared")
+    assert.ok(marked)
+    assert.equal(marked!.availability, "DEGRADED")
+    assert.equal(marked!.reason, "tool disappeared")
+    assert.equal(r.isAvailable("code.rename"), false)
+    assert.equal(r.select("code.rename"), null)
+  })
+
+  test("an already-unavailable capability is not downgraded twice", () => {
+    const r = new CapabilityRegistry({ now: FIXED })
+    r.register(lossCap({ availability: "UNAVAILABLE", reason: "previously" }))
+    assert.equal(r.markStructuralFailure("code.rename", "again"), null)
+    assert.equal(r.select("code.rename"), null)
+  })
+
+  test("re-registration by discovery lifts DEGRADED back to AVAILABLE", () => {
+    const r = new CapabilityRegistry({ now: FIXED })
+    r.register(lossCap())
+    r.markStructuralFailure("code.rename", "gone")
+    r.register(lossCap({ lastCheckedAt: "2026-09-11T01:00:00.000Z" }))
+    assert.equal(r.select("code.rename")!.availability, "AVAILABLE")
+    assert.equal(r.select("code.rename")!.reason, undefined)
+  })
+
+  test("DEGRADED stays non-selectable after a refresh that does not revive it", async () => {
+    let refreshed = 0
+    const r = new CapabilityRegistry({ now: FIXED, onRefresh: async () => { refreshed++ } })
+    r.register(lossCap())
+    await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "tool not found" })
+    assert.equal(refreshed, 1)
+    assert.equal(r.isAvailable("code.rename"), false)
+    assert.equal(r.select("code.rename"), null)
+  })
+})
+
+describe("WP-055 — the bounded refresh (RCV-T04)", () => {
+  test("refresh runs once per reason and reports it", async () => {
+    const calls: string[] = []
+    const r = new CapabilityRegistry({
+      now: FIXED,
+      onRefresh: async (reason) => { calls.push(reason) },
+    })
+    assert.equal(await r.refresh("structural-failure:fs.read"), true)
+    assert.equal(await r.refresh("structural-failure:fs.read"), false)
+    assert.equal(await r.refresh("structural-failure:other"), true)
+    assert.deepEqual(calls, ["structural-failure:fs.read", "structural-failure:other"])
+  })
+
+  test("repeated loss of the same id refreshes only once (no retry storm)", async () => {
+    let refreshed = 0
+    const r = new CapabilityRegistry({
+      now: advClock(),
+      onRefresh: async () => { refreshed++ },
+    })
+    r.register(lossCap())
+    await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "not found" })
+    await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "not found again" })
+    assert.equal(refreshed, 1)
+  })
+
+  test("callers can distinguish a bounded refresh from a re-probe", async () => {
+    const r = new CapabilityRegistry({ now: FIXED, onRefresh: async () => {} })
+    r.register(cap({ id: "fs.read", title: "Read file", effects: ["READ"] }))
+    await r.refresh("bootstrap")
+    assert.equal(await r.refresh("bootstrap"), false, "same reason never re-probes")
+  })
+})
+
+describe("WP-055 — recovery outcomes (21 §10)", () => {
+  test("pure reboot: DEGRADED back to AVAILABLE", async () => {
+    const r = new CapabilityRegistry({
+      now: advClock(),
+      onRefresh: async () => {
+        r.register(lossCap({ lastCheckedAt: "2026-09-11T02:00:00.000Z" }))
+      },
+    })
+    r.register(lossCap())
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "call failed" })
+    assert.equal(res.outcome, "RECOVERED")
+    assert.equal(res.replanned, false)
+    assert.equal(res.selected!.source.providerId, "test")
+    assert.ok(res.report.includes("recovered"))
+  })
+
+  test("revival with fewer effects is refused (a repair is not a recovery)", async () => {
+    const r = new CapabilityRegistry({
+      now: advClock(),
+      onRefresh: async () => {
+        r.register(lossCap({ effects: ["READ"], source: { kind: "mcp", providerId: "other", toolName: "rename" } }))
+      },
+    })
+    r.register(lossCap())
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "not found" })
+    assert.equal(res.outcome, "BLOCKED")
+    assert.equal(res.selected, null)
+    assert.ok(res.report.includes("UNAVAILABLE"))
+  })
+
+  test("UNAVAILABLE + fallback when nothing revives and no equivalent exists", async () => {
+    let refreshed = 0
+    const r = new CapabilityRegistry({ now: advClock(), onRefresh: async () => { refreshed++ } })
+    r.register(lossCap())
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "gone" })
+    assert.equal(res.outcome, "BLOCKED")
+    assert.equal(refreshed, 1)
+    assert.equal(res.replanned, false)
+    assert.equal(res.selected, null)
+    assert.ok(res.report.includes("UNAVAILABLE"))
+    assert.ok(res.report.includes("fallback"))
+  })
+
+  test("equivalent same-id candidate re-plans the work", async () => {
+    const r = new CapabilityRegistry({ now: advClock() })
+    r.register(lossCap({ source: { kind: "mcp", providerId: "p1", toolName: "renameOne" } }))
+    r.register(lossCap({ source: { kind: "mcp", providerId: "p2", toolName: "renameTwo" } }))
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "p1 dropped" })
+    assert.equal(res.outcome, "RECOVERED")
+    assert.equal(res.replanned, true)
+    assert.equal(res.selected!.source.providerId, "p2")
+    assert.ok(res.report.includes("equivalent"))
+  })
+
+  test("an equivalent may never paper over a missing effect", async () => {
+    const r = new CapabilityRegistry({ now: advClock() })
+    r.register(lossCap({ effects: ["DELETE", "DESTRUCTIVE"], source: { kind: "mcp", providerId: "p1", toolName: "wipe" } }))
+    r.register(lossCap({ effects: ["READ"], source: { kind: "mcp", providerId: "p2", toolName: "read" } }))
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "p1 gone" })
+    assert.equal(res.outcome, "BLOCKED")
+    assert.equal(res.replanned, false)
+  })
+
+  test("the caller's search surface can find a cross-id equivalent", async () => {
+    const r = new CapabilityRegistry({ now: advClock() })
+    r.register(lossCap())
+    r.register(cap({ id: "host.rename2", title: "Rename v2", effects: ["WRITE"], source: { kind: "host", providerId: "h", toolName: "rename2" } }))
+    const res = await r.handleStructuralFailure(
+      { capabilityId: "code.rename", observed: "not found" },
+      {
+        findEquivalent: (failed) => {
+          const hit = r.candidates("host.rename2")[0]!
+          return hit.effects.length === failed.effects.length ? hit : null
+        },
+      },
+    )
+    assert.equal(res.outcome, "RECOVERED")
+    assert.equal(res.replanned, true)
+    assert.equal(res.selected!.id, "host.rename2")
+  })
+
+  test("an unsafe search hit is refused", async () => {
+    const r = new CapabilityRegistry({ now: advClock() })
+    r.register(lossCap({ effects: ["DELETE", "DESTRUCTIVE"] }))
+    const res = await r.handleStructuralFailure(
+      { capabilityId: "code.rename", observed: "gone" },
+      {
+        findEquivalent: () => cap({ id: "host.safe", title: "Lookalike", effects: ["READ"], source: { kind: "host", providerId: "h", toolName: "safe" } }),
+      },
+    )
+    assert.equal(res.outcome, "BLOCKED")
+    assert.equal(res.replanned, false)
+  })
+})
+
+describe("WP-055 — recovery evidence and honesty (27 §§4, 13–14; RCV-T06)", () => {
+  test("the record carries the full 27 §14 shape, with a FAIL- failure id", async () => {
+    const clock = advClock()
+    const r = new CapabilityRegistry({ now: clock })
+    r.register(lossCap())
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "connection refused" })
+    assert.match(res.recovery.failureId, /^FAIL-/)
+    assert.equal(res.recovery.class, "CAPABILITY_UNAVAILABLE")
+    assert.equal(res.recovery.capabilityId, "code.rename")
+    assert.equal(res.recovery.observed, "connection refused")
+    assert.match(res.recovery.attemptFingerprint, /^[0-9a-f]{16}$/)
+    assert.equal(res.recovery.outcome, "BLOCKED")
+    assert.deepEqual(res.recovery.evidenceIds, [])
+    assert.ok(res.recovery.createdAt)
+  })
+
+  test("an already-unavailable capability is IGNORED, not recovered (RCV-T06)", async () => {
+    let refreshed = 0
+    const r = new CapabilityRegistry({ now: advClock(), onRefresh: async () => { refreshed++ } })
+    r.register(lossCap({ availability: "UNAVAILABLE", reason: "old" }))
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "still gone" })
+    assert.equal(res.outcome, "IGNORED")
+    assert.equal(refreshed, 0)
+    assert.equal(res.selected, null)
+    assert.ok(res.report.includes("was already unavailable"))
+  })
+
+  test("recovery is not reported as re-finding a lost capability", async () => {
+    const r = new CapabilityRegistry({ now: advClock() })
+    r.register(lossCap())
+    const res = await r.handleStructuralFailure({ capabilityId: "code.rename", observed: "lost" })
+    assert.ok(!res.report.includes("restored"), "never claims the lost tool came back")
+  })
+})

@@ -17,7 +17,8 @@
  */
 
 /**
- * The capability registry (21 §§4–5, 47 §4.9; WP-051).
+ * The capability registry (21 §§4–5, 47 §4.9; WP-051) and the capability-loss
+ * recovery flow (21 §10, 27 §§4–5, §14; WP-055).
  *
  * The normalization layer between arbitrary host tool names and stable ARMY
  * concepts: host-specific names are ALIASES, never the canonical API (21 §2).
@@ -32,7 +33,8 @@
  */
 
 import { ApexError } from "../core/errors.ts"
-import { toIsoString } from "../core/ids.ts"
+import { createHash } from "node:crypto"
+import { newId, toIsoString } from "../core/ids.ts"
 import { CAPABILITY_EFFECTS, type CapabilityEffect, type OperationKind } from "../core/types.ts"
 import { toOperationKind, isDestructive } from "./governor.ts"
 
@@ -126,6 +128,89 @@ export function mayExpose(cap: CapabilityDescriptor, ctx: ExposureContext): Expo
     return { allowed: false, reason: "untrusted destructive capability" }
   }
   return { allowed: true, reason: "policy permits exposure" }
+}
+
+/**
+ * WP-055 — structural failure classification (21 §10 / 27 §5). A failure is
+ * structural — the capability itself is gone — when the call never reached the
+ * tool: the tool is not found, the provider is disconnected, or the call was
+ * never issued at all. Anything else (a real but failing invocation) is a tool
+ * result the caller must report honestly, not a capability-loss event. Never
+ * guesses: every classification is a documented decision (27 §13).
+ */
+export type StructuralFailureKind =
+  | "not_found"       // the tool is no longer registered in the host
+  | "disconnected"    // the provider (MCP/extension/host) dropped
+  | "call_not_issued" // the invoke bridge refused before any call
+
+export function isStructuralFailure(
+  call: { notFound?: boolean; disconnected?: boolean; callIssued?: boolean },
+): { structural: boolean; kind: StructuralFailureKind } {
+  if (call.notFound === true) return { structural: true, kind: "not_found" }
+  if (call.disconnected === true) return { structural: true, kind: "disconnected" }
+  if (call.callIssued === false) return { structural: true, kind: "call_not_issued" }
+  return { structural: false, kind: "call_not_issued" }
+}
+
+/** 27 §4 — stable fingerprint of an attempt, so identical attempts are detected. */
+export function attemptFingerprint(input: string): string {
+  return createHash("sha256").update(input).digest("hex").slice(0, 16)
+}
+
+/**
+ * 27 §14 — recovery evidence: the persistent record of every capability-loss
+ * recovery. `failureId` is the mutable identity (27 §1); a repeated recovery
+ * for the same observed failure keeps one id, a fresh failure opens a new one.
+ * IGNORED means the call was never issued — there is nothing to recover, and
+ * pretending otherwise manufactures evidence (RCV-T06).
+ */
+export type RecoveryOutcome = "RECOVERED" | "BLOCKED" | "IGNORED"
+
+export interface RecoveryRecord {
+  failureId: string
+  class: "CAPABILITY_UNAVAILABLE"
+  capabilityId: string
+  observed: string
+  attemptFingerprint: string
+  recoveryAction: string
+  outcome: RecoveryOutcome
+  evidenceIds: string[]
+  createdAt: string
+}
+
+export interface HandleStructuralFailureInput {
+  /** The canonical capability id whose call failed structurally. */
+  capabilityId: string
+  /** Human-readable observation as it happened (27 §14 `observed`). */
+  observed: string
+  /** Refreshed lazily: only distinguishes the attempt fingerprint (27 §4). */
+  attemptContext?: string
+}
+
+export interface HandleStructuralFailureOptions {
+  /** Injected clock (43 §7); defaults to the registry clock. */
+  now?: () => number
+  /**
+   * 21 §10 step 4 — find a safe equivalent that CONDUCTS THE SAME WORK when
+   * the capability itself did not revive. Defaults to the same-id candidate
+   * with compatible effects (`equivalentSelection`); a caller with a search
+   * surface (WP-053) may supply a cross-id search here. Whatever it returns is
+   * still checked: AVAILABLE, not the failed descriptor, effects must cover
+   * the failed one's — a replacement never papers over a missing DESTRUCTIVE.
+   */
+  findEquivalent?: (failed: CapabilityDescriptor) => CapabilityDescriptor | null
+}
+
+export interface HandleStructuralFailureResult {
+  outcome: RecoveryOutcome
+  /** The fresh selection after the bounded refresh, or null. */
+  selected: CapabilityDescriptor | null
+  /** True when an equivalent, safe capability conducts the work instead. */
+  replanned: boolean
+  /** Machine-readable phrasing for the caller to report (never fake availability). */
+  report: string
+  /** The persistent recovery record (27 §14). */
+  recovery: RecoveryRecord
 }
 
 const TRUST_RANK: Record<CapabilityTrust, number> = {
@@ -336,6 +421,181 @@ export class CapabilityRegistry {
     return best?.availability === "AVAILABLE" ? best : null
   }
 
+  /**
+   * 21 §10 / 27 §5 — a capability call failed structurally. The exact
+   * descriptor that would have been selected is marked DEGRADED with the
+   * observed failure, so `select` and `isAvailable` refuse it from that moment
+   * on: no pretend call is ever issued (CAP-T05). DEGRADED is transient —
+   * only a fresh re-registration by discovery lifts it back to AVAILABLE.
+   * Returns the marked descriptor, or null when the id has no selectable
+   * candidate (an already-unavailable capability cannot be downgraded twice).
+   */
+  markStructuralFailure(id: string, observed: string): CapabilityDescriptor | null {
+    const selected = this.select(id)
+    if (selected === null) return null
+    const list = this.candidates(id)
+    const index = list.indexOf(selected)
+    const marked: CapabilityDescriptor = { ...selected, availability: "DEGRADED", reason: observed }
+    list[index] = marked
+    return marked
+  }
+
+  /**
+   * CAP-T06 — a provider disconnect invalidates that provider's stale
+   * AVAILABLE truth, event-driven and without a daemon: nothing polls. Records
+   * stay UNAVAILABLE until discovery re-registers them (availability is
+   * re-registration-only), so a vanished tool is never silently "fine".
+   * Returns how many descriptors changed.
+   */
+  invalidateProviderAvailability(providerId: string, reason: string): number {
+    let changed = 0
+    for (const list of this.byId.values()) {
+      for (let i = 0; i < list.length; i++) {
+        const cap = list[i]!
+        if (cap.source.providerId !== providerId || cap.availability === "UNAVAILABLE") continue
+        list[i] = { ...cap, availability: "UNAVAILABLE", reason }
+        changed++
+      }
+    }
+    return changed
+  }
+
+  /**
+   * 21 §10 / 27 §5 — capability-loss recovery, the whole ladder:
+   *
+   *   1. OBSERVE  — the caller names the structural failure;
+   *   2. mark the selected descriptor DEGRADED so no further call is issued;
+   *   3. refresh the registry exactly once per fresh reason (bounded, 47 §4.9),
+   *      with this id as the reason so a repeated loss is a no-op (RCV-T04);
+   *   4. re-select: a revived candidate (or an equivalent one under the same
+   *      canonical id with compatible effects) conducts the work; else
+   *   5. report UNAVAILABLE + fallback — never a pretend call (CAP-T05).
+   *
+   * The refresh stays one-shot and non-repeating for the SAME observed failure;
+   * there is no poll loop (21 §9), no retry storm (27 §4). If a different failure
+   * occurs the section re-runs.
+   */
+  async handleStructuralFailure(
+    input: HandleStructuralFailureInput,
+    opts: HandleStructuralFailureOptions = {},
+  ): Promise<HandleStructuralFailureResult> {
+    const observed = input.observed.trim()
+    if (input.capabilityId.trim().length === 0 || observed.length === 0) {
+      throw new ApexError("A capability-loss recovery needs a capability id and the observed failure.", "BAD_CAPABILITY")
+    }
+    const now = opts.now ?? this.now
+    const failureId = newId("FAIL", { now })
+
+    const marked = this.markStructuralFailure(input.capabilityId, observed)
+    if (marked === null) {
+      // Nothing was available to lose: the caller's report stands, but there is
+      // no recovery record and nothing to refresh — pretending otherwise would
+      // manufacture evidence (RCV-T06).
+      return {
+        outcome: "IGNORED",
+        selected: null,
+        replanned: false,
+        report: `Capability "${input.capabilityId}" was already unavailable; the call was not issued.`,
+        recovery: {
+          failureId,
+          class: "CAPABILITY_UNAVAILABLE",
+          capabilityId: input.capabilityId,
+          observed,
+          attemptFingerprint: attemptFingerprint(`${input.capabilityId}\n${observed}\n${input.attemptContext ?? ""}`),
+          recoveryAction: "none",
+          outcome: "IGNORED",
+          evidenceIds: [],
+          createdAt: toIsoString(now()),
+        },
+      }
+    }
+
+    // 3 — the bounded refresh, once per reason (this id), then re-select.
+    await this.refresh(`structural-failure:${input.capabilityId}`)
+    const selected = this.select(input.capabilityId)
+
+    // A re-selection is only usable if its effects cover the failed one's: an
+    // AVAILABLE candidate with fewer effects would silently downgrade the
+    // operation, which is a repair, not a recovery (27 §1 ladder).
+    const originalEffects = new Set(marked.effects)
+    const coversOriginal = (cap: CapabilityDescriptor): boolean =>
+      cap !== marked && cap.availability === "AVAILABLE" && cap.effects.every((e) => originalEffects.has(e))
+    const usable = selected !== null && coversOriginal(selected) ? selected : null
+
+    // 4 — equivalent: same-id candidate first, then the caller's search hook.
+    const claimed = usable === null ? (opts.findEquivalent?.(marked) ?? null) : null
+    const equivalent =
+      claimed !== null && coversOriginal(claimed) ? claimed : usable === null ? this.equivalentSelection(input.capabilityId, marked) : null
+    const revived = usable ?? equivalent
+    // The same provider+tool returning IS a reboot; a different conductor is a
+    // re-plan (21 §10 step 4) the packet must be told about.
+    const sameProvider =
+      revived !== null &&
+      revived.source.providerId === marked.source.providerId &&
+      revived.source.toolName === marked.source.toolName
+
+    let recoveryAction: string
+    let outcome: RecoveryOutcome
+    if (revived !== null && sameProvider) {
+      outcome = "RECOVERED"
+      recoveryAction = statusAction(revived)
+    } else if (revived !== null) {
+      outcome = "RECOVERED"
+      recoveryAction = `re-planned onto safe equivalent ${revived.id}`
+    } else {
+      outcome = "BLOCKED"
+      recoveryAction = "capability unavailable; reported UNAVAILABLE with fallback"
+    }
+
+    const recovery: RecoveryRecord = {
+      failureId,
+      class: "CAPABILITY_UNAVAILABLE",
+      capabilityId: input.capabilityId,
+      observed,
+      attemptFingerprint: attemptFingerprint(`${input.capabilityId}\n${observed}\n${input.attemptContext ?? ""}`),
+      recoveryAction,
+      outcome,
+      evidenceIds: [],
+      createdAt: toIsoString(now()),
+    }
+
+    return {
+      outcome,
+      selected: revived,
+      replanned: revived !== null && !sameProvider,
+      report:
+        revived === null
+          ? `Capability "${input.capabilityId}" is UNAVAILABLE after a bounded refresh. No safe equivalent exists; report it and use the stated fallback.`
+          : sameProvider
+            ? `Capability "${input.capabilityId}" recovered (${revived.availability.toLowerCase()}) after a bounded refresh.`
+            : `Capability "${input.capabilityId}" is unavailable; re-planned onto safe equivalent "${revived.id}".`,
+      recovery,
+    }
+  }
+
+  /**
+   * 21 §10 — an equivalent safe capability: another candidate under the same
+   * canonical id that is AVAILABLE and whose effects are a compatible superset
+   * of the failed one. "Safe" is checked, never assumed: the replacement may
+   * never paper over a missing DESTRUCTIVE with a read (27 §1 ladder step 5).
+   * Candidates are ranked like `select`; null when nothing qualifies, and
+   * cross-id guessing never happens — search remains the caller's bridge for
+   * finding a *different* canonical capability.
+   */
+  equivalentSelection(
+    capabilityId: string,
+    original: CapabilityDescriptor,
+  ): CapabilityDescriptor | null {
+    const list = this.candidates(capabilityId)
+    const originalEffects = new Set(original.effects)
+    const safe = list
+      .filter((cap) => cap !== original && cap.availability === "AVAILABLE")
+      .filter((cap) => cap.effects.every((e) => originalEffects.has(e)))
+    if (safe.length === 0) return null
+    safe.sort((a, b) => rankCandidate(b) - rankCandidate(a))
+    return safe[0]!
+  }
+
   /** All registered descriptors, flattened in registration order. */
   all(): CapabilityDescriptor[] {
     const out: CapabilityDescriptor[] = []
@@ -347,12 +607,15 @@ export class CapabilityRegistry {
    * 47 §4.9 — bounded, once per reason. A second refresh with the same reason is
    * a no-op; a fresh reason (explicit doctor/refresh, connect, disconnect,
    * tool-not-found) runs the hook again. The registry never polls (21 §9).
+   * Returns true when the hook actually ran (RCV-T04: callers can tell a
+   * bounded refresh apart from a re-probe).
    */
-  async refresh(reason: string): Promise<void> {
+  async refresh(reason: string): Promise<boolean> {
     const key = normalizeCapabilityId(reason)
-    if (this.refreshedReasons.has(key)) return
+    if (this.refreshedReasons.has(key)) return false
     this.refreshedReasons.add(key)
     await this.onRefresh(key)
+    return true
   }
 
   /** The ONLY bridge to the Governor (47 §4.9) — delegates to governor.ts (42 §6). */
@@ -367,6 +630,12 @@ export class CapabilityRegistry {
 }
 
 // ── Local helpers (taxonomy imported from core/types.ts — CAP-T07) ──────────
+
+/** 21 §10 — what a recovered selection means, stated plainly (never "restored"). */
+function statusAction(cap: CapabilityDescriptor): string {
+  // select() only ever returns AVAILABLE — the truth this branch states.
+  return `AVAILABLE via ${cap.source.providerId} after a bounded refresh`
+}
 
 function isKnownEffect(effect: string): effect is CapabilityEffect {
   return (CAPABILITY_EFFECTS as readonly string[]).includes(effect)

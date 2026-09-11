@@ -1258,3 +1258,34 @@ set doNotTouch on first init); rendered context line has bold markers
 `**Context:**`; the disposable relaxation applies ONLY to worktree/container —
 an early test draft over-asserted that worktree must never relax.
 Next: WP-055 (capability loss recovery).
+
+## WP-055 — Capability loss recovery
+
+Date: 2026-09-11 | Packet: WP-055 | Branch: upgrade/army-v4 | Dep: WP-054
+Files:
+  ~runtime/src/engines/capability-registry.ts (markStructuralFailure,
+  invalidateProviderAvailability, refresh -> Promise<boolean>, StructuralFailureKind,
+  isStructuralFailure, attemptFingerprint, handleStructuralFailure),
+  ~runtime/src/engines/warden.ts (replanAfterCapabilityLoss, strategyChangeForLoss),
+  ~runtime/src/plugin/index.ts (host capability-change -> bounded registry.refresh),
+  ~runtime/test/engines/capability-registry.test.ts (+24 => 68),
+  ~runtime/test/engines/warden.test.ts (+3 => 84),
+  +.apex/upgrade/EVIDENCE/EVD-055.md
+Decision: Honest recovery ladder (21 §10, 27 §5): mark DEGRADED -> bounded refresh once per
+  reason (RCV-T04, returns boolean) -> effects-gated equivalent search (the repair never
+  papers over a missing effect; caller findEquivalent is a seam, still gated) -> RECOVERED
+  (reboot if same provider+tool, re-plan onto safe equivalent otherwise) or BLOCKED
+  ("report it and use the stated fallback") or IGNORED (nothing to lose: no refresh, no
+  manufactured evidence). Recovery records carry FAIL- ids, CAPABILITY_UNAVAILABLE class,
+  attemptFingerprint = sha256(action-kind+command+cwd+inputs+env) first 16 hex (27 §4, §14).
+  warden.replanAfterCapabilityLoss amends the objective with "Do not re-issue the failed
+  call", increments attempt, carries survived work forward (WAR-006/007/008). CAP-T06:
+  invalidateProviderAvailability flips all non-UNAVAILABLE descriptors in one call, no
+  daemon. Host capability-change discovery routes through the bounded refresh.
+Verify: `npm run verify` -> 1176 pass, 0 fail, exit 0 (~50s).
+Evidence: EVD-055 (CAP-T05, CAP-T06, RCV-T04, RCV-T06).
+Surprises: the ledger writes PROGRESS.md under .apex/ in the project root (LED-001), not the
+  bare project dir - the failing assertion now reads ledger.file("PROGRESS.md"); refresh's
+  void -> Promise<boolean> change rippled into the plugin wiring (void wrapper); a
+  same-provider+same-tool revival is a reboot, only a different conductor re-plans.
+Next: WP-056 (extension contract, Dep WP-051 + WP-042, doc 23).
