@@ -45,10 +45,11 @@
     "seedSkills": true
   },
 
-  "_capabilitiesNote": "Host-provided code intelligence (54 §14). APEX never installs language servers; hostDiagnostics lets a host that already exposes semantic diagnostics record them as evidence. diagnosticsMessage holds the latest host-reported message (evidence only).",
+  "_capabilitiesNote": "Host-provided code intelligence (54 §14). APEX never installs language servers; hostDiagnostics lets a host that already exposes semantic diagnostics record them as evidence. diagnosticsMessage holds the latest host-reported message (evidence only). schemaBudgetTokens caps the compact capability index in tokens (44 §3/WP-053): schemas beyond it are deferred and reached via search/describe.",
   "capabilities": {
     "hostDiagnostics": true,
-    "diagnosticsMessage": ""
+    "diagnosticsMessage": "",
+    "schemaBudgetTokens": 1000
   },
 
   "_delegationNote": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",

@@ -75,7 +75,7 @@ export const DEFAULT_CONFIG: ApexConfig = {
   council: { enabled: false, reviewerModel: null, conveneOn: [] },
   context: { budgetTokens: 2000 },
   skills: { maxBodiesPerTask: 3, seedSkills: true },
-  capabilities: { hostDiagnostics: true, diagnosticsMessage: "" },
+  capabilities: { hostDiagnostics: true, diagnosticsMessage: "", schemaBudgetTokens: 1000 },
   delegation: {
     mode: "AUTO",
     maxConcurrentCalls: 6,

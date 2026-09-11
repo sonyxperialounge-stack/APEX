@@ -177,6 +177,12 @@ export interface ApexCapabilitiesConfig {
   hostDiagnostics: boolean
   /** Latest host-reported diagnostics message for this file/project (evidence). */
   diagnosticsMessage: string
+  /**
+   * WP-053 — the compact-index budget in tokens (44 §3). Schemas beyond this
+   * stay out of the assembled prompt; search/describe bridge the gap. Default
+   * 1000 tokens, the spec's starting point.
+   */
+  schemaBudgetTokens: number
 }
 
 export interface ApexConfig {
