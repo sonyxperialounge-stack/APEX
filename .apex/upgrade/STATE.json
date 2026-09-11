@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "7A",
-  "currentPacket": "WP-085",
+  "currentPacket": "WP-085b",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -818,7 +818,9 @@
       "committed": "see WORKLOG 2026-09-11 entry 5"
     },
     "WP-085": {
-      "status": "PENDING"
+      "status": "DONE",
+      "evidence": "EVIDENCE/EVD-085.md",
+      "committed": "see WORKLOG 2026-09-11 entry 6"
     },
     "WP-085b": {
       "status": "PENDING"

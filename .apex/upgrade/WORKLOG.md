@@ -1771,3 +1771,17 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation: interrupted detection short-circuited -> MIG-F03 fails; reverted clean.
 - Verify: 1411 pass / 0 fail (was 1406).
 - Evidence: EVD-083.md. Next: WP-084 (perf/budget regressions).
+
+## 2026-09-11 — WP-084 DONE (perf/budget regression suite)
+- test/perf/budgets.test.ts: PERF-T01..T08, each printing its measured number as a [perf] line — memory/Cortex token budgets truncate honestly and name what dropped (tight 221 of 1200, dropped: globalMemory); 1000-skill discovery is metadata-only (readIndex ~1s, body loads on explicit selection); compact index 33 listed / 967 deferred / 589 tokens; memory write = 0 network calls (patched fetch); source tree static scan + --version cold 126ms; retention with eventsMaxAgeDays:1 prunes only aged CLOSED sessions; read-only session = 0 byte changes to the home; START-HERE 4105 repo / 4089 payload vs ceiling 6000.
+- Contract notes the suite encodes: prune isOld = CLOSED/ABORTED + oldest event < cutoff (fixture ages events 3 days + closes); records enter stores only through resolveCandidate (hand-built literals fail the V1 contract at commit — the store defending itself); skill names obey ^[a-z0-9][a-z0-9-]{1,63}$.
+- Mutation: Cortex truncation loop disabled (&& false) -> PERF-T01 fails "assembled prompt exceeded the budget: 4486 > 1200"; reverted byte-identical.
+- Verify: 1419 pass / 0 fail (was 1411).
+- Evidence: EVD-084.md. Next: WP-085 (L0 conformance transcripts) + WP-085b (runtime/evals).
+
+## 2026-09-11 — WP-085 DONE (L0 conformance transcripts)
+- test/integration/l0-conformance.test.ts: L0C-T01..T06 as deterministic automated checks against the SHIPPED payload text + engines — L0 rung/"apex_*"/"Do not block on it"; 16-CAPABILITIES UNAVAILABLE+fallback template + registry.select refuses UNAVAILABLE; 14-DURABLE-STATE requirement-wins sentence; hostile memory renders inside the DATA wrapper while the assembly's own voice keeps AUTONOMY: GUARDED (outside-wrapper doesNotMatch); START-HERE has no wizard + every referenced repo .md ships; 09-RECOVERY VERIFY-THE-LEDGER resume protocol; 33 §7 invariants (no provider imports in src — redact.ts/warden.ts name providers only to redact their secrets; CAPABILITY_EFFECTS defined once).
+- test/fixtures/l0/MANUAL-RECORDS.md: the honest half — dated matrix records NO live-model harness exists in this build environment, no transcript recorded, no model-compliance claimed; scenario = conformed only when automated check passes AND a dated transcript exists.
+- Mutation: registry.select fabricated availability (best ?? null) -> L0C-T02 fails; reverted byte-identical.
+- Verify: 1426 pass / 0 fail (was 1419).
+- Evidence: EVD-085.md. Next: WP-085b (runtime/evals behavioural suite).
