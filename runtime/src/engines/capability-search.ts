@@ -17,7 +17,8 @@
  */
 
 /**
- * Capability search and the compact index (WP-053; 22 §2–§4).
+ * Capability search and the compact index (WP-053; 22 §2–§4) plus the lazy
+ * schema cache (WP-054; 22 §8–§9).
  *
  * Given a large tool catalog, START-HERE must not grow with it. This engine
  * gives the model two honest bridges:
@@ -31,13 +32,18 @@
  *   schema budget (44 §3). Anything beyond the budget is DEFERRED into the
  *   prompt budget, never silently dropped: the count rides along so callers
  *   can say "N more capabilities — search for them" (54 §4).
+ * - `loadSchema(capabilityId, load)` — the Level-C door (22 §3, §8–§9):
+ *   loads a deferred schema on demand, validates it and caches it per
+ *   structural hash for the session. The loader is supplied by the caller
+ *   (host adapter / WP-058 bridge); this engine never probes on its own.
  *
  * Pure in-memory and zero-dependency by construction (no exec, no disk).
- * Schemas are deliberately NOT here: loading them on demand is WP-054.
  */
 
+import { createHash } from "node:crypto"
 import { estimateTokens } from "./cortex.ts"
 import { toIsoString } from "../core/ids.ts"
+import { ApexError } from "../core/errors.ts"
 import type { CapabilityEffect } from "../core/types.ts"
 import type { CapabilityDescriptor, CapabilityRegistry } from "./capability-registry.ts"
 
@@ -74,6 +80,8 @@ export interface SearchOptions {
 export interface CapabilitySearchOptions {
   /** Injected clock (43 §7); tests pin it for generatedAt. */
   now?: () => number
+  /** WP-054 — the session schema cache; a fresh one is created when absent. */
+  schemaCache?: ToolSchemaCache
 }
 
 /** Where a matching token contributed, in the field-weight order of 22 §3. */
@@ -89,10 +97,12 @@ const FIELD_WEIGHTS: Array<[key: string, weight: number]> = [
 export class CapabilitySearch {
   private readonly registry: CapabilityRegistry
   private readonly now: () => number
+  private readonly schemaCache: ToolSchemaCache
 
   constructor(registry: CapabilityRegistry, opts: CapabilitySearchOptions = {}) {
     this.registry = registry
     this.now = opts.now ?? Date.now
+    this.schemaCache = opts.schemaCache ?? new ToolSchemaCache()
   }
 
   /**
@@ -122,13 +132,49 @@ export class CapabilitySearch {
   }
 
   /**
-   * 22 §3 — describe one capability by canonical id (aliases resolve through
-   * the registry). Returns null for a capability that does not exist or is not
-   * available: named honestly, never fabricated (TLS-T07).
+   * 22 §3, §8–§9 — describe one capability by canonical id (aliases resolve
+   * through the registry). Returns null for a capability that does not exist
+   * or is not available: named honestly, never fabricated (TLS-T07).
    */
   describe(capabilityId: string): CapabilityDescriptor | null {
     const cap = this.registry.select(capabilityId)
     return cap
+  }
+
+  /**
+   * 22 §8–§9 — load a deferred schema on demand (Level C). The caller supplies
+   * the loader (host adapter / WP-058 bridge); the result is validated with
+   * `validateDeferredSchema` and cached per structural hash for the session.
+   * A missing or unavailable capability throws CAPABILITY_UNAVAILABLE — a
+   * schema is never fabricated for a tool that does not exist (TLS-T07).
+   * `expectedHash` (a host-reported fingerprint) detects drift: a mismatch
+   * reloads and replaces the stale entry (TLS-T04).
+   */
+  async loadSchema(
+    capabilityId: string,
+    load: (cap: CapabilityDescriptor) => Promise<unknown>,
+    expectedHash?: string,
+  ): Promise<unknown> {
+    const cap = this.registry.select(capabilityId)
+    if (cap === null) {
+      throw new ApexError(
+        `Capability "${capabilityId}" is unknown or unavailable; refusing to fabricate a schema.`,
+        "CAPABILITY_UNAVAILABLE",
+      )
+    }
+    return this.schemaCache.get(cap, () => load(cap), expectedHash)
+  }
+
+  /** 22 §9 — drop every cached schema for a provider (disconnect/refresh). */
+  invalidateSchemaProvider(providerId: string): number {
+    return this.schemaCache.invalidateProvider(providerId)
+  }
+
+  /** 22 §9 — drop one capability's cached schema (structural not-found). */
+  invalidateSchema(capabilityId: string): boolean {
+    const cap = this.registry.select(capabilityId)
+    if (cap === null) return false
+    return this.schemaCache.invalidate(cap)
   }
 
   /**
@@ -244,4 +290,145 @@ function scoreCapability(cap: CapabilityDescriptor, rawQuery: string, terms: str
   }
 
   return score > 0 ? { ...hit, score } : null
+}
+
+// ── WP-054 — the lazy schema cache (22 §8–§9) ─────────────────────────────
+
+/**
+ * 22 §9 — the session schema cache. Schemas are loaded on demand (Level C),
+ * validated and cached under `providerId + toolName`; each entry records the
+ * structural hash of what was loaded. Invalidation is explicit: a provider
+ * disconnect sweeps its entries, a single capability can be dropped by id, and
+ * a host-reported hash mismatch replaces the stale entry on the next load.
+ * Nothing here writes to disk or to global memory (22 §9).
+ */
+export class ToolSchemaCache {
+  private readonly cache = new Map<string, { schema: unknown; hash: string }>()
+
+  get size(): number {
+    return this.cache.size
+  }
+
+  has(cap: CapabilityDescriptor): boolean {
+    return this.cache.has(cacheKeyOf(cap))
+  }
+
+  /**
+   * 22 §8–§9 — cached schema for a descriptor, or load + validate + cache.
+   * A hit returns without touching the loader (schemas stay lazy until asked
+   * for, TLS-T03). When `expectedHash` is given and differs from the cached
+   * fingerprint, the entry is replaced — hash drift is an invalidation, not a
+   * silent second opinion (TLS-T04).
+   */
+  async get(
+    cap: CapabilityDescriptor,
+    load: () => Promise<unknown>,
+    expectedHash?: string,
+  ): Promise<unknown> {
+    const key = cacheKeyOf(cap)
+    const entry = this.cache.get(key)
+    if (entry !== undefined && (expectedHash === undefined || entry.hash === expectedHash)) {
+      return entry.schema
+    }
+    const raw = await load()
+    const schema = validateDeferredSchema(raw)
+    this.cache.set(key, { schema, hash: schemaHashOf(schema) })
+    return schema
+  }
+
+  /** 22 §9 — drop one capability's entry (structural tool/schema-not-found). */
+  invalidate(cap: CapabilityDescriptor): boolean {
+    return this.cache.delete(cacheKeyOf(cap))
+  }
+
+  /** 22 §9 — drop every entry for a provider (disconnect, explicit refresh). */
+  invalidateProvider(providerId: string): number {
+    const prefix = `${providerId}:`
+    let removed = 0
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key)
+        removed += 1
+      }
+    }
+    return removed
+  }
+}
+
+/**
+ * 22 §8 — a deferred schema is validated before it may be cached or handed to
+ * a dispatcher: it must be a JSON object, and its internal `$ref` graph must
+ * resolve without cycles (a recursive schema is one the local validator cannot
+ * safely reason about). The raw form is kept for inspection; external refs are
+ * the backend's contract, not this layer's (22 §8 #5). Throws
+ * CAPABILITY_SCHEMA_INVALID — never silently coerces.
+ */
+export function validateDeferredSchema(raw: unknown): unknown {
+  let schema: unknown = raw
+  if (typeof raw === "string") {
+    try {
+      schema = JSON.parse(raw)
+    } catch {
+      throw new ApexError("Deferred schema is not valid JSON; refusing to construct a validator.", "CAPABILITY_SCHEMA_INVALID")
+    }
+  }
+  if (schema === null || typeof schema !== "object" || Array.isArray(schema)) {
+    throw new ApexError("A tool schema must be a JSON object; refusing this one.", "CAPABILITY_SCHEMA_INVALID")
+  }
+
+  const root = schema as Record<string, unknown>
+  const explored = new Set<string>()
+  const walk = (node: unknown, path: Set<string>): void => {
+    if (node === null || typeof node !== "object") return
+    const obj = node as Record<string, unknown>
+    const ref = obj["$ref"]
+    if (typeof ref === "string" && ref.startsWith("#/")) {
+      if (path.has(ref)) {
+        throw new ApexError(
+          `Deferred schema contains a recursive $ref cycle through "${ref}"; refusing it.`,
+          "CAPABILITY_SCHEMA_INVALID",
+        )
+      }
+      if (!explored.has(ref)) {
+        const target = resolvePointer(root, ref)
+        if (target === undefined) {
+          throw new ApexError(
+            `Deferred schema references "${ref}", which does not resolve inside the schema; refusing it.`,
+            "CAPABILITY_SCHEMA_INVALID",
+          )
+        }
+        path.add(ref)
+        walk(target, path)
+        path.delete(ref)
+        explored.add(ref)
+      }
+    }
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === "$ref") continue
+      walk(value, path)
+    }
+  }
+  walk(root, new Set())
+  return schema
+}
+
+/** 22 §9 — structural fingerprint: sha256 of the canonical JSON, first 8 hex. */
+export function schemaHashOf(schema: unknown): string {
+  const text = typeof schema === "string" ? schema : JSON.stringify(schema)
+  return createHash("sha256").update(text).digest("hex").slice(0, 8)
+}
+
+function cacheKeyOf(cap: CapabilityDescriptor): string {
+  return `${cap.source.providerId}:${cap.source.toolName ?? ""}`
+}
+
+/** Resolve a `#/a/b` JSON pointer inside a schema document. */
+function resolvePointer(root: Record<string, unknown>, pointer: string): unknown {
+  let node: unknown = root
+  for (const rawToken of pointer.slice(2).split("/")) {
+    if (node === null || typeof node !== "object") return undefined
+    const token = rawToken.replace(/~1/g, "/").replace(/~0/g, "~")
+    node = (node as Record<string, unknown>)[token]
+  }
+  return node
 }

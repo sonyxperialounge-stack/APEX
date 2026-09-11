@@ -8,6 +8,9 @@ import assert from "node:assert/strict"
 import { CapabilityRegistry, type CapabilityDescriptor } from "../../src/engines/capability-registry.ts"
 import {
   CapabilitySearch,
+  validateDeferredSchema,
+  schemaHashOf,
+  ToolSchemaCache,
   type CapabilityHit,
   type SearchOptions,
 } from "../../src/engines/capability-search.ts"
@@ -23,7 +26,7 @@ function desc(overrides: Partial<CapabilityDescriptor> = {}): CapabilityDescript
     title: overrides.title ?? `Synthetic capability ${seq}`,
     description: overrides.description ?? "A synthetic capability used by the WP-053 tests.",
     aliases: overrides.aliases ?? [],
-    source: overrides.source ?? { kind: "host", providerId: "host" },
+    source: overrides.source ?? { kind: "host", providerId: "host", toolName: overrides.id ?? `tool.${seq}` },
     availability: overrides.availability ?? "AVAILABLE",
     effects: overrides.effects ?? ["READ"],
     trust: overrides.trust ?? "TRUSTED",
@@ -48,6 +51,9 @@ function makeSearch(descriptors: CapabilityDescriptor[]): CapabilitySearch {
 function ids(hits: CapabilityHit[]): string[] {
   return hits.map((h) => h.id)
 }
+
+/** A canonical minimal tool schema used across the WP-054 tests. */
+const SCHEMA = { type: "object", properties: { path: { type: "string" } }, required: ["path"] }
 
 // ── WP-053 — the search engine (22 §2–§3) ──────────────────────────────────
 
@@ -251,5 +257,183 @@ describe("WP-053 — describe resolves a full capability", () => {
     registry.register(desc({ id: "host.gone", description: "disconnected", availability: "UNAVAILABLE" }))
     const s = new CapabilitySearch(registry, { now: () => 1_765_000_000_000 })
     assert.equal(s.describe("host.gone"), null)
+  })
+})
+// ── WP-054 — the lazy schema cache (22 §8–§9; TLS-T02..T04) ───────────────
+
+describe("WP-054 — deferred schemas load on demand and are cached per hash", () => {
+  test("TLS-T02 — a deferred capability's schema is NOT part of the compact index", () => {
+    const s = makeSearch([desc({ id: "host.big", schemaLocator: "big-schema.json" })])
+    const index = s.compactIndex(500)
+    const entry = index.capabilities.find((c) => c.id === "host.big")
+    assert.ok(entry, "the capability itself is listed")
+    assert.deepEqual(Object.keys(entry!), ["id", "summary", "effects"], "index never carries a schema")
+  })
+
+  test("TLS-T03 — loadSchema loads once and serves from cache by hash", async () => {
+    let loads = 0
+    const s = makeSearch([desc({ id: "host.editor", schemaLocator: "editor.json" })])
+    const schema = await s.loadSchema("host.editor", async () => {
+      loads += 1
+      return SCHEMA
+    })
+    assert.deepEqual(schema, SCHEMA)
+    assert.equal(loads, 1)
+
+    // second call hits the cache — the loader is not consulted again
+    const again = await s.loadSchema("host.editor", async () => {
+      loads += 1
+      return { type: "object" }
+    })
+    assert.deepEqual(again, SCHEMA)
+    assert.equal(loads, 1, "the cached schema won over the loader's replacement")
+  })
+
+  test("TLS-T04 — hash drift invalidates and reloads", async () => {
+    let loads = 0
+    const s = makeSearch([desc({ id: "host.editor", schemaLocator: "editor.json" })])
+    await s.loadSchema("host.editor", async () => {
+      loads += 1
+      return SCHEMA
+    })
+    assert.equal(loads, 1)
+
+    // host reports a different fingerprint -> the stale entry is replaced
+    const updated = await s.loadSchema(
+      "host.editor",
+      async () => {
+        loads += 1
+        return { type: "object", properties: { path: { type: "string" } } }
+      },
+      schemaHashOf({ type: "object", properties: { path: { type: "string" } } }),
+    )
+    assert.deepEqual(updated, { type: "object", properties: { path: { type: "string" } } })
+    assert.equal(loads, 2, "hash drift must not silently serve the stale schema")
+  })
+
+  test("provider disconnect invalidates its entries (22 §9)", async () => {
+    let hostLoads = 0
+    let otherLoads = 0
+    const s = makeSearch([
+      desc({ id: "host.a", schemaLocator: "a.json" }),
+      desc({ id: "host.b", schemaLocator: "b.json" }),
+      desc({ id: "ext.c", schemaLocator: "c.json", source: { kind: "extension", providerId: "ext" } }),
+    ])
+    await s.loadSchema("host.a", async () => { hostLoads += 1; return SCHEMA })
+    await s.loadSchema("host.b", async () => { hostLoads += 1; return SCHEMA })
+    await s.loadSchema("ext.c", async () => { otherLoads += 1; return SCHEMA })
+    assert.equal(hostLoads, 2)
+    assert.equal(otherLoads, 1)
+
+    s.invalidateSchemaProvider("host")
+    await s.loadSchema("host.a", async () => { hostLoads += 1; return SCHEMA })
+    await s.loadSchema("host.b", async () => { hostLoads += 1; return SCHEMA })
+    await s.loadSchema("ext.c", async () => { otherLoads += 1; return SCHEMA })
+    assert.equal(hostLoads, 4, "host entries re-loaded after disconnect")
+    assert.equal(otherLoads, 1, "unrelated provider untouched")
+  })
+
+  test("a capability without schemaLocator still caches by provider+tool", async () => {
+    let loads = 0
+    const s = makeSearch([desc({ id: "host.plain" })])
+    const first = await s.loadSchema("host.plain", async () => { loads += 1; return SCHEMA })
+    const second = await s.loadSchema("host.plain", async () => { loads += 1; return SCHEMA })
+    assert.deepEqual(first, second)
+    assert.equal(loads, 1)
+  })
+
+  test("loadSchema refuses to fabricate a schema for a missing capability", async () => {
+    const s = makeSearch([])
+    await assert.rejects(
+      () => s.loadSchema("host.nope", async () => ({ type: "object" })),
+      (err: unknown) => {
+        assert.ok(err instanceof Error)
+        assert.equal((err as { code?: string }).code, "CAPABILITY_UNAVAILABLE")
+        return true
+      },
+    )
+  })
+
+  test("loadSchema refuses unavailable capabilities (TLS-T07 applies to schemas too)", async () => {
+    const registry = makeRegistry([desc({ id: "host.gone", schemaLocator: "g.json" })])
+    registry.register(desc({ id: "host.gone", schemaLocator: "g.json", availability: "UNAVAILABLE" }))
+    const s = new CapabilitySearch(registry, { now: () => 1_765_000_000_000, schemaCache: new ToolSchemaCache() })
+    await assert.rejects(() => s.loadSchema("host.gone", async () => SCHEMA), /unavailable/i)
+  })
+})
+
+// ── WP-054 — schema validation (22 §8) ────────────────────────────────────
+
+describe("WP-054 — deferred schemas validate before caching", () => {
+  test("object schemas pass and return unchanged", () => {
+    const schema = { type: "object", properties: { a: { type: "string" } } }
+    assert.deepEqual(validateDeferredSchema(schema), schema)
+  })
+
+  test("JSON-string schemas parse before validation", () => {
+    const parsed = validateDeferredSchema('{"type":"object","properties":{}}')
+    assert.deepEqual(parsed, { type: "object", properties: {} })
+  })
+
+  test("invalid JSON is rejected with CAPABILITY_SCHEMA_INVALID", () => {
+    assert.throws(
+      () => validateDeferredSchema("{not json"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error)
+        assert.equal((err as { code?: string }).code, "CAPABILITY_SCHEMA_INVALID")
+        return true
+      },
+    )
+  })
+
+  test("non-object roots are rejected", () => {
+    for (const bad of [null, 42, "str", true, [], "[]"]) {
+      // an unparseable string is caught by the JSON gate; other shapes by the object gate
+      assert.throws(() => validateDeferredSchema(bad), /JSON object|not valid JSON/, `accepted ${String(bad)}`)
+    }
+  })
+
+  test("internal $ref pointers must resolve", () => {
+    assert.throws(
+      () => validateDeferredSchema({ $ref: "#/definitions/nope" }),
+      /does not resolve/,
+    )
+  })
+
+  test("recursive $ref cycles are rejected (22 §8 #2)", () => {
+    const recursive = {
+      type: "object",
+      properties: { child: { $ref: "#/definitions/node" } },
+      definitions: { node: { $ref: "#/definitions/node" } },
+    }
+    assert.throws(() => validateDeferredSchema(recursive), /recursive \$ref cycle/)
+  })
+
+  test("valid acyclic $ref graphs pass", () => {
+    const schema = {
+      type: "object",
+      properties: { child: { $ref: "#/definitions/child" } },
+      definitions: { child: { type: "object", properties: { name: { type: "string" } } } },
+    }
+    assert.deepEqual(validateDeferredSchema(schema), schema)
+  })
+
+  test("schemaHashOf fingerprints canonically", () => {
+    assert.equal(schemaHashOf({ a: 1 }), schemaHashOf({ a: 1 }))
+    assert.equal(schemaHashOf({ a: 1 }), schemaHashOf('{"a":1}'))
+    assert.notEqual(schemaHashOf({ a: 1 }), schemaHashOf({ a: 2 }))
+    assert.match(schemaHashOf({}), /^[0-9a-f]{8}$/)
+  })
+
+  test("ToolSchemaCache.invalidate drops exactly the named capability", async () => {
+    const cache = new ToolSchemaCache()
+    const a = desc({ id: "host.a", schemaLocator: "a.json" })
+    const b = desc({ id: "host.b", schemaLocator: "b.json" })
+    await cache.get(a, async () => SCHEMA)
+    await cache.get(b, async () => SCHEMA)
+    assert.equal(cache.size, 2)
+    assert.equal(cache.invalidate(a), true)
+    assert.equal(cache.size, 1)
+    assert.equal(cache.has(b), true)
   })
 })
