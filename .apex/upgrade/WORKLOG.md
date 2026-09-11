@@ -1386,3 +1386,43 @@ Surprises: payload.test.ts uses node:test — `npx vitest run test/cli/payload.t
   gate is `npm test` inside `npm run verify`, where the suite counts normally. Use `npm test`
   for the packaging gate going forward (noted for WP-058).
 Next: WP-058 (capability invoke bridge + 3-tier disclosure, CRITICAL).
+
+## WP-058 — Capability invoke bridge + 3-tier disclosure · DONE · 2026-09-11
+
+Files: +runtime/src/engines/capability-bridge.ts (CapabilityBridge search/describe/invoke;
+  invoke is NOT an authorization path — resolve descriptor -> validate args against the
+  locally loaded schema (22 §8) -> toOperationKind -> Governor.decide exactly like a direct
+  call; unknown id -> CAPABILITY_NOT_IN_CATALOG, never a fabricated call (C-017, CAP-T05);
+  schema violation -> CAPABILITY_ARGS_INVALID with the dispatcher never called (TLS-T10);
+  Governor block/ask -> CAPABILITY_BLOCKED with rule named + ask flag; absent invoker ->
+  honest refusal; dispatcher ApexError TOOL_NOT_FOUND -> registry.markStructuralFailure ->
+  DEGRADED (WP-055); mayExpose gates describe AND invoke (21 §7); batch describe survives
+  one bad id (TLS-T09); onDecision records every Governor decision), +runtime/src/engines/
+  capability-disclosure.ts (assembleDisclosure: tiers 0/1/2 with budget =
+  min(schemaBudgetTokens, 25% of context.budgetTokens) via estimateTokens, re-evaluated per
+  assembly (54 §3); eager-when-it-fits inversion (54 §4); CORE trust + requiredIds never
+  deferred (PERF-T10 seam for WP-060 TaskContract); tier 2 = per-source counts + bridge
+  search hint (TLS-T11); empty registry -> honest no-capabilities line),
+  ~runtime/src/plugin/index.ts (capabilitySurface(e, {loadSchema?, invoker?}) after the
+  hookScriptRegistry/extensionSurface pattern: bridge.{search,describe,invoke},
+  disclosure() reading e.cfg capabilities/context budgets live, registry.{all,select};
+  onDecision -> event("plugin.block", {tool, rule}) on blocked calls — TLS-T08 auditability),
+  +runtime/test/engines/capability-bridge.test.ts (18), +runtime/test/engines/
+  capability-disclosure.test.ts (12), +runtime/test/plugin/capability-surface.test.ts (2),
+  +.apex/upgrade/EVIDENCE/EVD-058.md
+Decision: the host adapter (OpenCode MCP tool layer, WP-072) plugs loadSchema + invoker in
+  later; until then search/describe/disclosure work and invoke refuses honestly — a deferred
+  tool is not a cheaper tool. requiredIds is wired as a DisclosureOptions option today; the
+  TaskContract lifecycle that feeds it lands in WP-060. CapabilityBridge options carry
+  config for the exposure context (autonomy mode), keeping mayExpose honest at invoke time.
+Verify: `npm run verify` -> sync:payload clean, typecheck/build pass, 1261 pass, 0 fail,
+  exit 0 (~46s) (1229 before + 32 new).
+Evidence: EVD-058 (54 §2–§4 + §20; full acceptance mapping incl. TLS-T08..T11, PERF-T09/T10).
+Surprises: schema validation fires BEFORE the blocklist — a blocked-write test against the
+  default READ_SCHEMA failed with CAPABILITY_ARGS_INVALID (missing content) instead of
+  CAPABILITY_BLOCKED; bind a per-capability schema in tests. Tier 1 only opens when full
+  records exceed the budget while compact names fit (fatten records with platforms/aliases);
+  at 240 vs 200 context tokens the same catalogue sits on either side of the tier-1 band.
+  sourcescan flags `from "..."` in comments — the "INVERTED from \"defer when large\"" header
+  had to be reworded. CapabilityInvoker["call"] is a method type, not a descriptor.
+Next: Phase 5 exit gate (final verify + plain-language phase report; WP-050..WP-059 all DONE).

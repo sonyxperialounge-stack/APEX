@@ -48,6 +48,9 @@ import { projectKey } from "../core/ids.ts"
 import { TOOLS, callTool } from "../mcp/tools.ts"
 import { openArchiveCapture } from "../engines/archive-capture.ts"
 import { CapabilityRegistry } from "../engines/capability-registry.ts"
+import { CapabilitySearch } from "../engines/capability-search.ts"
+import { CapabilityBridge, type CapabilityBridgeOptions, type CapabilityCall, type CapabilityInvoker } from "../engines/capability-bridge.ts"
+import { assembleDisclosure } from "../engines/capability-disclosure.ts"
 import { onHostCapabilityChange, registerHostTools } from "../engines/host-discovery.ts"
 import { discoverExtensions, openExtensionQuarantine, reportExternalDirectories } from "./extensions.ts"
 import { NullHostCapabilities, type HostCapabilities } from "../host/types.ts"
@@ -726,6 +729,66 @@ export function hookScriptRegistry(e: Engines) {
       },
       /** EXT-T11 — fail-closed: an unapproved hook script never runs. */
       require: (event: string, commandPath: string) => assertHookScriptRunnable(e.trust, event, commandPath),
+    },
+  }
+}
+
+/**
+ * WP-058 — the capability invoke bridge + three-tier disclosure (54 §2–§4,
+ * amending 22 §3 and §5).
+ *
+ * Lazy disclosure is a dead end without the third bridge function: a model
+ * that can find a deferred tool and read its schema must also be able to run
+ * it. `bridge.invoke` is NOT an authorization path — it resolves the
+ * descriptor, validates arguments against the locally loaded schema (22 §8),
+ * maps effects through `toOperationKind` and asks the Governor exactly as a
+ * direct call would. A deferred tool is not a cheaper tool (54 §2).
+ *
+ * `disclosure()` re-evaluates the tier every time the tool set is assembled
+ * (54 §3) and prefers eager exposure whenever the budget allows (54 §4).
+ * `requiredIds` is the TaskContract-required seam (PERF-T10): the full
+ * TaskContract lifecycle lands in WP-060 and will feed it directly.
+ *
+ * The host adapter plugs its schema loader (`loadSchema`) and dispatcher
+ * (`invoker`) here; without them, search/describe still work and invoke
+ * refuses honestly — it never fabricates a call (CAP-T05).
+ */
+export function capabilitySurface(
+  e: Engines,
+  opts: { loadSchema?: CapabilityBridgeOptions["loadSchema"]; invoker?: CapabilityInvoker } = {},
+) {
+  const search = new CapabilitySearch(e.registry)
+  const bridge = new CapabilityBridge(search, e.registry, e.governor, {
+    config: e.cfg,
+    loadSchema: opts.loadSchema,
+    invoker: opts.invoker,
+    // TLS-T08 — the Governor decision is recorded (blocked calls surface as
+    // plugin.block events, named by rule) so a deferred call is as auditable
+    // as a direct one (21 §7: exposure is not execution).
+    onDecision: (call, _op, decision) => {
+      if (!decision.allowed && !decision.ask) {
+        event("plugin.block", { tool: call.id, rule: decision.rule })
+      }
+    },
+  })
+  return {
+    /** 54 §2 — the trio that replaces deferred tools entirely. */
+    bridge: {
+      search: (query: string, limit?: number) => bridge.search(query, limit),
+      describe: (ids: string[]) => bridge.describe(ids),
+      invoke: (calls: CapabilityCall[]) => bridge.invoke(calls),
+    },
+    /** 54 §3–§4 — the tiered disclosure payload, re-evaluated per assembly. */
+    disclosure() {
+      return assembleDisclosure(e.registry, {
+        schemaBudgetTokens: e.cfg.capabilities?.schemaBudgetTokens ?? 1000,
+        contextBudgetTokens: e.cfg.context?.budgetTokens ?? 2000,
+      })
+    },
+    /** Registry read access for hosts that want to render the raw catalogue. */
+    registry: {
+      all: () => e.registry.all(),
+      select: (id: string) => e.registry.select(id),
     },
   }
 }
