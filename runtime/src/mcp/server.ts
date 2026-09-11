@@ -100,7 +100,12 @@ export class McpServer {
       case "tools/call": {
         const name = String(params.name ?? "")
         const args = (params.arguments as Record<string, unknown>) ?? {}
-        const result = await callTool(name, args, { projectRoot: this.projectRoot })
+        // WP-072 — the discovery registry travels with the call so the
+        // capability tools can serve it; absent stays honestly absent.
+        const result = await callTool(name, args, {
+          projectRoot: this.projectRoot,
+          capabilities: this.registry,
+        })
         event("mcp.tool", { name })
         return this.ok(id, result)
       }

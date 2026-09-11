@@ -1644,3 +1644,15 @@ Files: ~adapters/*.md (5) + payload — DURABLE STATE AND CAPABILITIES
 Verify: payload sync clean; `npm run test:unit` 913 pass, 0 fail.
 Surprises: none.
 Next: WP-072 (new MCP tools).
+
+## WP-072 — New MCP tools · DONE · 2026-09-11
+
+Files: +runtime/src/mcp/state-tools.ts (13 tools, MOD-T05 split),
+  ~runtime/src/mcp/tools.ts (TOOLS = CORE + STATE; dispatch bridge),
+  ~runtime/src/mcp/server.ts (registry travels with tools/call),
+  +runtime/test/mcp/state-tools.test.ts (+23),
+  +.apex/upgrade/EVIDENCE/EVD-072.md
+Verify: `npm run verify` -> 1350 pass, 0 fail, exit 0 (~37s) (was 1327).
+Surprises: the MOD-T05 budget test fired as designed and dictated the
+  module split; staging mints the record id (the store refuses empty ids).
+Next: WP-073 (CLI surface completion).

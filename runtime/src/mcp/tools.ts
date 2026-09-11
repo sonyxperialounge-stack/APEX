@@ -43,6 +43,9 @@ import { openArchiveCapture } from "../engines/archive-capture.ts"
 import { openArchiveStore } from "../stores/archive-store.ts"
 import { buildSearchIndex } from "../engines/archive-index.ts"
 import { apexHome } from "../core/paths.ts"
+import { STATE_TOOLS, dispatchStateTool, archiveDirFor } from "./state-tools.ts"
+import type { CapabilityRegistry } from "../engines/capability-registry.ts"
+import type { MemoryRecordV1 } from "../core/types.ts"
 
 export interface ToolDefinition {
   name: string
@@ -58,7 +61,7 @@ export interface ToolResult {
 const str = (description: string) => ({ type: "string", description })
 const strArray = (description: string) => ({ type: "array", items: { type: "string" }, description })
 
-export const TOOLS: ToolDefinition[] = [
+const TOOLS_CORE: ToolDefinition[] = [
   {
     name: "apex_init",
     description:
@@ -422,6 +425,7 @@ export const TOOLS: ToolDefinition[] = [
       required: ["query"],
     },
   },
+
 ]
 
 /**
@@ -484,6 +488,8 @@ const SLOW_TIERS = new Set(["suite", "build", "runtime", "integration"])
 
 export interface ToolContext {
   projectRoot: string
+  /** WP-072 — the host-discovery registry, when the server has one (40 §16). */
+  capabilities?: CapabilityRegistry | null
 }
 
 export async function callTool(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
@@ -505,6 +511,11 @@ async function dispatch(name: string, args: Record<string, unknown>, ctx: ToolCo
   // narrower containment is the caller's responsibility.
   const root = String(args.projectRoot ?? ctx.projectRoot)
   const ledger = new Ledger(root)
+
+  // WP-072 — the durable-state surfaces live in their own module (MOD-T05 budget);
+  // anything it owns never reaches the legacy switch.
+  const stateResult = await dispatchStateTool(name, args, ctx)
+  if (stateResult !== null) return stateResult
 
   switch (name) {
     case "apex_init": {
@@ -1053,20 +1064,6 @@ export async function runGate(ledger: Ledger): Promise<{
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-/**
- * The archive directory for a project root: global home `archive/` when a home is
- * resolvable, else the project's own `.apex/archive` (15 §4 — L1 capture is
- * best-effort and must never make the tool unusable).
- */
-function archiveDirFor(root: string): string {
-  try {
-    const home = apexHome()
-    return path.join(home.path, "archive")
-  } catch {
-    return path.join(root, ".apex", "archive")
-  }
-}
-
 let captureCache: { root: string; capture: ReturnType<typeof openArchiveCapture> } | null = null
 
 function openCaptureFor(root: string): ReturnType<typeof openArchiveCapture> {
@@ -1129,3 +1126,5 @@ async function findSnapshot(root: string, id: string) {
   }
   return null
 }
+
+export const TOOLS: ToolDefinition[] = [...TOOLS_CORE, ...STATE_TOOLS]
