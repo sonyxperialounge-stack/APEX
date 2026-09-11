@@ -1,6 +1,6 @@
 # EXAMPLES
 
-> What APEX actually looks like in a session. Four worked examples, each showing the ordinary
+> What APEX actually looks like in a session. Six worked examples, each showing the ordinary
 > behaviour and then the APEX behaviour on the same task.
 
 ---
@@ -468,7 +468,86 @@ a fleet from a token bonfire.
 
 ---
 
-## THE PATTERN ACROSS ALL FIVE
+## EXAMPLE 6 — The second session
+
+**Task.** Same project, three weeks later. New session, different model. What carries over?
+
+### Without APEX
+
+You re-explain the pnpm preference. You re-explain that the staging database is shared and
+must never be seeded. The model re-derives how the migration tool works, badly, and you
+correct it by hand. Whatever the last session learned is gone unless you pasted it.
+
+### With APEX
+
+```
+APEX active — L1, adapter: opencode, autonomy: GUARDED.
+
+Loaded from the ledger: HANDOFF (last session ended mid-refactor, REQ-014 open),
+23 requirements, your recorded constraints.
+
+From global memory (2 relevant, shown because they shape choices):
+  preference.package_manager  "Prefer pnpm over npm."        confidence 0.95, explicit
+  environment.staging_db      "Staging DB is shared — never seed it."  confidence 1.0, explicit
+
+Resuming: SUB-009 left storage/src/blob.ts half-written; verify first.
+```
+
+Nothing was re-explained. The memory was written in earlier sessions — some by you
+(`memory add`), some learned and **staged** for approval first:
+
+```
+$ apex-agent memory pending
+1 staged mutation, awaiting approval:
+  create  preference.report_style  "Owner wants failures first, then summary."  (learned)
+  approve <id> / reject <id>
+$ apex-agent memory approve MEM-000000421-c3d91a
+Approved. preference.report_style is now an active record, source: learned_then_approved.
+```
+
+And when a fact goes stale, a correction beats the older record — permanently:
+
+```
+$ apex-agent memory correct MEM-000000387-a41f02 "Staging DB moved to db-staging-2.corp."
+Corrected. The correction supersedes the earlier text; the history is kept, nothing deleted.
+```
+
+`memory journey` shows every learn, correction and retraction in order, each with the
+evidence that justified it — so "why does it believe that?" always has an answer:
+
+```
+$ apex-agent memory journey
+1.  added    preference.package_manager   explicit_user       (3 weeks ago)
+2.  learned  environment.staging_db       inferred, staged → approved   V-118
+3.  corrected environment.staging_db      explicit_user, supersedes #2
+...
+```
+
+Skills work the same way. A procedure this project verified — *how the migration tool is
+run safely* — was saved as a skill after its last run proved out, and loads when relevant:
+
+```
+$ apex-agent skills list
+migrations/safe-run     verified 3 times, last: 2 weeks ago      trusted
+storage/blob-retry      candidate — 1 verified use, needs 2 more
+$ apex-agent skills show migrations/safe-run
+Promoted with evidence V-131, V-142. Retire it with `skills retire migrations/safe-run --reason "..."`.
+```
+
+The session archive closes the loop. "Why is blob.ts structured like this?" is a search, not
+a memory hunt:
+
+```
+$ apex-agent session search "blob chunking"
+SES-000000061  3 weeks ago  chose 4 MiB chunks — S3 multipart threshold, see V-127
+```
+
+The difference in one line: **the second session starts from what the first one proved, and
+you can see and correct every bit of it.**
+
+---
+
+## THE PATTERN ACROSS ALL SIX
 
 | | Ordinary | APEX |
 |---|---|---|
@@ -480,6 +559,7 @@ a fleet from a token bonfire.
 | "50 workers" | 12 workers, report says 50 | 50 packets, bounded concurrency, tally reconciles |
 | Completion | "Done!" | The gate, or an honest "not complete" |
 | Constraints | Remembered until they are not | On disk, re-injected every turn |
+| The next session | Starts blank | Memory, skills and the session archive — inspectable and correctable |
 | Bad news | Softened or omitted | Stated first, with the evidence |
 
 None of this requires a smarter model. All of it requires a model that does not skip steps.

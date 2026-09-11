@@ -49,6 +49,13 @@ function copyDir(from, to) {
  * which is exactly how five dead links survived a "fixed" claim.
  */
 const REWRITES = [
+  // WP-075 — the changelog and the repo's docs/ folder stay in the repository; the
+  // shipped copy points at the repository instead of at files that do not travel.
+  [/\[`CHANGELOG\.md`\]\(CHANGELOG\.md\)/g, "the changelog in the project repository"],
+  [
+    /troubleshooting table in \[`install\/ATTACH\.md`\]\(install\/ATTACH\.md\)/g,
+    "troubleshooting table in the project repository",
+  ],
   [/\[`install\/ATTACH\.md`\]\(install\/ATTACH\.md\)/g, "`npx apex-agent attach`"],
   [/\[`build\/BUILD-MASTER-PROMPT\.md`\]\(build\/BUILD-MASTER-PROMPT\.md\)/g, "the build plan in the project repository"],
   [/\[`build\/TESTING\.md`\]\(build\/TESTING\.md\)/g, "the test plan in the project repository"],

@@ -17,7 +17,7 @@ Nothing to install. Three ways in, from least to most permanent.
 Paste into any AI, in any tool:
 
 ```
-Read and follow: D:/multiworker opencode/Army-V3/START-HERE.md
+Read and follow: <path-to-this-folder>/START-HERE.md
 ```
 
 Use the real path on your machine. Forward slashes work everywhere and avoid escaping problems.
@@ -143,7 +143,7 @@ your config non-destructively (with a `.bak`), creates the ledger, and runs a he
 ```
 $ npx apex-agent attach
 
-APEX 1.0.0
+APEX 2.0.0
 
 Detected:
   ✓ OpenCode      1.2.4    ~/.config/opencode
@@ -161,14 +161,29 @@ Attaching to Claude Code (L1 — MCP)
 LEVEL 2. Run `/apex <task>` in OpenCode to begin.
 ```
 
-**Other commands**
+**The commands, once attached**
+
+Every command prints `--help`; destructive ones demand `--reason` or an explicit flag; none
+ever asks for a credential. Full descriptions in [`../README.md`](../README.md).
 
 ```bash
-npx apex-agent doctor      # what is installed, what is broken, how to fix it
-npx apex-agent detach      # remove cleanly, restoring your original config
-npx apex-agent status      # ledger summary for the current project
-npx apex-agent init        # create .apex/ only, no host changes
+apex-agent doctor [--repair]      what is installed, what is broken, how to fix it
+apex-agent status                 ledger summary for the current project
+apex-agent gate                   run the completion gate
+apex-agent detach [--host <name>] remove the binding; deletes nothing personal
+apex-agent init                   create .apex/ only, no host changes
+
+apex-agent memory list|show|add|correct|retract|pending|approve|reject|journey|export|off
+apex-agent skills list|search|show|stage|pending|promote|retire|trust|pin|unpin|reset|run|bundle|journey
+apex-agent session list|search|show|prune
+apex-agent archive discover|browse|read|scroll
+apex-agent home show|export|migrate-from-army
 ```
+
+The personal-data commands in one line each: `memory correct <id> "<new text>"` fixes a
+stale fact and corrections always win; `memory journey` and `skills journey` show everything
+the system learned, in order, with the evidence that justified it; `home export --out <file>`
+writes one redacted file with everything personal in it.
 
 ---
 
@@ -212,9 +227,27 @@ safety).
 **L2** — `npx apex-agent detach`. It reads `install.json`, deletes only what it created, and
 restores each modified config from its backup. `.apex/` is left alone — it is yours.
 
+**Your data is untouched by any of this.** Detaching removes only the binding; it deletes
+nothing personal. Your personal memory, skills and session archive live in the APEX home
+folder (`apex-agent home show` prints where). Deleting that folder is the one thing that
+deletes them — `apex-agent home export --out <file>` writes a redacted copy of everything
+personal first if you want to keep it.
+
 ---
 
 ## TROUBLESHOOTING
+
+What the owner can fix without help. `apex-agent doctor` first, always — it is read-only
+and safe.
+
+| Symptom | What it means | What to do |
+|---|---|---|
+| "APEX active — L0" but you expected tools | The runtime binding is not installed for this host | `npx apex-agent attach`, or just keep working — L0 is fully usable |
+| "Durable state: unavailable — read-only home" | The APEX home folder cannot be written | `npx apex-agent doctor` shows the path and the reason |
+| The model says something is UNAVAILABLE | The host genuinely lacks that tool | It is telling the truth. Use a host that has it, or accept the fallback it offered |
+| Memory has something wrong in it | A learned fact went stale | `npx apex-agent memory correct <id> "<new text>"` — corrections always win |
+| A skill keeps failing | It went stale after the project changed | `npx apex-agent skills retire <name> --reason "..."` — it will be relearned |
+| "Staged, not committed" | Another session holds the lock, or approval is required | `npx apex-agent memory pending`, then approve |
 
 **The AI ignored the doctrine.** Check it actually read the file — ask it to quote Law 1. If it
 cannot read local files, paste the contents of `START-HERE.md` directly.

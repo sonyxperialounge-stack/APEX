@@ -32,14 +32,15 @@ export const STORE_NAMES = [
 ] as const
 export type StoreName = (typeof STORE_NAMES)[number]
 
-/** Writer version per store. Readers may accept older; writers write only this (29 §9). */
+/** Writer version per store. Readers may accept older; writers write only this (29 §9).
+ *  `config` is 2: the V4 key surface (44 §1-6) that MIG-config-1-to-2 stamps (43 §4). */
 export const CURRENT_SCHEMA: Record<StoreName, number> = {
   memory: 1,
   archive: 1,
   skills: 1,
   trust: 1,
   project: 1,
-  config: 1,
+  config: 2,
 }
 
 export type SchemaVerdict =

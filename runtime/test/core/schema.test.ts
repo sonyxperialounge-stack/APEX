@@ -57,8 +57,9 @@ describe("WP-011 classifySchema", () => {
     assert.throws(() => classifySchema("nope" as never, 1), /Unknown store/)
   })
 
-  test("CURRENT_SCHEMA covers exactly the six stores at version 1", () => {
+  test("CURRENT_SCHEMA covers exactly the six stores; config is 2 (43 §4), the rest 1", () => {
     assert.equal(STORE_NAMES.length, 6)
-    for (const store of STORE_NAMES) assert.equal(CURRENT_SCHEMA[store], 1)
+    assert.equal(CURRENT_SCHEMA.config, 2, "the V4 config surface is generation 2 (MIG-config-1-to-2)")
+    for (const store of STORE_NAMES.filter((s) => s !== "config")) assert.equal(CURRENT_SCHEMA[store], 1)
   })
 })

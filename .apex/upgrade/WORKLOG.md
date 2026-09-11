@@ -1718,3 +1718,26 @@ Next: WP-074 (templates and config migration, 44 §6, CFG-T01..T09).
 - Evidence: `.apex/upgrade/EVIDENCE/EVD-074.md`.
 
 Next: WP-075 (documentation refresh, doc 53).
+
+## 2026-09-11 — WP-075: Documentation refresh (53)
+
+- `CHANGELOG.md` + `docs/SCHEMA-CHANGELOG.md` written (plain language, approved
+  terminology only). README gained "New in this release", the full command reference
+  (archive/gate were documented nowhere before) and the data-ownership section; ATTACH
+  gained the 53 §4 troubleshooting table, §7 ownership sentences, a generic one-off path
+  (machine path removed) and 2.0.0 sample output; EXAMPLES gained Example 6 (the second
+  session) and a corrected example count.
+- New `test/cli/docs.test.ts` (14 tests): documented commands must exist in the REAL CLI
+  surface (COMMAND_HELP + both dispatch styles), no shipped command undocumented (UX-T03),
+  every internal link resolves, SCHEMA-CHANGELOG ↔ CURRENT_SCHEMA drift guard, 43 §8
+  terminology. Mutation-checked.
+- Cross-check find: `core/schema.ts` still said `config: 1` while MIG-config-1-to-2 stamps
+  `schemaVersion: 2` (43 §4) — doctor lied and the classifier would have called the
+  runtime's own config "future". Fixed at the source; `CURRENT_CONFIG_SCHEMA` now derives
+  from the registry; stale WP-011 test updated. CFG-T10 pins it.
+- Payload: README ships in the payload, so new repo-only links needed two sync-payload
+  REWRITES; verified the shipped copy reads correctly.
+- Tests: 1389 pass / 0 fail (was 1374).
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-075.md`.
+
+Next: WP-080 (Phase 7B — security fixture suite).

@@ -67,6 +67,21 @@ All three levels are built. `attach` installs the deepest binding your host supp
 
 ---
 
+## New in this release
+
+The discipline is unchanged. What is new — see the changelog in the project repository for the full list:
+
+- **It remembers now.** Preferences and hard-won facts survive across sessions, projects and
+  models. `memory journey` shows everything it keeps, and you can correct or retract any of it.
+- **It learns procedures.** A verified solution can be saved as a skill and reused. A skill
+  only becomes active after it is checked; overriding that needs your explicit, recorded call.
+- **It knows what it can actually do.** It looks at the tools your host really provides and
+  says UNAVAILABLE instead of pretending.
+- **It picks up where it left off.** Sessions are archived; a different model tomorrow reads
+  the same files and continues.
+
+---
+
 ## Using it today
 
 ### Any AI, any tool
@@ -117,9 +132,13 @@ claiming things.
 START-HERE.md      ← the one file. Give any AI this link.
 README.md          ← you are here
 EXAMPLES.md        ← worked end-to-end sessions
+CHANGELOG.md       what changed in each release, in plain language
 LICENSE            The license — personal use only. NOT open source.
 LEGAL-NOTICE.md    Legal warning (India + international sections) and
                    the notice to AI agents
+
+docs/              Schema changelog and release notes
+  SCHEMA-CHANGELOG.md   every store's version and what moved it
 
 core/              The doctrine. Thirteen files, loaded on demand.
   01-LAWS          the twelve laws that override default habits
@@ -162,7 +181,36 @@ What you get from `npx apex-agent attach` today: requirement tracking with mecha
 enforced status transitions, grounded verification that records literal command output,
 snapshots with surgical rollback that never touches your unrelated work, protected paths
 with evasion-resistant matching, and a completion gate that refuses to pass while anything
-is unverified or regressed.
+is unverified or regressed. The V4 engines ride on top: durable personal memory, the skill
+library with its verification gates, the session archive, and the global APEX home.
+
+### Command reference
+
+Every command prints `--help` and exits non-zero on real failure. None ever asks for a
+credential.
+
+```bash
+apex-agent attach [--host <name>] [--all-hosts]   install into ONE host (the deepest available)
+apex-agent detach [--host <name>]                 remove the binding; deletes nothing personal
+apex-agent doctor [--repair]                      read-only diagnosis; safe to run any time
+apex-agent status [--project <path>] [--json]     ledger summary for a project
+apex-agent init [--project <path>]                create .apex/ only, no host changes
+apex-agent gate [--project <path>]                run the completion gate
+apex-agent mcp [--project <path>]                 the MCP stdio server (hosts call this)
+
+apex-agent memory <sub>       list · show · add · correct · retract --reason ·
+                              pending · approve · reject · journey · export · off
+apex-agent skills <sub>       list · search · show · stage · pending · promote ·
+                              retire --reason · trust · pin · unpin · reset · run ·
+                              bundle list|create|delete · journey
+apex-agent session <sub>      list · search · show · prune --dry-run
+apex-agent archive <sub>      discover · browse · read · scroll
+apex-agent home <sub>         show · export · migrate-from-army
+apex-agent --version
+```
+
+Destructive commands demand `--reason` or an explicit flag; anything that changes durable
+state prints exactly what changed.
 
 ## The build plan
 
@@ -198,6 +246,20 @@ honest "unverified" is worth more than a confident "done".
 
 **No credentials, ever.** APEX has no code path that reads, stores, or forwards a provider key.
 The host owns authentication.
+
+---
+
+## When something feels wrong
+
+Run `apex-agent doctor` first, always. It is read-only and safe: it shows what is installed,
+what is broken, and how to fix it. Common symptoms and their plain-language fixes are in the
+troubleshooting table in the project repository.
+
+**Your data is yours.** Removing the binding (`apex-agent detach`) deletes nothing personal.
+`apex-agent home export` writes one redacted file containing everything personal. Deleting
+the APEX home folder deletes your personal memory, skills and session archive — that folder
+is where they live. Project state lives in `.apex/` inside the project and belongs to the
+project. Nothing is uploaded anywhere. There is no account and no telemetry.
 
 ---
 

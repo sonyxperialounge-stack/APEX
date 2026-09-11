@@ -51,6 +51,7 @@ import { ApexError, IllegalTransitionError } from "../core/errors.ts"
 import { readTextOrNull, writeText, writeJson, readJson, existsSync, withCrossProcessLock, backup } from "../core/json.ts"
 import { apexDir, apexHome, isFilesystemRoot } from "../core/paths.ts"
 import { bound, redact } from "../core/redact.ts"
+import { CURRENT_SCHEMA } from "../core/schema.ts"
 import { event, log } from "../core/log.ts"
 
 // ── The transition table — LED-004, the heart of the engine ─────────────────
@@ -147,8 +148,11 @@ export interface ResolvedConfig {
   layers: Record<string, ConfigLayer>
 }
 
-/** Project config file generation the migration writes (44 §6, MIG-config-1-to-2). */
-export const CURRENT_CONFIG_SCHEMA = 2
+/**
+ * Project config file generation the migration writes (44 §6, MIG-config-1-to-2).
+ * Derived from the one schema registry — a second literal here would drift from it.
+ */
+export const CURRENT_CONFIG_SCHEMA = CURRENT_SCHEMA.config
 
 const EMPTY_RESUME: ResumePoint = { nextAction: "", doNotRedo: "", verifyFirst: "", watchOut: "" }
 

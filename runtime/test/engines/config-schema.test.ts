@@ -14,7 +14,8 @@ import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { Ledger, DEFAULT_CONFIG } from "../../src/engines/ledger.ts"
+import { Ledger, DEFAULT_CONFIG, CURRENT_CONFIG_SCHEMA } from "../../src/engines/ledger.ts"
+import { CURRENT_SCHEMA, classifySchema } from "../../src/core/schema.ts"
 import { Governor } from "../../src/engines/governor.ts"
 import { VERIFY_TYPES, type MemoryRecordV1 } from "../../src/core/types.ts"
 import { selectMemory } from "../../src/engines/memory-librarian.ts"
@@ -369,5 +370,17 @@ describe("WP-074 config surface", () => {
     assert.equal(layers.autonomy, "default")
     assert.equal(layers.projectRoot, "project")
     assert.ok(Object.keys(layers).length >= Object.keys(DEFAULT_CONFIG).length, "every key has a layer")
+  })
+
+  test("CFG-T10 — the schema registry and the config migration agree on the writer version", async () => {
+    // The registry is the declared single classifier (core/schema.ts). Before WP-075 it
+    // still said config: 1 while the migration stamped schemaVersion 2 — so doctor
+    // reported the wrong generation and a future classifySchema("config", 2) caller
+    // would have refused the runtime's own current file as "future".
+    assert.equal(CURRENT_SCHEMA.config, 2)
+    assert.equal(CURRENT_CONFIG_SCHEMA, CURRENT_SCHEMA.config, "ledger derives, never re-declares")
+    assert.equal(classifySchema("config", 2).kind, "current", "the runtime reads its own config as current")
+    assert.equal(classifySchema("config", 3).kind, "future")
+    assert.equal(classifySchema("config", null).kind, "legacy", "a versionless V3 file is legacy, never future")
   })
 })
