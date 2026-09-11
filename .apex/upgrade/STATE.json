@@ -539,7 +539,7 @@
         "EVD-049"
       ],
       "notes": "bundles, 3-body selection limit, skills run/bundle CLI, maxBodiesPerTask config",
-      "commit": "PENDING"
+      "commit": "bfa367e"
     },
     "WP-050": {
       "status": "PENDING"
