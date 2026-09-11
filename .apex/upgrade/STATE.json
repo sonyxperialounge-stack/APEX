@@ -696,8 +696,18 @@
    "notes": "failure taxonomy + recovery ladder (27): fingerprint gate, canonical classes, bounded escalation, check-deletion refused; RCV-T01..T06; 1295 pass"
   },
   "WP-065": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T12:40:00.000Z",
+   "finishedAt": "2026-09-11T13:00:00.000Z",
+   "commit": "c192b38",
+   "evidence": [
+    "EVD-065"
+   ],
+   "notes": "fleet delegation contracts (26 S3/S6): explicit scopes, overlap serialize, child-never-closes-parent, parent reconciles, slice-only context; FLT-T01/T03/T05/T06; 1300 pass"
+  },
+  "WP-065b": {
    "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T12:40:00.000Z"
+   "startedAt": "2026-09-11T13:00:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
