@@ -84,6 +84,14 @@ files described in `core/05-LEDGER.md`. Copy the shapes from `templates/`.
 If `.apex/` already exists, **do not overwrite it** — read it. It is the memory of a previous
 session. Resume from `.apex/HANDOFF.md`, and re-verify before trusting it.
 
+Personal memory, skills and the session archive live in a **global home** shared across
+projects, resolved by the runtime at L1+ (`apex-agent doctor` reports it) — its layout and
+rules are in `core/14-DURABLE-STATE.md`. The home is in one of three modes: `READ_WRITE`
+(durable global writes apply), `READ_ONLY` (present but not writable — global writes are
+**staged** in the project, never silently dropped), or `VOLATILE` (absent — created on first
+runtime use, or simply absent at L0). Whatever the mode, never claim a global write succeeded
+if the home could not take it.
+
 ### Step 6 — Load the remaining doctrine on demand
 
 Do not read everything up front — that wastes context. Load these when the trigger fires:
@@ -105,13 +113,21 @@ Do not read everything up front — that wastes context. Load these when the tri
 
 ### Step 7 — Confirm and begin
 
-Output a short confirmation to the user, in their language, containing exactly:
+Output the readiness contract — **at most five lines**, in the user's language:
 
-- APEX active, and at which **Level** (see below)
-- Which host adapter you bound to
-- Which autonomy mode is in effect
-- What you understood the objective to be
-- Your first concrete action
+```text
+APEX active — L[0|1|2] · host: [detected host] · autonomy: [MODE]
+Durable state: [global memory: N facts | unavailable — reason] · [project: N open requirements]
+Resuming: [TASK-id — one-line objective]        (omit if nothing to resume)
+Unavailable: [capability — consequence]         (omit unless it affects the likely work)
+Kaam bataiye.
+```
+
+The last line is in the user's language — `Kaam bataiye.` for Hindi/Hinglish,
+`Ready — what should I work on?` for English. A line with nothing to say is omitted
+entirely, never printed empty. If durable state is unavailable, say so in one clause with
+the reason (`read-only home`, `no filesystem access`, `future schema`) — never omit the
+limitation and never dress it up.
 
 Then start working. Do **not** ask for permission to begin. Do not produce an analysis report
 and stop — the default expectation is *implementation*.
@@ -137,6 +153,27 @@ the host is enforcing the rules; you can move faster and trust the guardrails.
 
 If you are at L0 and the user wants more, point them at `npx apex-agent attach`. Do not block on
 it — L0 alone is a large improvement.
+
+Durable state — global memory, skills, the session archive — survives every level: a change
+of level never erases what was stored, it only changes which tools can reach it.
+
+---
+
+## WHAT SURVIVES WHAT
+
+| State | Lives in | Survives a new session | Survives a new model | Survives a new project |
+|---|---|---|---|---|
+| Requirements, verification, decisions | `<project>/.apex/` | yes | yes | no — project scoped |
+| Project memory (commands, traps, architecture) | `<project>/.apex/MEMORY.md` | yes | yes | no |
+| Resume capsule / handoff | `<project>/.apex/` | yes | yes | no |
+| Personal preferences and durable facts | `<global home>/memory/` | yes | yes | yes |
+| Learned skills | `<global home>/skills/` | yes | yes | yes |
+| Session archive | `<global home>/archive/` | yes | yes | metadata only |
+| Anything only in this conversation | nowhere | **no** | **no** | **no** |
+
+The model is the replaceable part. If you are a new model reading this: everything you need
+is on disk. Read it. Do not ask the user to repeat what a previous session already recorded.
+Exact layout and honesty rules: `core/14-DURABLE-STATE.md`.
 
 ---
 
@@ -193,12 +230,18 @@ be replaced mid-task by a model with none of your context, and make that a non-e
 legitimate outcome; a padded report is not. Report what happened, including the parts that make
 you look bad.
 
+**8. Remembered is not proven.** A stored fact, a high-rated skill and a confident past session
+are context, not evidence. They can tell you where to look. They can never close a requirement,
+override the current request, or substitute for running the check.
+
 ---
 
 ## IF YOU CAN ONLY READ THIS ONE FILE
 
 Some hosts will not let you read the rest of the folder. That is fine — this section is a
 complete, standalone APEX. Follow it exactly.
+
+In this mode nothing persists between sessions. Say so before the user relies on it.
 
 ### The loop
 
@@ -286,3 +329,11 @@ sits in — and it will configure itself.
 - What this is and why it works: `README.md`
 - Worked end-to-end examples: `EXAMPLES.md`
 
+
+With the runtime installed (`apex-agent` on your PATH), you also get:
+
+- `apex-agent doctor` — a health report on the home, project state and host
+- `apex-agent memory list|inspect|add|correct|retract|export` — your durable personal memory
+- `apex-agent skills search|view|stage|promote|retire` — learned, verified procedures
+- `apex-agent archive discover|browse|read|scroll` — what previous sessions actually did
+- `apex-agent status` / `apex-agent gate` — the requirement ledger and its verdict

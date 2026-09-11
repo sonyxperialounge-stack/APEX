@@ -161,7 +161,9 @@ export class Cortex {
       state: stateSection(requirements),
       rules: rulesSection(),
       corrections: correctionsSection(ctx.corrections ?? [], ctx.conflicts ?? []),
-      projectMemory: memorySection(memoryFacts),
+      // 48 §4 — project memory is retrieved memory, so it travels inside the data
+      // wrapper like every other stored block; only the source attribute differs.
+      projectMemory: apexDataSection("project-memory", memoryFacts, []),
       globalMemory: apexDataSection("global-memory", frozen.map((m) => m.text), ctx.conflicts ?? []),
       skills: skillsSection(ctx.skillIndex ?? []),
     }
@@ -310,11 +312,6 @@ function rulesSection(): string {
     '  "Complete" requires the gate to pass. Nothing else earns the word.',
     "",
   ].join("\n")
-}
-
-function memorySection(facts: string[]): string {
-  if (!facts.length) return ""
-  return ["PROJECT MEMORY (relevant to this work)", ...facts.map((f) => `  · ${f}`), ""].join("\n")
 }
 
 /**

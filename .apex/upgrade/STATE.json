@@ -3,7 +3,7 @@
  "plan": "army-update-plan",
  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
  "startedAt": "2026-09-10T05:36:15.128Z",
- "updatedAt": "2026-09-11T14:20:00.000Z",
+ "updatedAt": "2026-09-11T16:20:00.000Z",
  "baseline": {
   "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
   "dirtyAtStart": false,
@@ -18,7 +18,7 @@
   }
  },
  "currentPhase": "7A",
- "currentPacket": "WP-070",
+ "currentPacket": "WP-071",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -279,7 +279,7 @@
    "evidence": [
     "EVD-044"
    ],
-   "notes": "attached-context 25/50 guard (54 §11.1); context-guard.ts engine + archive read/scroll wiring; 982 pass"
+   "notes": "attached-context 25/50 guard (54 \u00a711.1); context-guard.ts engine + archive read/scroll wiring; 982 pass"
   },
   "WP-027": {
    "status": "DONE",
@@ -309,7 +309,7 @@
    "evidence": [
     "EVD-023"
    ],
-   "notes": "+7 CLI e2e tests; all 10 §12 operations reachable"
+   "notes": "+7 CLI e2e tests; all 10 \u00a712 operations reachable"
   },
   "WP-030": {
    "status": "DONE",
@@ -398,7 +398,7 @@
    "evidence": [
     "EVD-033"
    ],
-   "notes": "frontmatter subset parser + 41§10 header validation + 18§4 body check + advisory linter (18§8) in engines/skill-linter.ts",
+   "notes": "frontmatter subset parser + 41\u00a710 header validation + 18\u00a74 body check + advisory linter (18\u00a78) in engines/skill-linter.ts",
    "commit": "6ee26a6"
   },
   "WP-041": {
@@ -419,7 +419,7 @@
    "evidence": [
     "EVD-045"
    ],
-   "notes": "54 §5/§6 activation already present (SKL-T06/T07); added banned-env-name rejection + value drop + SEC-T09 sweep"
+   "notes": "54 \u00a75/\u00a76 activation already present (SKL-T06/T07); added banned-env-name rejection + value drop + SEC-T09 sweep"
   },
   "WP-042": {
    "status": "DONE",
@@ -602,7 +602,7 @@
    "startedAt": "2026-09-11T05:40:00.000Z",
    "finishedAt": "2026-09-11T05:01:47.000Z",
    "evidence": "EVD-055",
-   "notes": "capability loss recovery: DEGRADED mark, bounded refresh (RCV-T04), effects-gated equivalent, FAIL- records with attemptFingerprint (27 §14), replanAfterCapabilityLoss with do-not-reissue, provider invalidation (CAP-T06)",
+   "notes": "capability loss recovery: DEGRADED mark, bounded refresh (RCV-T04), effects-gated equivalent, FAIL- records with attemptFingerprint (27 \u00a714), replanAfterCapabilityLoss with do-not-reissue, provider invalidation (CAP-T06)",
    "commit": "98de6d3"
   },
   "WP-056": {
@@ -610,7 +610,7 @@
    "startedAt": "2026-09-11T05:10:10.000Z",
    "finishedAt": "2026-09-11T05:55:00.000Z",
    "evidence": "EVD-056",
-   "notes": "extension contract: manifest-first data-only discovery (EXT-T01), hash-bound grants in trust/extensions.json (EXT-T03, 54 §15 same mechanism), project extensions never self-trust (EXT-T02), Governor-mediated mutations (EXT-T04/T06), external dirs UNSUPPORTED (EXT-T05), crash isolation + session quarantine (EXT-T07); trust store split for module budget",
+   "notes": "extension contract: manifest-first data-only discovery (EXT-T01), hash-bound grants in trust/extensions.json (EXT-T03, 54 \u00a715 same mechanism), project extensions never self-trust (EXT-T02), Governor-mediated mutations (EXT-T04/T06), external dirs UNSUPPORTED (EXT-T05), crash isolation + session quarantine (EXT-T07); trust store split for module budget",
    "commit": "ed34b4a"
   },
   "WP-056b": {
@@ -618,7 +618,7 @@
    "startedAt": "2026-09-11T06:10:00.000Z",
    "finishedAt": "2026-09-11T07:15:00.000Z",
    "evidence": "EVD-056b",
-   "notes": "hook fail-open/closed classes by 54 §15 (EXT-T08..T10), 23 §11 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json — same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
+   "notes": "hook fail-open/closed classes by 54 \u00a715 (EXT-T08..T10), 23 \u00a711 quarantine for fail-open hooks (guards never quarantined), completion gate fail-closed by construction, per-hook timeout by class, hook-script consent keyed by (event, canonical path, content hash) in trust/hooks.json \u2014 same mechanism as extension trust (EXT-T11), plugin.capture.lost on capture loss",
    "commit": "16b8660"
   },
   "WP-057": {
@@ -626,7 +626,7 @@
    "startedAt": "2026-09-11T07:30:00.000Z",
    "finishedAt": "2026-09-11T07:40:00.000Z",
    "evidence": "EVD-057",
-   "notes": "capability doctrine: +core/16-CAPABILITIES.md (48 §2 routing; one effects taxonomy; mayExpose != mayExecute; 48 §5 canonical UNAVAILABLE statement + forbiddens; progressive disclosure; CAP-T05), ~START-HERE.md row, payload sync; packaging tests pass inside npm run verify",
+   "notes": "capability doctrine: +core/16-CAPABILITIES.md (48 \u00a72 routing; one effects taxonomy; mayExpose != mayExecute; 48 \u00a75 canonical UNAVAILABLE statement + forbiddens; progressive disclosure; CAP-T05), ~START-HERE.md row, payload sync; packaging tests pass inside npm run verify",
    "commit": "176f1c4"
   },
   "WP-058": {
@@ -634,7 +634,7 @@
    "startedAt": "2026-09-11T07:45:00.000Z",
    "finishedAt": "2026-09-11T09:04:54.000Z",
    "evidence": "EVD-058",
-   "notes": "capability invoke bridge + 3-tier disclosure (54 §2–§4, §20): CapabilityBridge search/describe/invoke through Governor (invoke is NOT an authorization path — validate args locally per 22 §8, toOperationKind, Governor.decide; CAPABILITY_NOT_IN_CATALOG / ARGS_INVALID / BLOCKED / CALL_FAILED; TOOL_NOT_FOUND → markStructuralFailure; mayExpose gates describe+invoke); assembleDisclosure tiers 0/1/2, budget=min(schemaBudgetTokens, 25% context) eager-when-it-fits (54 §4), CORE trust + requiredIds never deferred (PERF-T10 seam for WP-060); plugin.capabilitySurface with bridge/disclosure/registry + plugin.block events; 33 new tests (TLS-T08..T11, PERF-T09/T10)",
+   "notes": "capability invoke bridge + 3-tier disclosure (54 \u00a72\u2013\u00a74, \u00a720): CapabilityBridge search/describe/invoke through Governor (invoke is NOT an authorization path \u2014 validate args locally per 22 \u00a78, toOperationKind, Governor.decide; CAPABILITY_NOT_IN_CATALOG / ARGS_INVALID / BLOCKED / CALL_FAILED; TOOL_NOT_FOUND \u2192 markStructuralFailure; mayExpose gates describe+invoke); assembleDisclosure tiers 0/1/2, budget=min(schemaBudgetTokens, 25% context) eager-when-it-fits (54 \u00a74), CORE trust + requiredIds never deferred (PERF-T10 seam for WP-060); plugin.capabilitySurface with bridge/disclosure/registry + plugin.block events; 33 new tests (TLS-T08..T11, PERF-T09/T10)",
    "commit": "c6369d8"
   },
   "WP-059": {
@@ -642,7 +642,7 @@
    "startedAt": "2026-09-11T06:30:00.000Z",
    "finishedAt": "2026-09-11T04:28:52.000Z",
    "evidence": "EVD-059",
-   "notes": "ExecutionContext on the operation record: EXECUTION_CONTEXTS const, Operation.context?, VerificationRecord.context, detectExecutionContext, normalize/renderContext, disposable-context relaxation (54 §13), audit+evidence carry context, apex_check context param",
+   "notes": "ExecutionContext on the operation record: EXECUTION_CONTEXTS const, Operation.context?, VerificationRecord.context, detectExecutionContext, normalize/renderContext, disposable-context relaxation (54 \u00a713), audit+evidence carry context, apex_check context param",
    "commit": "9a5962e"
   },
   "WP-060": {
@@ -743,10 +743,16 @@
    "evidence": [
     "EVD-068"
    ],
-   "notes": "PHASE 6 COMPLETE: durable-state doctrine (48 S9) with exact implemented paths + routing row + payload sync; phase gate — code/research/artifact/system share one governed loop; 1313 pass"
+   "notes": "PHASE 6 COMPLETE: durable-state doctrine (48 S9) with exact implemented paths + routing row + payload sync; phase gate \u2014 code/research/artifact/system share one governed loop; 1313 pass"
   },
   "WP-070": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T15:40:00.000Z",
+   "finishedAt": "2026-09-11T16:20:00.000Z",
+   "evidence": [
+    "EVD-070"
+   ],
+   "notes": "START-HERE V2: home modes, readiness contract, WHAT-SURVIVES-WHAT, core item 8, degraded disclaimer; SH-T04 fix (project memory now wrapped); SH-T01..T07 tests. 1327 pass."
   },
   "WP-071": {
    "status": "PENDING"

@@ -1617,3 +1617,21 @@ Next: PHASE 6 COMPLETE (WP-060..WP-068 + WP-065b all DONE). Phase 7A
   verifier (AUT-T02); artifact → physical validation (AUT-T07); system
   operation → planning + Governor + recovery + delegation (AUT-T03,
   RCV-T01..T06, FLT-T01..T11). One governed loop, four golden scenarios.
+
+## WP-070 — START-HERE V2 · DONE · 2026-09-11
+
+Files: ~START-HERE.md + payload (home modes, readiness contract,
+  WHAT-SURVIVES-WHAT, core item 8, degraded disclaimer, real CLI
+  commands), ~runtime/src/engines/cortex.ts (project memory now inside
+  the 48 §4 wrapper — SH-T04 gap), +runtime/test/cli/starthere.test.ts
+  (SH-T01..T07 minus live transcripts), ~runtime/test/engines/
+  cortex.test.ts (+SH-T04), +.apex/upgrade/EVIDENCE/EVD-070.md
+Decision: 48 is an edit, not a rewrite — steps kept, B0–B11 folded in.
+  The archive row says `archive/` (code wins, WP-068 rule). The
+  "For the human" list names the CLI subcommands that actually exist
+  (memory add/inspect/correct/retract, not the MCP names).
+Verify: `npm run verify` -> 1327 pass, 0 fail, 0 cancelled, exit 0 (~42s)
+  (was 1313; +14). Ceiling: ~4,133 estimated tokens < 6,000 (SH-T01).
+Surprises: project memory was never wrapped — the pre-V2 section
+  predated the wrapper work; fixed here because SH-T04 names it.
+Next: WP-071 (adapter refresh).
