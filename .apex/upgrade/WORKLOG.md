@@ -1593,3 +1593,27 @@ Verify: `npm run verify` -> 1313 pass, 0 fail, 0 cancelled, exit 0 (~42s)
 Evidence: EVD-067.
 Surprises: none.
 Next: WP-068 (durable-state doctrine) — the Phase-6 gate packet.
+
+## WP-068 — Durable-state doctrine · DONE · 2026-09-11 · PHASE 6 COMPLETE
+
+Files: +core/14-DURABLE-STATE.md (survival map with exact implemented
+  paths, consult-when, honesty rules), ~START-HERE.md (verbatim 48 §2
+  routing row; V2 rewrite stays in WP-070), payload sync,
+  +.apex/upgrade/EVIDENCE/EVD-068.md
+Decision: the map reports the code, never a second spec — the 48 §9 draft
+  said `<global home>/sessions/`, the shipped archive resolves `<global
+  home>/archive/`, so the doc says `archive/` and states the code-wins
+  rule inside. Every other row verified against its owning store
+  (home LAYOUT, memory records/pending, skills bundles/archive/pending,
+  trust files, ledger files).
+Verify: `npm run verify` -> 1313 pass, 0 fail, 0 cancelled, exit 0 (~45s).
+  Packaging tests inside it green with the new file shipped.
+Evidence: EVD-068 (map-exact + packaging).
+Surprises: the draft-vs-code `sessions/`/`archive/` mismatch above —
+  resolved honestly, recorded in the doctrine itself.
+Next: PHASE 6 COMPLETE (WP-060..WP-068 + WP-065b all DONE). Phase 7A
+  (surfaces) at WP-070.
+  Exit gate: code → cascade + code verifier (AUT-T01); research → sourced
+  verifier (AUT-T02); artifact → physical validation (AUT-T07); system
+  operation → planning + Governor + recovery + delegation (AUT-T03,
+  RCV-T01..T06, FLT-T01..T11). One governed loop, four golden scenarios.

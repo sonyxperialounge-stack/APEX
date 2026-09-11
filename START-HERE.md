@@ -99,6 +99,7 @@ Do not read everything up front — that wastes context. Load these when the tri
 | `core/10-GATE.md` | Before you say the word "complete" |
 | `core/11-COUNCIL.md` | When multiple models are available and the decision is expensive |
 | `core/12-MEMORY.md` | At session start and session end |
+| `core/14-DURABLE-STATE.md` | Before writing anything to global memory or skills |
 | `core/15-SKILLS.md` | At session start (consult the compact index), before repeating a known task class, and whenever a verified procedure should become reusable |
 | `core/16-CAPABILITIES.md` | When a needed tool seems missing, or before planning tool-heavy work |
 
