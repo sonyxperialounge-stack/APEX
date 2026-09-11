@@ -594,7 +594,8 @@
       "evidence": "EVD-054",
       "startedAt": "2026-09-11T05:40:00.000Z",
       "finishedAt": "2026-09-11T06:30:00.000Z",
-      "notes": "lazy schema cache: provider+tool key, structural hash, validate before cache, disconnect/hash-drift invalidation, loadSchema door; TLS-T02/T03/T04"
+      "notes": "lazy schema cache: provider+tool key, structural hash, validate before cache, disconnect/hash-drift invalidation, loadSchema door; TLS-T02/T03/T04",
+      "sha": "0e0dedc"
     },
     "WP-055": {
       "status": "PENDING"
