@@ -5,37 +5,29 @@ Where the build stopped, and the single next action. Read after `EXECUTE.md`,
 
 ## State
 
-- Branch `upgrade/army-v4`, ~99 commits ahead of baseline 7c217ec.
-- Phases 0–4 primary packets DONE (WP-001..006, WP-010..019, WP-015b, WP-020..029,
-  WP-025b, WP-030..037, WP-040..049). 46 of 92 packets DONE.
-- **Still PENDING inside those phases — NOT optional (`49` second-pass list):**
-  WP-026b, WP-041b, WP-042b, WP-047b, WP-049b, WP-049c. All have their
-  dependencies satisfied. They must land before the Phase-6 gate (or be
-  explicitly descoped in STATE.json with a reason — see QUESTIONS.md #5).
-- Suite at last verify: 973 pass, 0 fail, exit 0 (EVD-043, audit repair run).
+- Branch `upgrade/army-v4`, ~101 commits ahead of baseline 7c217ec.
+- Phases 0–5 DONE (WP-001..006, WP-010..019 + WP-015b, WP-020..029 + WP-025b/WP-026b,
+  WP-030..037, WP-040..049 + WP-041b/WP-042b/WP-047b/WP-049b/WP-049c,
+  WP-050..059 + WP-050b/WP-056b/WP-058). Phase 6 started: WP-060 DONE.
+- Suite at last verify: 1272 pass, 0 fail, exit 0 (EVD-060, WP-060).
   Node v24.16.0, win32 x64.
-- Phase-4 exit gate met: a verified reusable procedure can be learned (extractor ->
-  forge -> catalog), and failed or untrusted skills cannot silently become active
-  (gate-before-learning, deny-never-overridable, hash-bound trust, no self-trust).
-- 2026-09-11 owner-requested audit of all DONE work (WORKLOG "AUDIT" entry,
-  EVD-043): hard constraints, STATE/evidence integrity, and acceptance-id sweep
-  re-verified; five defects fixed at root cause, including the real cause of the
-  MEM-CON-T01 Windows flake (lock holder-read EPERM now retried in json.ts) and
-  two missing 12 §13 concurrency tests (MEM-CON-T02/T03 now exist and are green).
+- Phase-6 entry met: TaskContract envelope only (no second goal DB),
+  parent/child close guard, fingerprint-forced revalidation, auditable
+  supersession, pointer-rich handoff — TASK-T01..T06 green.
 
 ## Single next action
 
-Start **WP-026b — attached-context 25/50 guard** (first PENDING packet in
-`packetOrder` whose dependencies are DONE), then WP-041b, WP-042b, WP-047b,
-WP-049b, WP-049c, then Phase 5 at **WP-050**. Per `49`: WP-026b's doc is `13 §4`;
-the Governor's operation kinds are `read|write|delete|bash|network|deploy|payment|message`
-(42 §6) — use the 42 §6 mapping, NOT the names in 21.
+Start **WP-061 — domain verifier registry** (Dep WP-060; Doc `24 §3`,
+`40 §10`, `41 §16`). Per `49`: registry returning
+`PASS|FAIL|NOT_RUN|NOT_APPLICABLE`, existing code verification stays
+authoritative, **no write path added** (`42 §4`). Then WP-062..WP-068 in
+`packetOrder`.
 
 ## Pointers
 
 - Plan: `D:/APEX/army-update-plan/` (EXECUTE.md is the work order; 49 = packets).
 - Machine truth: `.apex/upgrade/STATE.json` (92 packets, deps, statuses).
-- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..043`.
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..060`.
 - Lessons that WILL bite again (from WORKLOG Surprises):
   - write source files with the FILE TOOL ONLY — bash heredocs truncate mid-file and
     eat backslashes (`\\` becomes `\`, corrupting regex literals — three hits so far);

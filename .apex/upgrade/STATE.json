@@ -3,7 +3,7 @@
  "plan": "army-update-plan",
  "planRevision": "f3e854039c286714fb4e26dd9481be5b53cb36c9bfa8fc0bda6ad9266b14dba3",
  "startedAt": "2026-09-10T05:36:15.128Z",
- "updatedAt": "2026-09-11T09:05:14.000Z",
+ "updatedAt": "2026-09-11T11:30:00.000Z",
  "baseline": {
   "commit": "7c217ec0d5026be714dbe717fdf7333e06345da4",
   "dirtyAtStart": false,
@@ -17,8 +17,8 @@
    "exit": 0
   }
  },
- "currentPhase": "5",
- "currentPacket": "WP-060",
+ "currentPhase": "6",
+ "currentPacket": "WP-061",
  "phase0": "PASSED",
  "packets": {
   "WP-001": {
@@ -646,7 +646,14 @@
    "commit": "9a5962e"
   },
   "WP-060": {
-   "status": "PENDING"
+   "status": "DONE",
+   "startedAt": "2026-09-11T10:35:00.000Z",
+   "finishedAt": "2026-09-11T11:30:00.000Z",
+   "commit": "b51dc31",
+   "evidence": [
+    "EVD-060"
+   ],
+   "notes": "TaskContract envelope + resume validation (25, 41 S15): pure envelope, no second DB, parent/child close guard, conversion rule, fingerprint revalidation, auditable supersession, pointer-rich handoff; 1272 pass"
   },
   "WP-061": {
    "status": "PENDING"
