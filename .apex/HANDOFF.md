@@ -5,29 +5,31 @@ Where the build stopped, and the single next action. Read after `EXECUTE.md`,
 
 ## State
 
-- Branch `upgrade/army-v4`, ~101 commits ahead of baseline 7c217ec.
-- Phases 0–5 DONE (WP-001..006, WP-010..019 + WP-015b, WP-020..029 + WP-025b/WP-026b,
-  WP-030..037, WP-040..049 + WP-041b/WP-042b/WP-047b/WP-049b/WP-049c,
-  WP-050..059 + WP-050b/WP-056b/WP-058). Phase 6 started: WP-060 DONE.
-- Suite at last verify: 1272 pass, 0 fail, exit 0 (EVD-060, WP-060).
+- Branch `upgrade/army-v4`, ~119 commits ahead of baseline 7c217ec.
+- Phases 0–6 DONE: Phase 6 closed WP-060 (TaskContract envelope,
+  TASK-T01..T06), WP-061 (domain verifiers, AUT-T01/T02), WP-062
+  (deliverable validation, AUT-T07), WP-063 (capability-first planning,
+  AUT-T03), WP-064 (failure taxonomy + ladder, RCV-T01..T06), WP-065
+  (delegation contracts, FLT-T01/T03/T05/T06), WP-065b (child limits,
+  FLT-T07..T11), WP-066 (council triggers, FLT-T04), WP-067 (completion
+  states + Gate), WP-068 (durable-state doctrine + payload sync).
+- Suite at last verify: 1313 pass, 0 fail, exit 0 (EVD-068, WP-068).
   Node v24.16.0, win32 x64.
-- Phase-6 entry met: TaskContract envelope only (no second goal DB),
-  parent/child close guard, fingerprint-forced revalidation, auditable
-  supersession, pointer-rich handoff — TASK-T01..T06 green.
+- Phase-6 exit gate met: code, research, artifact and system-operation
+  scenarios run through one governed loop (EVD-068 gate section).
 
 ## Single next action
 
-Start **WP-061 — domain verifier registry** (Dep WP-060; Doc `24 §3`,
-`40 §10`, `41 §16`). Per `49`: registry returning
-`PASS|FAIL|NOT_RUN|NOT_APPLICABLE`, existing code verification stays
-authoritative, **no write path added** (`42 §4`). Then WP-062..WP-068 in
-`packetOrder`.
+Start **Phase 7A at WP-070 — START-HERE V2** (Dep WP-068; Doc `48`).
+Per `49`: rewrite START-HERE to the V2 spec (B0–B11 boot, durable-state
+map section, readiness contract, 6,000-token ceiling SH-T01) with payload
+sync. Then WP-071..WP-075 in `packetOrder`.
 
 ## Pointers
 
 - Plan: `D:/APEX/army-update-plan/` (EXECUTE.md is the work order; 49 = packets).
 - Machine truth: `.apex/upgrade/STATE.json` (92 packets, deps, statuses).
-- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..060`.
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-001..068`.
 - Lessons that WILL bite again (from WORKLOG Surprises):
   - write source files with the FILE TOOL ONLY — bash heredocs truncate mid-file and
     eat backslashes (`\\` becomes `\`, corrupting regex literals — three hits so far);
