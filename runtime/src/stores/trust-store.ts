@@ -17,7 +17,9 @@
  */
 
 /**
- * The trust store: skill trust grants bound to content hashes (20 §§2–4; WP-042).
+ * The trust store: skill trust grants bound to content hashes (20 §§2–4; WP-042),
+ * plus the extension trust surface (23 §5, §6; WP-056) implemented in
+ * `./extension-trust.ts`.
  *
  * A skill is future instruction; a script inside one is executable code (20 §1).
  * Both are supply-chain inputs, so trust is never a property of a NAME — it is a
@@ -27,6 +29,10 @@
  * The store exposes no execution path at all (SKSEC-T01): scripts are enumerated
  * and hashed, and the Governor alone decides execution later. Project-sourced
  * content can never grant itself trust (CFG-T07).
+ *
+ * Extension trust is the SAME mechanism as skill trust, not a second one (54 §15):
+ * one cross-process lock, one shared scan-cache (extension verdicts keyed `ext:`),
+ * stored in its own `trust/extensions.json`.
  */
 
 import fsp from "node:fs/promises"
@@ -35,8 +41,12 @@ import { createHash } from "node:crypto"
 import { ApexError } from "../core/errors.ts"
 import { readJson, writeJson, withCrossProcessLock } from "../core/json.ts"
 import { scan } from "../core/redact.ts"
-import type { ScanResult } from "../core/redact.ts"
+import type { ScanResult, ScanContext } from "../core/redact.ts"
 import { toIsoString } from "../core/ids.ts"
+import { openExtensionTrust } from "./extension-trust.ts"
+import type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
+
+export type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
 
 /** Source tiers (54 §9.1). PROJECT grants are data-tier: never self-trusting. */
 export type SkillTier = "BUILTIN" | "USER" | "LEARNED" | "PROJECT" | "EXTERNAL"
@@ -69,12 +79,6 @@ export interface TrustGrant {
 export interface TrustFile {
   schemaVersion: 1
   grants: TrustGrant[]
-}
-
-export interface TrustStatus {
-  trusted: boolean
-  grants: number
-  reason?: string
 }
 
 export interface ScriptListing {
@@ -118,6 +122,28 @@ export interface TrustStore {
   scanSkill(text: string): Promise<ScanResult>
   /** Enumerate a skill's scripts/ with content hashes (20 §4). Never executes. */
   enumerateScripts(skillId: string, skillDir: string): Promise<ScriptListing[]>
+  /**
+   * WP-056 — record an EXTENSION trust grant at an exact content hash (23 §5).
+   * The extension ENTRY text is scanned in the strict `extension` context (47
+   * §4.5): a deny verdict is never overridable, a review verdict needs a
+   * recorded justification, and a PROJECT grant claimed by project content is
+   * refused outright (23 §6 — project extensions stay disabled until explicit
+   * user trust).
+   */
+  grantExtension(input: {
+    extensionId: string
+    contentHash: string
+    version: string
+    tier: ExtensionTier
+    grantedBy: string
+    grantedEffects: string[]
+    override?: boolean
+    justification?: string
+  }, entryText?: string): Promise<ExtensionTrustGrant & { granted: boolean }>
+  /** Is this extension, at THIS hash, trusted (23 §5)? Any content drift means no. */
+  extensionStatus(extensionId: string, contentHash: string): Promise<TrustStatus>
+  /** Scan extension entry text in the `extension` scan context, cached by `ext:` key. */
+  scanExtension(text: string): Promise<ScanResult>
   readonly file: string
 }
 
@@ -132,7 +158,6 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
   const file = path.join(homeDir, "trust", "skills.json")
   const cacheFile = path.join(homeDir, "trust", "scan-cache.json")
   const lockFile = path.join(homeDir, "locks", "trust.lock")
-  const scanOnce = opts.scanner ?? ((text: string) => scan(text, "skill"))
 
   /** Hash TEXT (not a file) into the 16-hex cache key — pure over content. */
   function hashText(text: string): string {
@@ -156,8 +181,8 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
   }
 
   /** Cached scan (54 §9.2, SKSEC-T07): hash key, policy-version key, re-scan only on miss. */
-  async function scanCached(text: string): Promise<ScanResult> {
-    const hash = hashText(text)
+  async function scanCached(text: string, ctx: ScanContext, prefix = ""): Promise<ScanResult> {
+    const hash = prefix + hashText(text)
     const cache = await readCache()
     const hit = cache.entries[hash]
     if (hit) {
@@ -168,7 +193,7 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
         findings: hit.rules.map((r) => ({ rule: r.rule, severity: r.severity, excerpt: "" })),
       }
     }
-    const fresh = scanOnce(text)
+    const fresh = opts.scanner ? opts.scanner(text) : scan(text, ctx)
     cache.entries[hash] = {
       verdict: fresh.verdict,
       rules: fresh.findings.map((f) => ({ rule: f.rule, severity: f.severity })),
@@ -184,12 +209,18 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
     return { schemaVersion: 1, grants: [] }
   }
 
+  // Extension trust shares this store's clock, scan-cache, and cross-process lock
+  // (54 §15 — the same mechanism, not a second one).
+  const extStore = openExtensionTrust(homeDir, { now, scanCached, lockFile })
+
   return {
     file,
 
     async scanSkill(text: string): Promise<ScanResult> {
-      return scanCached(text)
+      return scanCached(text, "skill")
     },
+
+    scanExtension: (text: string) => extStore.scan(text),
 
     async grant(input, skillText): Promise<TrustGrant & { granted: boolean }> {
       // Project-sourced content may never grant itself trust, whoever the grant
@@ -204,7 +235,7 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
       }
 
       if (skillText !== undefined) {
-        const verdict = await scanCached(skillText)
+        const verdict = await scanCached(skillText, "skill")
         if (verdict.verdict === "deny") {
           throw new ApexError(
             `Trust refused: the skill scanner returned deny (${verdict.findings.map((f) => f.rule).join(", ")}). ` +
@@ -251,6 +282,9 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
 
       return result
     },
+
+    grantExtension: (input, entryText) => extStore.grant(input, entryText),
+    extensionStatus: (extensionId, contentHash) => extStore.status(extensionId, contentHash),
 
     async status(skillId: string, contentHash: string): Promise<TrustStatus> {
       const data = await read()

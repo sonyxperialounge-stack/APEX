@@ -1289,3 +1289,41 @@ Surprises: the ledger writes PROGRESS.md under .apex/ in the project root (LED-0
   void -> Promise<boolean> change rippled into the plugin wiring (void wrapper); a
   same-provider+same-tool revival is a reboot, only a different conductor re-plans.
 Next: WP-056 (extension contract, Dep WP-051 + WP-042, doc 23).
+
+## WP-056 — Extension contract
+
+Date: 2026-09-11 | Packet: WP-056 | Branch: upgrade/army-v4 | Dep: WP-051, WP-042
+Files:
+  ~runtime/src/stores/trust-store.ts (extension surface delegated out; 439 -> 327 lines),
+  +runtime/src/stores/extension-trust.ts (extension trust grants: own extensions.json file,
+    same lock + shared scan-cache via injection — "the same mechanism, not a second one",
+    54 §15),
+  +runtime/src/plugin/extensions.ts (data-only surface: parseExtensionManifest, apiVersion
+    gate, discoverExtensions hashing entries never loading them, evaluateExtension lifecycle
+    ladder, extensionOperationFor/requestExtensionOperation through the Governor,
+    reportExternalDirectories UNSUPPORTED, openExtensionQuarantine + invokeExtension crash
+    isolation),
+  ~runtime/src/plugin/index.ts (extensionSurface exposed: discover/externalDirectories/quarantine),
+  +runtime/test/plugin/extensions.test.ts (+18),
+  ~runtime/test/stores/trust-store.test.ts (WP-056 suite, +6),
+  +.apex/upgrade/EVIDENCE/EVD-056.md
+Decision: IN SCOPE, not descoped. (a) the `extension` scan context existed in redact.ts with
+  strict deny severities and had NO consumer (dead code otherwise); (b) 54 §15's consent is
+  "the same mechanism as extension trust"; (c) honest-UNSUPPORTED is part of the packet's own
+  "Do". Entry LOADING (EXT-T01's load half, EXT-T07's execution boundary) is deferred to the
+  WP-058 invoke bridge by design; this packet delivers data-only discovery + hash-bound trust
+  + consent records + quarantine bookkeeping. Project extensions can never enable themselves
+  (EXT-T02); hash drift returns ENABLED to TRUST_PENDING (EXT-T03); mutation requests are
+  ordinary Operations through the same Governor (EXT-T04, EXT-T06 — NETWORK -> network,
+  EXTERNAL_SIDE_EFFECT -> deploy, never downgraded); external directories answer UNSUPPORTED
+  (EXT-T05); a crashing extension is redacted, marks its capability DEGRADED, and quarantines
+  after repeated crashes without touching the kernel (EXT-T07). Manifest-first (23 §4): pure
+  JSON parse, id/entry path-traversal refusal, taxonomy-only effects, apiVersion drift refused
+  (EXTENSION_API_UNSUPPORTED).
+Verify: `npm run verify` -> 1200 pass, 0 fail, exit 0 (~40s).
+Evidence: EVD-056 (EXT-T01..T07).
+Surprises: the MOD-T05 module-budget gate (350 lines, no grandfathering) caught the trust
+  store at 439 lines — split into extension-trust.ts; Decision has no verdict/kind fields
+  (allowed/ask/rule/reason only); redact() strips real secret shapes, not placeholders; a
+  scanned-clean untrusted entry evaluates TRUST_PENDING, not SCANNED.
+Next: WP-056b (hook fail-open/closed + per-hook timeout + consent records, 54 §15).

@@ -239,3 +239,158 @@ describe("WP-042 project skills never self-trust (44 §3, CFG-T07)", () => {
     assert.equal("execute" in store, false, "the trust store exposes no execution path at all")
   })
 })
+
+// ── WP-056 — extension trust (23 §5; EXT-T02, EXT-T03) ─────────────────────
+
+describe("WP-056 extension trust is hash-bound and never self-trusting (23 §5, §6)", () => {
+  test("EXT-T03: a grant covers ONE content hash; drift invalidates until re-granted", async () => {
+    const store = openTrustStore(home, {})
+    const h1 = "aaaaaaaaaaaaaaaa"
+    const granted = await store.grantExtension({
+      extensionId: "example.git-extra",
+      contentHash: h1,
+      version: "1.2.0",
+      tier: "USER",
+      grantedBy: "user",
+      grantedEffects: ["READ", "EXECUTE"],
+    })
+    assert.equal(granted.granted, true)
+
+    const fresh = await store.extensionStatus("example.git-extra", h1)
+    assert.equal(fresh.trusted, true)
+
+    // The entry changed on disk (23 §5): the old grant must NOT follow the new bytes.
+    const afterDrift = await store.extensionStatus("example.git-extra", "bbbbbbbbbbbbbbbb")
+    assert.equal(afterDrift.trusted, false)
+    assert.match(afterDrift.reason ?? "", /content hash changed/i, "hash drift invalidates executable trust")
+
+    const reGranted = await store.grantExtension({
+      extensionId: "example.git-extra",
+      contentHash: "bbbbbbbbbbbbbbbb",
+      version: "1.2.1",
+      tier: "USER",
+      grantedBy: "user",
+      grantedEffects: ["READ", "EXECUTE"],
+    })
+    assert.equal(reGranted.granted, true)
+    assert.equal((await store.extensionStatus("example.git-extra", "bbbbbbbbbbbbbbbb")).trusted, true)
+  })
+
+  test("EXT-T02: a project-supplied extension cannot enable itself", async () => {
+    const store = openTrustStore(home, {})
+    await assert.rejects(
+      store.grantExtension({
+        extensionId: "repo.helper",
+        contentHash: "cccccccccccccccc",
+        version: "1.0.0",
+        tier: "PROJECT",
+        grantedBy: "repo.helper",
+        grantedEffects: ["READ"],
+      }),
+      (e: unknown) => e instanceof ApexError && /extension.*(enable itself|self.?trust)|self.?trust.*extension/i.test(e.message),
+      "a grant BY the extension itself is refused",
+    )
+    await assert.rejects(
+      store.grantExtension({
+        extensionId: "repo.helper",
+        contentHash: "cccccccccccccccc",
+        version: "1.0.0",
+        tier: "PROJECT",
+        grantedBy: "project",
+        grantedEffects: ["READ"],
+      }),
+      /enable itself|self.?trust/i,
+      "a project-tier grant from project content is refused",
+    )
+  })
+
+  test("extension grants live in trust/extensions.json, separate from skills.json", async () => {
+    const store = openTrustStore(home, {})
+    await store.grant({
+      skillId: "meta/a-skill",
+      contentHash: "dddddddddddddddd",
+      tier: "USER",
+      grantedBy: "user",
+    })
+    await store.grantExtension({
+      extensionId: "example.git-extra",
+      contentHash: "eeeeeeeeeeeeeeee",
+      version: "1.2.0",
+      tier: "USER",
+      grantedBy: "user",
+      grantedEffects: ["READ"],
+    })
+    const skills = await fsp.readFile(path.join(home, "trust", "skills.json"), "utf8")
+    assert.ok(!skills.includes("example.git-extra"), "an extension grant never leaks into the skills file")
+    const extensions = await fsp.readFile(path.join(home, "trust", "extensions.json"), "utf8")
+    assert.ok(extensions.includes("example.git-extra"))
+    assert.ok(!extensions.includes("meta/a-skill"))
+  })
+
+  test("the extension scan context is DENY-strict: destructive shell refuses the grant, never overridable", async () => {
+    const store = openTrustStore(home, {})
+    const hostileEntry = "export function clean() { return rm -rf / }\n"
+    await assert.rejects(
+      store.grantExtension(
+        {
+          extensionId: "evil.run",
+          contentHash: "ffffffffffffffff",
+          version: "1.0.0",
+          tier: "USER",
+          grantedBy: "user",
+          grantedEffects: ["READ"],
+          override: true,
+          justification: "trusted publisher",
+        },
+        hostileEntry,
+      ),
+      (e: unknown) => e instanceof ApexError && /deny/i.test(e.message),
+      "a deny verdict in the extension context is never overridable",
+    )
+  })
+
+  test("a review-verdict extension grant may be overridden only with a recorded justification", async () => {
+    const store = openTrustStore(home, { scanner: () => ({ verdict: "review", findings: [{ rule: "x", severity: "warn", excerpt: "" }] }) })
+    await assert.rejects(
+      store.grantExtension(
+        {
+          extensionId: "shady.addon",
+          contentHash: "abababababababab",
+          version: "1.0.0",
+          tier: "USER",
+          grantedBy: "user",
+          grantedEffects: ["READ"],
+          override: true,
+        },
+        "code",
+      ),
+      /justification/i,
+      "overriding a review finding without a reason is refused",
+    )
+    const ok = await store.grantExtension(
+      {
+        extensionId: "shady.addon",
+        contentHash: "abababababababab",
+        version: "1.0.0",
+        tier: "USER",
+        grantedBy: "user",
+        grantedEffects: ["READ"],
+        override: true,
+        justification: "reviewed and accepted on 2026-09-11",
+      },
+      "code",
+    )
+    assert.equal(ok.granted, true)
+  })
+
+  test("scanExtension caches under its own namespace — a skill scan of the same bytes stays distinct", async () => {
+    const store = openTrustStore(home, {})
+    await store.scanExtension("just some prose")
+    await store.scanSkill("just some prose")
+    const cache = JSON.parse(await fsp.readFile(path.join(home, "trust", "scan-cache.json"), "utf8"))
+    const keys = Object.keys(cache.entries)
+    assert.ok(keys.some((k) => k.startsWith("ext:")), "extension scans cache under ext:")
+    assert.ok(keys.some((k) => !k.startsWith("ext:")), "skill scans keep the legacy bare key")
+    assert.ok(keys.length >= 2, "the two contexts never collide under one key")
+  })
+})

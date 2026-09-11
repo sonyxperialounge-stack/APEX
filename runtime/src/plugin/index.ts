@@ -42,12 +42,13 @@ import type { ApexConfig, Operation, VerificationRecord } from "../core/types.ts
 import { log, event } from "../core/log.ts"
 import { redact } from "../core/redact.ts"
 import { BlockedError } from "../core/errors.ts"
-import { safeProjectRoot, apexHome } from "../core/paths.ts"
+import { safeProjectRoot, apexHome, apexDir } from "../core/paths.ts"
 import { projectKey } from "../core/ids.ts"
 import { TOOLS, callTool } from "../mcp/tools.ts"
 import { openArchiveCapture } from "../engines/archive-capture.ts"
 import { CapabilityRegistry } from "../engines/capability-registry.ts"
 import { onHostCapabilityChange, registerHostTools } from "../engines/host-discovery.ts"
+import { discoverExtensions, openExtensionQuarantine, reportExternalDirectories } from "./extensions.ts"
 import { NullHostCapabilities, type HostCapabilities } from "../host/types.ts"
 
 /** WP-052 — single provider label for everything the plugin's host declares. */
@@ -642,6 +643,11 @@ export async function ApexPlugin(ctx: PluginContext = {}): Promise<Record<string
     event: safe("event", onEvent(engines)),
     // PLG-014 — register apex_* natively so L2 needs no MCP server running.
     tool: apexTools(projectRoot),
+    // WP-056 — the extension surface (23). DATA-ONLY: discovery parses manifests
+    // and hashes entry files; nothing here imports or executes extension code.
+    // Loading happens only through the invoke bridge (WP-058) after hash-bound
+    // trust, per EXT-T01.
+    extensions: extensionSurface(projectRoot),
     dispose: async () => {
       await engines.ledger.appendProgress({ note: "APEX plugin disposed." })
     },
@@ -649,6 +655,25 @@ export async function ApexPlugin(ctx: PluginContext = {}): Promise<Record<string
 }
 
 export default ApexPlugin
+
+/**
+ * WP-056 — the project extension surface (23 §4, §6, §7): a data-only registry
+ * over `.apex/extensions/`, a session quarantine for crash isolation (23 §11),
+ * and an honest UNSUPPORTED verdict for external directories (23 §7, EXT-T05).
+ * Trust is granted through the trust store by an explicit user action; this
+ * surface only ever READS manifests and hashes.
+ */
+export function extensionSurface(projectRoot: string) {
+  return {
+    extensionsDir: path.join(apexDir(projectRoot), "extensions"),
+    /** EXT-T01 — discover manifests + entry hashes without executing anything. */
+    discover: () => discoverExtensions(path.join(apexDir(projectRoot), "extensions")),
+    /** EXT-T05 — external extension directories are UNSUPPORTED in this release. */
+    externalDirectories: () => reportExternalDirectories([]),
+    /** EXT-T07 — repeated crash loops quarantine an extension for the session. */
+    quarantine: openExtensionQuarantine(),
+  }
+}
 
 /**
  * PLG-014 — the same `apex_*` surface as L1, registered natively.
