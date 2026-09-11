@@ -542,7 +542,14 @@
       "commit": "bfa367e"
     },
     "WP-050": {
-      "status": "PENDING"
+      "status": "DONE",
+      "startedAt": "2026-09-11T02:00:00.000Z",
+      "finishedAt": "2026-09-11T03:02:00.000Z",
+      "evidence": [
+        "EVD-050"
+      ],
+      "notes": "effects taxonomy + Governor adapter",
+      "commit": "PENDING"
     },
     "WP-050b": {
       "status": "PENDING"

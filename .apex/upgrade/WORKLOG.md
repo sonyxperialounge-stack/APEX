@@ -1086,3 +1086,28 @@ Decision: 54 §8 was MISSING (nothing said how a skill is invoked). Implemented 
 Verify: `npm run verify` -> 1004 pass, 0 fail, exit 0 (39.6s).
 Evidence: EVD-049.
 Next: PHASE 5 (WP-050..WP-059 capabilities) — Phase 4 is complete.
+
+## WP-050 — effects taxonomy + Governor adapter (DONE — PHASE 5 START)
+
+Date: 2026-09-11
+Packet: WP-050 (21 §3 taxonomy, 42 §6 adapter, CAP-T04/CAP-T07/HC-T04)
+Files: ~runtime/src/core/types.ts (CAPABILITY_EFFECTS + CapabilityEffect union,
+  Operation.destructive modifier), ~runtime/src/engines/governor.ts (toOperationKind,
+  isDestructive, destructive enforcement in modePolicy), ~runtime/test/engines/governor.test.ts
+  (+13 tests), +.apex/upgrade/EVIDENCE/EVD-050.md
+Decision: Built the ONE effects taxonomy (CAPABILITY_EFFECTS, 8 effects) in core/types.ts so
+  registry, skills and security policy share a single vocabulary (CAP-T07) — no parallel
+  synonym list anywhere. Added toOperationKind() as the only bridge from capability effects to
+  the real OperationKind union (42 §6): EXTERNAL_SIDE_EFFECT -> deploy, EXECUTE/INSTALL -> bash
+  (commands first so the command blocklist reasons on op.command), NETWORK -> network,
+  DELETE -> delete, WRITE -> write, READ -> read, DESTRUCTIVE alone -> delete. Added the
+  Operation.destructive modifier (declared only by capability descriptors, never by the model)
+  which raises requiresSnapshot and forces explicit human approval in EVERY mode — even
+  FULL_AUTO refuses a destructive read outright (CAP-T04: exposure cannot bypass the Governor).
+Verify: `npm run verify` -> 1017 pass, 0 fail, exit 0 (31.6s).
+Evidence: EVD-050.
+Surprises: two self-test-expectation corrections — (1) EXECUTE must win over NETWORK in composite
+  effects so the command blocklist always sees exec operations (fixed the test, not the code);
+  (2) EXECUTE+DELETE maps to "bash" not "delete": a delete executed through a command must stay
+  on bash because the unbounded-delete / sql-destructive rules reason on op.command.
+Next: WP-051 (capability registry: descriptors, availability, trust, mayExpose).

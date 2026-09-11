@@ -33,6 +33,7 @@ import crypto from "node:crypto"
 import type {
   ApexConfig,
   AutonomyMode,
+  CapabilityEffect,
   Decision,
   Operation,
   RollbackReport,
@@ -144,6 +145,39 @@ const RULES: Rule[] = [
 /** GOV-001 — what each mode does with an operation that survived the blocklist. */
 const ROUTINE: Operation["kind"][] = ["read", "write"]
 
+/**
+ * WP-050 — the ONE effect→OperationKind adapter (42 §6, correcting 21 §6).
+ *
+ * The mapping lives here and nowhere else; `CapabilityRegistry.toOperationKind`
+ * delegates to it. When several effects are present, the most restrictive mapped
+ * kind wins. `DESTRUCTIVE` is a MODIFIER, never a kind (42 §6): this function
+ * derives the operation's own kind from the remaining effects, and the caller
+ * must surface the modifier on the Operation (`destructive: true`) so the
+ * Governor raises the snapshot bar and forces approval.
+ */
+export function toOperationKind(effects: CapabilityEffect[]): Operation["kind"] {
+  const own = effects.filter((e) => e !== "DESTRUCTIVE")
+  // An external side effect governs as `deploy` — the most restricted
+  // non-financial external kind — unless the descriptor declares a target
+  // class and the caller maps payment/message itself (future metadata).
+  if (own.includes("EXTERNAL_SIDE_EFFECT")) return "deploy"
+  // Commands first: an exec-based operation must stay on `bash` so the command
+  // blocklist (unbounded-delete, history-rewrite, sql-destructive) still sees
+  // it, even when it also touches the network.
+  if (own.includes("EXECUTE") || own.includes("INSTALL")) return "bash"
+  if (own.includes("NETWORK")) return "network"
+  if (own.includes("DELETE")) return "delete"
+  if (own.includes("WRITE")) return "write"
+  if (own.includes("READ")) return "read"
+  // Degenerate: DESTRUCTIVE alone. Govern as the most restrictive kind.
+  return "delete"
+}
+
+/** WP-050 — whether a descriptor's effects carry the destructive modifier. */
+export function isDestructive(effects: CapabilityEffect[]): boolean {
+  return effects.includes("DESTRUCTIVE")
+}
+
 export class Governor {
   cfg: ApexConfig
   private git: GitClient | null
@@ -184,7 +218,10 @@ export class Governor {
   private modePolicy(op: Operation): Decision {
     const mode: AutonomyMode = this.cfg.autonomy
     const risky = this.isRisky(op)
-    const requiresSnapshot = op.kind === "write" || op.kind === "delete" || risky
+    // WP-050 — 42 §6: DESTRUCTIVE raises the snapshot bar on the operation's own
+    // kind and forces approval in EVERY mode, including FULL_AUTO.
+    const destructive = op.destructive === true
+    const requiresSnapshot = op.kind === "write" || op.kind === "delete" || risky || destructive
 
     const allow = (reason: string): Decision => ({
       allowed: true,
@@ -203,15 +240,21 @@ export class Governor {
 
     switch (mode) {
       case "MANUAL":
-        return op.kind === "read"
+        return op.kind === "read" && !destructive
           ? allow("MANUAL: reading is always permitted")
           : ask("MANUAL: propose the change and wait for an explicit yes")
       case "GUARDED":
-        return risky
+        return risky || destructive
           ? ask(`GUARDED: ${this.riskLabel(op)} needs a one-time confirmation`)
           : allow("GUARDED: routine operation")
       case "AUTO":
       case "FULL_AUTO":
+        if (destructive) {
+          return ask(
+            "FULL_AUTO: this capability is declared DESTRUCTIVE (42 §6) and always needs explicit human approval, " +
+              "even in autonomous mode",
+          )
+        }
         return allow(`${mode}: proceeding — snapshot ${requiresSnapshot ? "required" : "not required"}`)
     }
   }

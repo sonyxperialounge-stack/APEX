@@ -3,10 +3,10 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Governor, extractPathArguments, type GitClient } from "../../src/engines/governor.ts"
+import { Governor, extractPathArguments, toOperationKind, isDestructive, type GitClient } from "../../src/engines/governor.ts"
 import { DEFAULT_CONFIG } from "../../src/engines/ledger.ts"
 import { setLogDir } from "../../src/core/log.ts"
-import type { ApexConfig, AutonomyMode, Operation } from "../../src/core/types.ts"
+import type { ApexConfig, AutonomyMode, CapabilityEffect, Operation } from "../../src/core/types.ts"
 
 let dir: string
 let cfg: ApexConfig
@@ -425,5 +425,103 @@ describe("extractPathArguments", () => {
   })
   test("drops redirects", () => {
     assert.deepEqual(extractPathArguments("pytest > out.txt"), [])
+  })
+})
+
+// ── WP-050 // 21 §3, 42 §6 — the effects taxonomy and Governor adapter ──────
+
+describe("toOperationKind — the one effect→kind adapter (42 §6)", () => {
+  const TABLE: Array<{ effects: CapabilityEffect[]; expected: Operation["kind"] }> = [
+    { effects: ["READ"], expected: "read" },
+    { effects: ["WRITE"], expected: "write" },
+    { effects: ["EXECUTE"], expected: "bash" },
+    { effects: ["NETWORK"], expected: "network" },
+    { effects: ["INSTALL"], expected: "bash" },
+    { effects: ["DELETE"], expected: "delete" },
+    { effects: ["EXTERNAL_SIDE_EFFECT"], expected: "deploy" },
+    { effects: ["DESTRUCTIVE", "DELETE"], expected: "delete" },
+  ]
+  test("maps every single effect to its operation kind", () => {
+    for (const { effects, expected } of TABLE) {
+      assert.equal(toOperationKind(effects), expected, `${effects.join("+")} -> ${expected}`)
+    }
+  })
+  test("a composite maps to the most restrictive kind", () => {
+    assert.equal(toOperationKind(["READ", "WRITE"]), "write")
+    assert.equal(toOperationKind(["READ", "DELETE"]), "delete")
+    assert.equal(toOperationKind(["WRITE", "NETWORK"]), "network")
+    // A delete done through a command stays on `bash`: the command blocklist
+    // must still see it (unbounded-delete etc. reason on op.command).
+    assert.equal(toOperationKind(["EXECUTE", "DELETE"]), "bash")
+    assert.equal(toOperationKind(["READ", "DESTRUCTIVE"]), "read")
+  })
+  test("EXECUTE wins over NETWORK so command safety rules still see it", () => {
+    assert.equal(toOperationKind(["NETWORK", "EXECUTE"]), "bash")
+  })
+  test("DESTRUCTIVE alone still maps to a real kind (delete)", () => {
+    assert.equal(toOperationKind(["DESTRUCTIVE"]), "delete")
+  })
+  test("the full taxonomy is referenced — no parallel synonym vocabulary (CAP-T07)", () => {
+    // The eight canonical effects from 21 §3 compile through the adapter and
+    // stay inside the exported const union.
+    assert.deepEqual(
+      ["READ", "WRITE", "EXECUTE", "NETWORK", "INSTALL", "DELETE", "DESTRUCTIVE", "EXTERNAL_SIDE_EFFECT"] as CapabilityEffect[],
+      ["READ", "WRITE", "EXECUTE", "NETWORK", "INSTALL", "DELETE", "DESTRUCTIVE", "EXTERNAL_SIDE_EFFECT"],
+    )
+    for (const e of ["READ", "WRITE", "EXECUTE", "NETWORK", "INSTALL", "DELETE", "DESTRUCTIVE", "EXTERNAL_SIDE_EFFECT"]) {
+      assert.ok(toOperationKind([e as CapabilityEffect]), `adapter handles ${e}`)
+    }
+  })
+})
+
+describe("isDestructive — the modifier, not a kind (42 §6)", () => {
+  test("DESTRUCTIVE in the effects list flags the operation", () => {
+    assert.equal(isDestructive(["DESTRUCTIVE", "DELETE"]), true)
+    assert.equal(isDestructive(["READ"]), false)
+    assert.equal(isDestructive([]), false)
+  })
+})
+
+describe("WP-050 destructive modifier on the Governor", () => {
+  test("a destructive read still requires a snapshot (raises the bar)", () => {
+    const d = gov({ autonomy: "FULL_AUTO" }).decide({ kind: "read", destructive: true })
+    assert.equal(d.allowed, false, "destructive forces approval even in FULL_AUTO")
+    assert.equal(d.requiresSnapshot, true)
+  })
+  test("FULL_AUTO refuses a destructive operation outright and says why", () => {
+    const d = gov({ autonomy: "FULL_AUTO" }).decide({ kind: "delete", destructive: true })
+    assert.equal(d.allowed, false)
+    assert.match(d.reason, /DESTRUCTIVE.*explicit human approval/)
+    assert.equal(d.requiresSnapshot, true)
+  })
+  test("AUTO also refuses — the modifier is not skipped at higher autonomy", () => {
+    const d = gov({ autonomy: "AUTO" }).decide({ kind: "bash", destructive: true, command: "rm -rf build" })
+    assert.equal(d.allowed, false)
+    assert.equal(d.requiresSnapshot, true)
+  })
+  test("GUARDED asks for a destructive operation with a snapshot", () => {
+    const d = gov({ autonomy: "GUARDED" }).decide({ kind: "write", path: "src/app.ts", destructive: true })
+    assert.equal(d.allowed, false)
+    assert.equal(d.ask, true)
+    assert.equal(d.requiresSnapshot, true)
+  })
+  test("MANUAL asks even for a destructive read", () => {
+    const d = gov({ autonomy: "MANUAL" }).decide({ kind: "read", destructive: true })
+    assert.equal(d.allowed, false)
+    assert.equal(d.ask, true)
+  })
+  test("an ordinary non-destructive write keeps its current AUTO behaviour", () => {
+    const d = gov({ autonomy: "AUTO" }).decide({ kind: "write", path: "src/app.ts" })
+    assert.equal(d.allowed, true)
+    assert.equal(d.requiresSnapshot, true)
+  })
+  test("CAP-T04 — capability exposure still goes through the Governor", () => {
+    // The adapter maps the descriptor's effects and asks exactly as a direct call
+    // would; a deferred tool is not a cheaper tool (54 §2).
+    const d = gov({ autonomy: "FULL_AUTO" }).decide({
+      kind: toOperationKind(["DESTRUCTIVE", "DELETE"]),
+      destructive: isDestructive(["DESTRUCTIVE", "DELETE"]),
+    })
+    assert.equal(d.allowed, false, "a destructive capability cannot bypass the Governor")
   })
 })

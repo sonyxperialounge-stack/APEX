@@ -186,11 +186,35 @@ export type OperationKind =
   | "payment"
   | "message"
 
+/**
+ * WP-050 — the ONE effects taxonomy (21 §3). Registry, skills and security policy
+ * all reference this list; nothing may define a parallel synonym vocabulary
+ * (CAP-T07).
+ */
+export const CAPABILITY_EFFECTS = [
+  "READ",
+  "WRITE",
+  "EXECUTE",
+  "NETWORK",
+  "INSTALL",
+  "DELETE",
+  "DESTRUCTIVE",
+  "EXTERNAL_SIDE_EFFECT",
+] as const
+export type CapabilityEffect = (typeof CAPABILITY_EFFECTS)[number]
+
 export interface Operation {
   kind: OperationKind
   path?: string
   command?: string
   payload?: string
+  /**
+   * WP-050 — declared only by the capability descriptor that produced this
+   * operation, never by the model (54 §2: a deferred tool is not a cheaper tool).
+   * The Governor treats it as a modifier (42 §6): raises `requiresSnapshot` and
+   * forces explicit approval in every mode, including FULL_AUTO.
+   */
+  destructive?: boolean
 }
 
 export interface Decision {
