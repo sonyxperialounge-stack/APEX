@@ -215,7 +215,7 @@ describe("WP-083 — migration fixtures (33 §12, 43 §5)", () => {
     assert.match(mig!.summary, /read-only/, "the read-only rule is the reported reason")
   })
 
-  test("MIG-F05 — the transactional runner preserves IDs and data across the chain, then reports already complete", async () => {
+  test("MIG-T07/MIG-F05 — the transactional runner preserves IDs and data across the chain, then reports already complete", async () => {
     const stateFile = path.join(dir, "memory.json")
     await writeJson(stateFile, {
       // Versionless legacy V3 memory: records with IDs, no schemaVersion marker.

@@ -208,7 +208,7 @@ describe("WP-087 — Doctor completion (45 §4 registry; DOC-T02, T04, T05, T06)
     assert.equal(events.includes(SECRET), false, "the event log never stores the secret in clear")
   })
 
-  test("DOC-T05: broken cross-store references are surfaced (dependsOn, evidence)", async () => {
+  test("DOC-T05/DAT-T06: broken cross-store references are surfaced (dependsOn, evidence)", async () => {
     const ledger = new Ledger(dir)
     await ledger.init()
     await ledger.addRequirement({ source: "user", text: "a", acceptance: "a passes", verifyBy: "true" })
@@ -289,7 +289,7 @@ describe("WP-087 — Doctor completion (45 §4 registry; DOC-T02, T04, T05, T06)
     const ids = new Set(report.checks.map((c) => c.id))
     for (const expected of [
       "DOC-RUN-NODE", "DOC-RUN-MODE", "DOC-PKG-SCHEMAS", "DOC-PKG-METADATA", "DOC-PKG-SYNC",
-      "DOC-HOME-RESOLVE", "DOC-CAP-DISCOVERY", "DOC-MIG-JOURNAL",
+      "DOC-PKG-MANIFEST", "DOC-HOME-RESOLVE", "DOC-CAP-DISCOVERY", "DOC-MIG-JOURNAL",
       "DOC-LOCK-01", "DOC-LOCK-02", "DOC-LOCK-03",
     ]) {
       assert.ok(ids.has(expected), `${expected} is reported`)

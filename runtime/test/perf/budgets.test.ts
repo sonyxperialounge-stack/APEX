@@ -144,7 +144,7 @@ describe("WP-084 — performance and budget regressions (32 §11-§13)", () => {
     assert.match(body ?? "", /BODYMARK-421/, "the body is there when explicitly selected")
   })
 
-  test("PERF-T03 — the capability catalog degrades to a compact index without hiding existence", () => {
+  test("PERF-T03/BOOT-T07 — the capability catalog degrades to a compact index without hiding existence", () => {
     const registry = new CapabilityRegistry()
     for (let i = 0; i < 1000; i++) {
       const descriptor: CapabilityDescriptor = {
@@ -251,7 +251,7 @@ describe("WP-084 — performance and budget regressions (32 §11-§13)", () => {
     assert.match(ev!.text ?? "", /\[REDACTED\]/)
   })
 
-  test("PERF-T07 — a read-only session performs zero durable writes to the global home", async () => {
+  test("PERF-T07/LIFE-T02 — a read-only session performs zero durable writes to the global home", async () => {
     // Seed the home with content worth reading.
     const store = openMemoryStore(path.join(home, "memory"))
     const state = await store.read()

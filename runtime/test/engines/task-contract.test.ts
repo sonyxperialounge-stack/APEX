@@ -114,7 +114,7 @@ describe("WP-060 TaskContract envelope (25 §1–§2)", () => {
     assert.deepEqual(task.requirementIds, ["REQ-001", "REQ-002"])
   })
 
-  test("TASK-T02: a resumable task survives model replacement", () => {
+  test("TASK-T02/AUT-T05: a resumable task survives model replacement", () => {
     const task = makeParent()
     // A different model/host reads the same persisted envelope bytes.
     const roundTripped = JSON.parse(JSON.stringify(task)) as unknown

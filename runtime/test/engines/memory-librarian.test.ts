@@ -194,7 +194,7 @@ function cand(over: Partial<MemoryCandidate> = {}): MemoryCandidate {
 }
 
 describe("WP-024 resolveCandidate", () => {
-  test("npm -> pnpm correction supersedes cleanly with an auditable chain (11 §7)", async () => {
+  test("MEM-T03 — npm -> pnpm correction supersedes cleanly with an auditable chain (11 §7)", async () => {
     const npm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm for installs." })
     const out = await resolveCandidate([npm], cand({
       text: "Use pnpm for installs.",
@@ -343,7 +343,7 @@ describe("WP-025 selectMemory", () => {
     assert.ok(out.skipped.some((s) => s.reason.includes("useGlobal")), "the skip is recorded with its reason")
   })
 
-  test("another project's facts are never injected here (HOME-T02, C-020)", () => {
+  test("another project's facts are never injected here (HOME-T02, ID-T05, C-020)", () => {
     const mine = rec({ id: "MEM-000000002-bbbbbb", scope: { kind: "project", projectKey: "prj_1111111111111111" }, text: "This project uses npm." })
     const foreign = rec({ id: "MEM-000000003-cccccc", scope: { kind: "project", projectKey: "prj_2222222222222222" }, text: "That project deploys on Fridays." })
     const global1 = rec({ id: "MEM-000000001-aaaaaa", text: "Use pnpm." })

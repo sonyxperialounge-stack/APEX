@@ -524,7 +524,7 @@ describe("WP-027 — recall bridge", () => {
     assert.equal(after, human, "the file is byte-identical to what the human wrote")
   })
 
-  test("the six existing sections are unchanged; new content maps INTO them (42 §8)", () => {
+  test("PMEM-T01 — the six existing sections are unchanged; new content maps INTO them (42 §8)", () => {
     assert.deepEqual([...MEMORY_SECTIONS], [
       "Environment", "Commands", "Architecture", "Traps", "Failed approaches", "User preferences",
     ])

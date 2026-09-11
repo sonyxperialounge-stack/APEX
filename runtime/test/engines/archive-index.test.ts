@@ -108,7 +108,7 @@ describe("WP-033 archive search (SRCH-T01/T02)", () => {
     assert.ok(hits.every((h) => h.score > 0), "all hits have nonzero score")
   })
 
-  test("filters: projectKey, sessionId, types, limit", async () => {
+  test("SRCH-T06 — filters: projectKey, sessionId, types, limit", async () => {
     const store = openArchiveStore(archiveDir, { now: () => 1725964800000 })
     const sesA = await store.appendSession({ startedAt: "2026-09-10T00:00:00.000Z", projectKey: "prj_1111111111111111" })
     const sesB = await store.appendSession({ startedAt: "2026-09-10T01:00:00.000Z", projectKey: "prj_2222222222222222" })

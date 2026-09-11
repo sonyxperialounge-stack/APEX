@@ -17,7 +17,7 @@
     "payload/",
     "README.md",
     "LICENSE",
-    "scripts/"
+    "scripts/sync-payload.mjs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

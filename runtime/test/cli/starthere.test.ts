@@ -6,6 +6,7 @@
  * once before (see payload.test.ts). Transcript-level scenarios (SH-T03's live read,
  * SH-T06's live wording) are exercised by the L0 conformance suite; this file pins the
  * invariants that are statically checkable, so a doc edit cannot silently break them.
+ * WP-070 — the START-HERE rebuild (48; SH-T01..T07 are this file's acceptance ids).
  */
 
 import { test, describe } from "node:test"

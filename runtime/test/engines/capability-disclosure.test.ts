@@ -94,7 +94,7 @@ describe("WP-058 — eager disclosure when the catalogue fits (54 §4)", () => {
     assert.equal((res.text.match(/web\.search/g) ?? []).length, 1, "one entry per canonical id")
   })
 
-  test("the budget is min(schemaBudgetTokens, 25% of contextBudgetTokens) (54 §3)", () => {
+  test("CTX-T02 — the budget is min(schemaBudgetTokens, 25% of contextBudgetTokens) (54 §3)", () => {
     const r = new CapabilityRegistry({ now: () => NOW })
     r.register(cap("fs.read"))
     r.register(cap("fs.write", { effects: ["WRITE"] }))

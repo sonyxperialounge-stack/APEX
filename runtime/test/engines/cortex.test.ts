@@ -182,7 +182,7 @@ describe("COR-002/003 — budget degradation from the bottom", () => {
     assert.deepEqual(dropped, [])
   })
 
-  test("the default budget is respected", async () => {
+  test("CTX-T01 — the default budget is respected", async () => {
     const req = await addReq("x".repeat(400))
     await ledger.setStatus(req.id, "IN_PROGRESS")
     const { estimatedTokens } = await cortex.assemble()

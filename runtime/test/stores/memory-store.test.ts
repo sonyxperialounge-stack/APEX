@@ -209,7 +209,7 @@ describe("WP-021 commit — revision CAS", () => {
 })
 
 describe("WP-021 hot views (10 §6, C-008)", () => {
-  test("views render from active global records; deleting them loses nothing (MEM-CON-T05: views are derived)", async () => {
+  test("MEM-T06/MEM-CON-T05: views render from active global records; deleting them loses nothing", async () => {
     const { dir, memoryDir } = await tempStore("apex-mem-view-")
     const store = openMemoryStore(memoryDir)
     await store.commit(0, [

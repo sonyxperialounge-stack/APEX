@@ -1,6 +1,7 @@
 /**
  * EVAL — resume-across-models: session A writes the ledger; session B (a
  * different model label) resumes from disk alone.
+ * Register ids:  REQ-BOOT-008 (BOOT-T08, ID-T01).
  *
  * Inputs:        an empty temporary project; a real Ledger.
  * Constraints:   simulated host = node; no chat history carries over — B sees

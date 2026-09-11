@@ -80,7 +80,7 @@ describe("WP-042 trust grants bound to content hash", () => {
     assert.equal((await store.status("meta/a-skill", h1)).trusted, true, "the grant is bound to its own hash, nothing else")
   })
 
-  test("a deny-verdict scan can never be overridden, in any mode (54 §9.1)", async () => {
+  test("SKSEC-T06 — a deny-verdict scan can never be overridden, in any mode (54 §9.1)", async () => {
     await writeSkill()
     const store = openTrustStore(home, {})
     const h = await hashSkillContent(path.join(home, "skills", "meta", "a-skill", "SKILL.md"))

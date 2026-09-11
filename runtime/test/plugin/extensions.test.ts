@@ -103,7 +103,7 @@ describe("WP-056 — manifest is data-only (23 §4; EXT-T01)", () => {
     }
   })
 
-  test("apiVersion drift is refused explicitly, never silently upgraded", () => {
+  test("MIG-T06: apiVersion drift is refused explicitly — an incompatible extension API is disabled, never silently upgraded", () => {
     assert.throws(
       () => parseExtensionManifest(MANIFEST.replace('"apiVersion": "1"', '"apiVersion": "2"')),
       (e: unknown) => e instanceof ApexError && e.code === "EXTENSION_API_UNSUPPORTED",

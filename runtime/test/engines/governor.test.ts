@@ -488,7 +488,7 @@ describe("WP-050 destructive modifier on the Governor", () => {
     assert.equal(d.allowed, false, "destructive forces approval even in FULL_AUTO")
     assert.equal(d.requiresSnapshot, true)
   })
-  test("FULL_AUTO refuses a destructive operation outright and says why", () => {
+  test("AUT-T06 — FULL_AUTO refuses a destructive operation outright and says why", () => {
     const d = gov({ autonomy: "FULL_AUTO" }).decide({ kind: "delete", destructive: true })
     assert.equal(d.allowed, false)
     assert.match(d.reason, /DESTRUCTIVE.*explicit human approval/)

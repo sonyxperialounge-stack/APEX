@@ -1,125 +1,129 @@
 # Requirements
 
-**Totals:** 112 total · 1 verified · 0 implemented-unverified · 0 in-progress · 111 not-started · 0 blocked · 0 n/a
-**Last updated:** 2026-09-10T05:43:21.227Z
+**Totals:** 116 total · 110 verified · 1 implemented-unverified · 1 in-progress · 2 not-started · 0 blocked · 2 n/a
+**Last updated:** 2026-09-11T23:02:25.897Z
 
 > Invariants: no row is ever deleted · no ID is ever reused · every row has exactly one
 > status · the totals line is regenerated from the detail blocks below, so it cannot disagree.
 
 | ID | Summary | Status | Evidence |
 |---|---|---|---|
-| REQ-001 | REQ-BOOT-001: one instruction (read START-HERE.md) reaches a ready state for any capable file-reading model | NOT_STARTED | — |
-| REQ-002 | REQ-BOOT-002: absent/read-only/volatile global home is named and degraded safely | NOT_STARTED | — |
-| REQ-003 | REQ-BOOT-003: existing .apex state resumed, never overwritten | NOT_STARTED | — |
-| REQ-004 | REQ-BOOT-004: tampered core manifest refuses mechanical trust, permits L0 | NOT_STARTED | — |
-| REQ-005 | REQ-BOOT-005: two simultaneous first runs produce one valid structure | NOT_STARTED | — |
-| REQ-006 | REQ-BOOT-006: future schema is read-only, never downgraded | NOT_STARTED | — |
-| REQ-007 | REQ-BOOT-007: hundreds of skills/tools stay inside boot context budget | NOT_STARTED | — |
-| REQ-008 | REQ-BOOT-008: a new model restores durable identity and open work | NOT_STARTED | — |
-| REQ-009 | REQ-BOOT-009: START-HERE within estimated-token ceiling | NOT_STARTED | — |
-| REQ-010 | REQ-HOME-001: filesystem root/empty/system-wide home refused | NOT_STARTED | — |
-| REQ-011 | REQ-HOME-002: project facts never appear in an unrelated project | NOT_STARTED | — |
-| REQ-012 | REQ-HOME-003: project can disable global memory categories | NOT_STARTED | — |
-| REQ-013 | REQ-HOME-004: direct writes to global home outside chokepoints blocked at L1/L2 | NOT_STARTED | — |
-| REQ-014 | REQ-HOME-005: instruction-shaped memory never rendered as authority | NOT_STARTED | — |
-| REQ-015 | REQ-HOME-006: extension/external-skill hash drift invalidates trust | NOT_STARTED | — |
-| REQ-016 | REQ-HOME-007: portable mode never enabled silently | NOT_STARTED | — |
-| REQ-017 | REQ-HOME-008: provider credentials never in identity or global store | NOT_STARTED | — |
-| REQ-018 | REQ-HOME-009: global root ~/.apex/; ~/.army/ reported, never auto-migrated | NOT_STARTED | — |
-| REQ-019 | REQ-MEM-001: explicit durable preference survives model change | NOT_STARTED | — |
-| REQ-020 | REQ-MEM-002: concurrent writers cannot silently lose an accepted record | NOT_STARTED | — |
-| REQ-021 | REQ-MEM-003: likely secrets rejected/redacted before durable persistence | NOT_STARTED | — |
-| REQ-022 | REQ-MEM-004: session-start snapshot frozen; live correction via overlay | NOT_STARTED | — |
-| REQ-023 | REQ-MEM-005: expired item never injected | NOT_STARTED | — |
-| REQ-024 | REQ-MEM-006: hot views deletable and rebuildable, no data loss | NOT_STARTED | — |
-| REQ-025 | REQ-MEM-007: explicit correction supersedes with auditable chain | NOT_STARTED | — |
-| REQ-026 | REQ-MEM-008: unresolved conflicts recorded, never both-injected | NOT_STARTED | — |
-| REQ-027 | REQ-MEM-009: Devanagari and Hinglish round-trip and are searchable | NOT_STARTED | — |
-| REQ-028 | REQ-MEM-010: read-only session performs zero durable global writes | NOT_STARTED | — |
-| REQ-029 | REQ-MEM-011: project memory keeps six sections, human-readable | NOT_STARTED | — |
-| REQ-030 | REQ-MEM-012: personal facts never mirrored into shared instruction files | NOT_STARTED | — |
-| REQ-031 | REQ-MEM-013: memory list/inspect/correct/retract/approve/export/disable without editing internals | NOT_STARTED | — |
-| REQ-032 | REQ-ARC-001: file-capable L0 resumes from compact capsule, no database | NOT_STARTED | — |
-| REQ-033 | REQ-ARC-002: prior session found by real recorded content with provenance | NOT_STARTED | — |
-| REQ-034 | REQ-ARC-003: destroying derived index loses no canonical history | NOT_STARTED | — |
-| REQ-035 | REQ-ARC-004: chat-only L0 honestly reports durable archive unavailable | NOT_STARTED | — |
-| REQ-036 | REQ-ARC-005: secret-bearing output redacted via one chokepoint | NOT_STARTED | — |
-| REQ-037 | REQ-ARC-006: prune never removes verification evidence; dry-run supported | NOT_STARTED | — |
-| REQ-038 | REQ-ARC-007: project-scoped query cannot retrieve another project private events | NOT_STARTED | — |
-| REQ-039 | REQ-ARC-008: detaching a host binding never deletes personal/project state | NOT_STARTED | — |
-| REQ-040 | REQ-SKL-001: verified repeated workflow becomes candidate; writing file never activates | NOT_STARTED | — |
-| REQ-041 | REQ-SKL-002: activation requires platform, capabilities, trust, validation | NOT_STARTED | — |
-| REQ-042 | REQ-SKL-003: changing executable content invalidates prior trust/validation | NOT_STARTED | — |
-| REQ-043 | REQ-SKL-004: user fast-promotion only via recorded override, never presented as verified | NOT_STARTED | — |
-| REQ-044 | REQ-SKL-005: large catalogue loads metadata only; bodies/references on demand | NOT_STARTED | — |
-| REQ-045 | REQ-SKL-006: discovered script never executes automatically | NOT_STARTED | — |
-| REQ-046 | REQ-SKL-007: curator never silently deletes a user skill | NOT_STARTED | — |
-| REQ-047 | REQ-SKL-008: using a skill does not rewrite SKILL.md | NOT_STARTED | — |
-| REQ-048 | REQ-SKL-009: project-supplied skills off by default, never self-trusting | NOT_STARTED | — |
-| REQ-049 | REQ-SKL-010: subagent cannot directly write global skill/memory record | NOT_STARTED | — |
-| REQ-050 | REQ-SKL-011: unverified failed task creates no active skill and no global fact | NOT_STARTED | — |
-| REQ-051 | REQ-SKL-012: curation and learning require no daemon | NOT_STARTED | — |
-| REQ-052 | REQ-CAP-001: equivalent host tools normalize to one canonical id | NOT_STARTED | — |
-| REQ-053 | REQ-CAP-002: large catalogues do not require all schemas at startup | NOT_STARTED | — |
-| REQ-054 | REQ-CAP-003: missing capability reported UNAVAILABLE; no pretend call | NOT_STARTED | — |
-| REQ-055 | REQ-CAP-004: unknown external tool never optimistically read-only | NOT_STARTED | — |
-| REQ-056 | REQ-CAP-005: capability exposure never bypasses Governor | NOT_STARTED | — |
-| REQ-057 | REQ-CAP-006: exactly one effects taxonomy across all subsystems | NOT_STARTED | — |
-| REQ-058 | REQ-CAP-007: discovery performs no destructive probe | NOT_STARTED | — |
-| REQ-059 | REQ-CAP-008: disconnect/hash drift invalidates cached schemas without daemon | NOT_STARTED | — |
-| REQ-060 | REQ-AUT-001: code/research/artifact/data/system tasks use domain-appropriate evidence | NOT_STARTED | — |
-| REQ-061 | REQ-AUT-002: autonomy never bypasses Governor approval for destructive/external effects | NOT_STARTED | — |
-| REQ-062 | REQ-AUT-003: open goal persists and resumes with no heartbeat/gateway/service | NOT_STARTED | — |
-| REQ-063 | REQ-AUT-004: learned memory/skills never override a current requirement | NOT_STARTED | — |
-| REQ-064 | REQ-AUT-005: requested artifact physically validated before completion | NOT_STARTED | — |
-| REQ-065 | REQ-AUT-006: no second goal database | NOT_STARTED | — |
-| REQ-066 | REQ-AUT-007: changed project fingerprint forces resume revalidation | NOT_STARTED | — |
-| REQ-067 | REQ-AUT-008: child cannot close parent task or grant itself scope | NOT_STARTED | — |
-| REQ-068 | REQ-AUT-009: Council agreement never treated as verification | NOT_STARTED | — |
-| REQ-069 | REQ-AUT-010: unchanged failing attempt cannot loop | NOT_STARTED | — |
-| REQ-070 | REQ-AUT-011: failing test never fixed by deleting it | NOT_STARTED | — |
-| REQ-071 | REQ-AUT-012: unknown failure stays explicitly unknown | NOT_STARTED | — |
-| REQ-072 | REQ-DAT-001: every durable entity declares a schema version | NOT_STARTED | — |
-| REQ-073 | REQ-DAT-002: ids stable across migration, never recycled | NOT_STARTED | — |
-| REQ-074 | REQ-DAT-003: no two documents/stores claim writable authority over same state | NOT_STARTED | — |
-| REQ-075 | REQ-DAT-004: broken cross-store reference surfaced by Doctor | NOT_STARTED | — |
-| REQ-076 | REQ-MIG-001: interrupted migration recovers without canonical corruption | NOT_STARTED | — |
-| REQ-077 | REQ-MIG-002: legacy versionless state adopted non-destructively after snapshot | NOT_STARTED | — |
-| REQ-078 | REQ-MIG-003: declared compatibility window executable in CI | NOT_STARTED | — |
-| REQ-079 | REQ-SEC-001: persistent learned text cannot change policy precedence | NOT_STARTED | — |
-| REQ-080 | REQ-SEC-002: path traversal from project cannot reach global home | NOT_STARTED | — |
-| REQ-081 | REQ-SEC-003: Windows permission reporting never claims POSIX guarantees | NOT_STARTED | — |
-| REQ-082 | REQ-SEC-004: no mandatory telemetry/network call at bootstrap | NOT_STARTED | — |
-| REQ-083 | REQ-SEC-005: every new source file carries the license header | NOT_STARTED | — |
+| REQ-001 | REQ-BOOT-001: one instruction (read START-HERE.md) reaches a ready state for any capable file-reading model | VERIFIED_COMPLETE | V-002 |
+| REQ-002 | REQ-BOOT-002: absent/read-only/volatile global home is named and degraded safely | VERIFIED_COMPLETE | V-002 |
+| REQ-003 | REQ-BOOT-003: existing .apex state resumed, never overwritten | VERIFIED_COMPLETE | V-002 |
+| REQ-004 | REQ-BOOT-004: tampered core manifest refuses mechanical trust, permits L0 | VERIFIED_COMPLETE | V-002 |
+| REQ-005 | REQ-BOOT-005: two simultaneous first runs produce one valid structure | VERIFIED_COMPLETE | V-002 |
+| REQ-006 | REQ-BOOT-006: future schema is read-only, never downgraded | VERIFIED_COMPLETE | V-002 |
+| REQ-007 | REQ-BOOT-007: hundreds of skills/tools stay inside boot context budget | VERIFIED_COMPLETE | V-002 |
+| REQ-008 | REQ-BOOT-008: a new model restores durable identity and open work | VERIFIED_COMPLETE | V-002 |
+| REQ-009 | REQ-BOOT-009: START-HERE within estimated-token ceiling | VERIFIED_COMPLETE | V-002 |
+| REQ-010 | REQ-HOME-001: filesystem root/empty/system-wide home refused | VERIFIED_COMPLETE | V-002 |
+| REQ-011 | REQ-HOME-002: project facts never appear in an unrelated project | VERIFIED_COMPLETE | V-002 |
+| REQ-012 | REQ-HOME-003: project can disable global memory categories | VERIFIED_COMPLETE | V-002 |
+| REQ-013 | REQ-HOME-004: direct writes to global home outside chokepoints blocked at L1/L2 | VERIFIED_COMPLETE | V-002 |
+| REQ-014 | REQ-HOME-005: instruction-shaped memory never rendered as authority | VERIFIED_COMPLETE | V-002 |
+| REQ-015 | REQ-HOME-006: extension/external-skill hash drift invalidates trust | VERIFIED_COMPLETE | V-002 |
+| REQ-016 | REQ-HOME-007: portable mode never enabled silently | VERIFIED_COMPLETE | V-002 |
+| REQ-017 | REQ-HOME-008: provider credentials never in identity or global store | VERIFIED_COMPLETE | V-002 |
+| REQ-018 | REQ-HOME-009: global root ~/.apex/; ~/.army/ reported, never auto-migrated | VERIFIED_COMPLETE | V-002 |
+| REQ-019 | REQ-MEM-001: explicit durable preference survives model change | VERIFIED_COMPLETE | V-002 |
+| REQ-020 | REQ-MEM-002: concurrent writers cannot silently lose an accepted record | VERIFIED_COMPLETE | V-002 |
+| REQ-021 | REQ-MEM-003: likely secrets rejected/redacted before durable persistence | VERIFIED_COMPLETE | V-002 |
+| REQ-022 | REQ-MEM-004: session-start snapshot frozen; live correction via overlay | VERIFIED_COMPLETE | V-002 |
+| REQ-023 | REQ-MEM-005: expired item never injected | VERIFIED_COMPLETE | V-002 |
+| REQ-024 | REQ-MEM-006: hot views deletable and rebuildable, no data loss | VERIFIED_COMPLETE | V-002 |
+| REQ-025 | REQ-MEM-007: explicit correction supersedes with auditable chain | VERIFIED_COMPLETE | V-002 |
+| REQ-026 | REQ-MEM-008: unresolved conflicts recorded, never both-injected | VERIFIED_COMPLETE | V-002 |
+| REQ-027 | REQ-MEM-009: Devanagari and Hinglish round-trip and are searchable | VERIFIED_COMPLETE | V-002 |
+| REQ-028 | REQ-MEM-010: read-only session performs zero durable global writes | VERIFIED_COMPLETE | V-002 |
+| REQ-029 | REQ-MEM-011: project memory keeps six sections, human-readable | VERIFIED_COMPLETE | V-002 |
+| REQ-030 | REQ-MEM-012: personal facts never mirrored into shared instruction files | VERIFIED_COMPLETE | V-002 |
+| REQ-031 | REQ-MEM-013: memory list/inspect/correct/retract/approve/export/disable without editing internals | VERIFIED_COMPLETE | V-002 |
+| REQ-032 | REQ-ARC-001: file-capable L0 resumes from compact capsule, no database | VERIFIED_COMPLETE | V-002 |
+| REQ-033 | REQ-ARC-002: prior session found by real recorded content with provenance | VERIFIED_COMPLETE | V-002 |
+| REQ-034 | REQ-ARC-003: destroying derived index loses no canonical history | VERIFIED_COMPLETE | V-002 |
+| REQ-035 | REQ-ARC-004: chat-only L0 honestly reports durable archive unavailable | VERIFIED_COMPLETE | V-002 |
+| REQ-036 | REQ-ARC-005: secret-bearing output redacted via one chokepoint | VERIFIED_COMPLETE | V-002 |
+| REQ-037 | REQ-ARC-006: prune never removes verification evidence; dry-run supported | VERIFIED_COMPLETE | V-002 |
+| REQ-038 | REQ-ARC-007: project-scoped query cannot retrieve another project private events | VERIFIED_COMPLETE | V-002 |
+| REQ-039 | REQ-ARC-008: detaching a host binding never deletes personal/project state | VERIFIED_COMPLETE | V-002 |
+| REQ-040 | REQ-SKL-001: verified repeated workflow becomes candidate; writing file never activates | VERIFIED_COMPLETE | V-002 |
+| REQ-041 | REQ-SKL-002: activation requires platform, capabilities, trust, validation | VERIFIED_COMPLETE | V-002 |
+| REQ-042 | REQ-SKL-003: changing executable content invalidates prior trust/validation | VERIFIED_COMPLETE | V-002 |
+| REQ-043 | REQ-SKL-004: user fast-promotion only via recorded override, never presented as verified | VERIFIED_COMPLETE | V-002 |
+| REQ-044 | REQ-SKL-005: large catalogue loads metadata only; bodies/references on demand | VERIFIED_COMPLETE | V-002 |
+| REQ-045 | REQ-SKL-006: discovered script never executes automatically | VERIFIED_COMPLETE | V-002 |
+| REQ-046 | REQ-SKL-007: curator never silently deletes a user skill | VERIFIED_COMPLETE | V-002 |
+| REQ-047 | REQ-SKL-008: using a skill does not rewrite SKILL.md | VERIFIED_COMPLETE | V-002 |
+| REQ-048 | REQ-SKL-009: project-supplied skills off by default, never self-trusting | VERIFIED_COMPLETE | V-002 |
+| REQ-049 | REQ-SKL-010: subagent cannot directly write global skill/memory record | VERIFIED_COMPLETE | V-002 |
+| REQ-050 | REQ-SKL-011: unverified failed task creates no active skill and no global fact | VERIFIED_COMPLETE | V-002 |
+| REQ-051 | REQ-SKL-012: curation and learning require no daemon | VERIFIED_COMPLETE | V-002 |
+| REQ-052 | REQ-CAP-001: equivalent host tools normalize to one canonical id | VERIFIED_COMPLETE | V-002 |
+| REQ-053 | REQ-CAP-002: large catalogues do not require all schemas at startup | VERIFIED_COMPLETE | V-002 |
+| REQ-054 | REQ-CAP-003: missing capability reported UNAVAILABLE; no pretend call | VERIFIED_COMPLETE | V-002 |
+| REQ-055 | REQ-CAP-004: unknown external tool never optimistically read-only | VERIFIED_COMPLETE | V-002 |
+| REQ-056 | REQ-CAP-005: capability exposure never bypasses Governor | VERIFIED_COMPLETE | V-002 |
+| REQ-057 | REQ-CAP-006: exactly one effects taxonomy across all subsystems | VERIFIED_COMPLETE | V-002 |
+| REQ-058 | REQ-CAP-007: discovery performs no destructive probe | VERIFIED_COMPLETE | V-002 |
+| REQ-059 | REQ-CAP-008: disconnect/hash drift invalidates cached schemas without daemon | VERIFIED_COMPLETE | V-002 |
+| REQ-060 | REQ-AUT-001: code/research/artifact/data/system tasks use domain-appropriate evidence | VERIFIED_COMPLETE | V-002 |
+| REQ-061 | REQ-AUT-002: autonomy never bypasses Governor approval for destructive/external effects | VERIFIED_COMPLETE | V-002 |
+| REQ-062 | REQ-AUT-003: open goal persists and resumes with no heartbeat/gateway/service | VERIFIED_COMPLETE | V-002 |
+| REQ-063 | REQ-AUT-004: learned memory/skills never override a current requirement | VERIFIED_COMPLETE | V-002 |
+| REQ-064 | REQ-AUT-005: requested artifact physically validated before completion | VERIFIED_COMPLETE | V-002 |
+| REQ-065 | REQ-AUT-006: no second goal database | VERIFIED_COMPLETE | V-002 |
+| REQ-066 | REQ-AUT-007: changed project fingerprint forces resume revalidation | VERIFIED_COMPLETE | V-002 |
+| REQ-067 | REQ-AUT-008: child cannot close parent task or grant itself scope | VERIFIED_COMPLETE | V-002 |
+| REQ-068 | REQ-AUT-009: Council agreement never treated as verification | VERIFIED_COMPLETE | V-002 |
+| REQ-069 | REQ-AUT-010: unchanged failing attempt cannot loop | VERIFIED_COMPLETE | V-002 |
+| REQ-070 | REQ-AUT-011: failing test never fixed by deleting it | VERIFIED_COMPLETE | V-002 |
+| REQ-071 | REQ-AUT-012: unknown failure stays explicitly unknown | VERIFIED_COMPLETE | V-002 |
+| REQ-072 | REQ-DAT-001: every durable entity declares a schema version | VERIFIED_COMPLETE | V-002 |
+| REQ-073 | REQ-DAT-002: ids stable across migration, never recycled | VERIFIED_COMPLETE | V-002 |
+| REQ-074 | REQ-DAT-003: no two documents/stores claim writable authority over same state | VERIFIED_COMPLETE | V-002 |
+| REQ-075 | REQ-DAT-004: broken cross-store reference surfaced by Doctor | VERIFIED_COMPLETE | V-002 |
+| REQ-076 | REQ-MIG-001: interrupted migration recovers without canonical corruption | VERIFIED_COMPLETE | V-002 |
+| REQ-077 | REQ-MIG-002: legacy versionless state adopted non-destructively after snapshot | VERIFIED_COMPLETE | V-002 |
+| REQ-078 | REQ-MIG-003: declared compatibility window executable in CI | VERIFIED_COMPLETE | V-002 |
+| REQ-079 | REQ-SEC-001: persistent learned text cannot change policy precedence | VERIFIED_COMPLETE | V-002 |
+| REQ-080 | REQ-SEC-002: path traversal from project cannot reach global home | VERIFIED_COMPLETE | V-002 |
+| REQ-081 | REQ-SEC-003: Windows permission reporting never claims POSIX guarantees | VERIFIED_COMPLETE | V-002 |
+| REQ-082 | REQ-SEC-004: no mandatory telemetry/network call at bootstrap | VERIFIED_COMPLETE | V-002 |
+| REQ-083 | REQ-SEC-005: every new source file carries the license header | VERIFIED_COMPLETE | V-002 |
 | REQ-084 | REQ-PROD-001: untouched baseline recorded before upgrade changes | VERIFIED_COMPLETE | V-001 |
-| REQ-085 | REQ-PROD-002: source tree and packed artifact both tested | NOT_STARTED | — |
-| REQ-086 | REQ-PROD-003: every persistent store has tested migration + future-schema behaviour | NOT_STARTED | — |
-| REQ-087 | REQ-PROD-004: release package free of scratch paths and nested archives | NOT_STARTED | — |
-| REQ-088 | REQ-PROD-005: zero production dependencies remain | NOT_STARTED | — |
-| REQ-089 | REQ-PROD-006: OS x Node matrix green or documented classified exclusion | NOT_STARTED | — |
+| REQ-085 | REQ-PROD-002: source tree and packed artifact both tested | VERIFIED_COMPLETE | V-002 |
+| REQ-086 | REQ-PROD-003: every persistent store has tested migration + future-schema behaviour | VERIFIED_COMPLETE | V-002 |
+| REQ-087 | REQ-PROD-004: release package free of scratch paths and nested archives | VERIFIED_COMPLETE | V-002 |
+| REQ-088 | REQ-PROD-005: zero production dependencies remain | VERIFIED_COMPLETE | V-002 |
+| REQ-089 | REQ-PROD-006: OS x Node matrix green or documented classified exclusion | IN_PROGRESS | — |
 | REQ-090 | REQ-PROD-007: non-developer can install, verify, use from documentation alone | NOT_STARTED | — |
 | REQ-091 | REQ-PROD-008: known limitations published, not hidden | NOT_STARTED | — |
-| REQ-092 | REQ-UX-001: normal start requires exactly one instruction | NOT_STARTED | — |
-| REQ-093 | REQ-UX-002: readiness output follows the five-line contract | NOT_STARTED | — |
-| REQ-094 | REQ-UX-003: staged write never described as saved | NOT_STARTED | — |
-| REQ-095 | REQ-CAP-009: deferred capability discoverable, describable AND invokable, fully governed | NOT_STARTED | — |
-| REQ-096 | REQ-CAP-010: disclosure degrades through three tiers; eager when budget allows | NOT_STARTED | — |
-| REQ-097 | REQ-CAP-011: every operation carries an execution context, most conservative default | NOT_STARTED | — |
-| REQ-098 | REQ-CAP-012: host code intelligence used when present, never faked when absent | NOT_STARTED | — |
-| REQ-099 | REQ-SKL-014: fallback skill hidden when the better capability exists | NOT_STARTED | — |
-| REQ-100 | REQ-SKL-015: env var NAMES declarable; values never read or requested | NOT_STARTED | — |
-| REQ-101 | REQ-SKL-016: seed skills ship, install, update without clobbering user edits | NOT_STARTED | — |
-| REQ-102 | REQ-SKL-017: at most three skill bodies per task, selection explainable | NOT_STARTED | — |
-| REQ-103 | REQ-SKL-018: deny verdict never overridable; review needs recorded justification | NOT_STARTED | — |
-| REQ-104 | REQ-SKL-019: retirement archives; pins protected; curation interval-bounded | NOT_STARTED | — |
-| REQ-105 | REQ-MEM-014: hot-view overflow produces consolidation candidate, never loses canonical record | NOT_STARTED | — |
-| REQ-106 | REQ-SEC-006: sensitive paths denied by default; exact-path audited overrides only | NOT_STARTED | — |
-| REQ-107 | REQ-SEC-007: bulk attachments respect soft and hard context guards | NOT_STARTED | — |
-| REQ-108 | REQ-AUT-013: child agent cannot interact with user, schedule, message, or write global state | NOT_STARTED | — |
-| REQ-109 | REQ-AUT-014: delegation depth/budget/stall bounded; child resources cleaned up | NOT_STARTED | — |
-| REQ-110 | REQ-EXT-002: policy/gate hooks fail closed; capture hooks fail open and record loss | NOT_STARTED | — |
-| REQ-111 | REQ-PROD-009 (N): behavioural eval suite exists, runnable, honestly reported | NOT_STARTED | — |
-| REQ-112 | REQ-UX-004: chronological plain-language record of everything learned (journey) | NOT_STARTED | — |
+| REQ-092 | REQ-UX-001: normal start requires exactly one instruction | VERIFIED_COMPLETE | V-002 |
+| REQ-093 | REQ-UX-002: readiness output follows the five-line contract | VERIFIED_COMPLETE | V-002 |
+| REQ-094 | REQ-UX-003: staged write never described as saved | VERIFIED_COMPLETE | V-002 |
+| REQ-095 | REQ-CAP-009: deferred capability discoverable, describable AND invokable, fully governed | VERIFIED_COMPLETE | V-002 |
+| REQ-096 | REQ-CAP-010: disclosure degrades through three tiers; eager when budget allows | VERIFIED_COMPLETE | V-002 |
+| REQ-097 | REQ-CAP-011: every operation carries an execution context, most conservative default | VERIFIED_COMPLETE | V-002 |
+| REQ-098 | REQ-CAP-012: host code intelligence used when present, never faked when absent | VERIFIED_COMPLETE | V-002 |
+| REQ-099 | REQ-SKL-014: fallback skill hidden when the better capability exists | VERIFIED_COMPLETE | V-002 |
+| REQ-100 | REQ-SKL-015: env var NAMES declarable; values never read or requested | VERIFIED_COMPLETE | V-002 |
+| REQ-101 | REQ-SKL-016: seed skills ship, install, update without clobbering user edits | VERIFIED_COMPLETE | V-002 |
+| REQ-102 | REQ-SKL-017: at most three skill bodies per task, selection explainable | VERIFIED_COMPLETE | V-002 |
+| REQ-103 | REQ-SKL-018: deny verdict never overridable; review needs recorded justification | VERIFIED_COMPLETE | V-002 |
+| REQ-104 | REQ-SKL-019: retirement archives; pins protected; curation interval-bounded | VERIFIED_COMPLETE | V-002 |
+| REQ-105 | REQ-MEM-014: hot-view overflow produces consolidation candidate, never loses canonical record | VERIFIED_COMPLETE | V-002 |
+| REQ-106 | REQ-SEC-006: sensitive paths denied by default; exact-path audited overrides only | VERIFIED_COMPLETE | V-002 |
+| REQ-107 | REQ-SEC-007: bulk attachments respect soft and hard context guards | VERIFIED_COMPLETE | V-002 |
+| REQ-108 | REQ-AUT-013: child agent cannot interact with user, schedule, message, or write global state | VERIFIED_COMPLETE | V-002 |
+| REQ-109 | REQ-AUT-014: delegation depth/budget/stall bounded; child resources cleaned up | VERIFIED_COMPLETE | V-002 |
+| REQ-110 | REQ-EXT-002: policy/gate hooks fail closed; capture hooks fail open and record loss | VERIFIED_COMPLETE | V-002 |
+| REQ-111 | REQ-PROD-009 (N): behavioural eval suite exists, runnable, honestly reported | VERIFIED_COMPLETE | V-003 |
+| REQ-112 | REQ-UX-004: chronological plain-language record of everything learned (journey) | VERIFIED_COMPLETE | V-002 |
+| REQ-113 | REQ-EXT-001: optional extension contract implemented end to end | VERIFIED_COMPLETE | V-002 |
+| REQ-114 | REQ-ARC-009: optional accelerated index (built-in SQLite/FTS) when the runtime provides one | NOT_APPLICABLE | V-002 |
+| REQ-115 | REQ-SKL-013: external skill directories interop | NOT_APPLICABLE | V-002 |
+| REQ-116 | REQ-L2-001: full L2 host-native enforcement checks executed on a live host | IMPLEMENTED_NOT_VERIFIED | V-004 |
 
 ---
 
@@ -130,9 +134,9 @@
 - **Depends on:** 
 - **Acceptance:** L0C-T05, SH-T03 green; START-HERE review
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -143,9 +147,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T01, BOOT-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -156,9 +160,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -169,9 +173,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -182,9 +186,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -195,9 +199,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T06, MIG-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -208,9 +212,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T07, CTX-T01, CTX-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -221,9 +225,9 @@
 - **Depends on:** 
 - **Acceptance:** BOOT-T08, ID-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -234,9 +238,9 @@
 - **Depends on:** 
 - **Acceptance:** SH-T01, PERF-T08 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -247,9 +251,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T01, SEC-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -260,9 +264,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T02, ID-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -273,9 +277,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T03, CFG-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -286,9 +290,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -299,9 +303,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T05, SH-T05, SEC-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -312,9 +316,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T06, EXT-T03, SKSEC-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -325,9 +329,9 @@
 - **Depends on:** 
 - **Acceptance:** HOME-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -338,9 +342,9 @@
 - **Depends on:** 
 - **Acceptance:** ID-T03, SEC-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -351,9 +355,9 @@
 - **Depends on:** 
 - **Acceptance:** NAM-T01, NAM-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -364,9 +368,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -377,9 +381,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-CON-T01..T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -390,9 +394,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T04, SEC-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -403,9 +407,9 @@
 - **Depends on:** 
 - **Acceptance:** CTX-T03, CTX-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -416,9 +420,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -429,9 +433,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -442,9 +446,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -455,9 +459,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -468,9 +472,9 @@
 - **Depends on:** 
 - **Acceptance:** SEC-T08 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -481,9 +485,9 @@
 - **Depends on:** 
 - **Acceptance:** PERF-T07, LIFE-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -494,9 +498,9 @@
 - **Depends on:** 
 - **Acceptance:** PMEM-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -507,9 +511,9 @@
 - **Depends on:** 
 - **Acceptance:** PMEM-T03, PMEM-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -520,9 +524,9 @@
 - **Depends on:** 
 - **Acceptance:** CLI tests in WP-073 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -533,9 +537,9 @@
 - **Depends on:** 
 - **Acceptance:** ARC-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -546,9 +550,9 @@
 - **Depends on:** 
 - **Acceptance:** ARC-T03, SRCH-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -559,9 +563,9 @@
 - **Depends on:** 
 - **Acceptance:** ARC-T05, SRCH-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -572,9 +576,9 @@
 - **Depends on:** 
 - **Acceptance:** ARC-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -585,9 +589,9 @@
 - **Depends on:** 
 - **Acceptance:** ARC-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -598,9 +602,9 @@
 - **Depends on:** 
 - **Acceptance:** SRCH-T03, SRCH-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -611,9 +615,9 @@
 - **Depends on:** 
 - **Acceptance:** SRCH-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -624,9 +628,9 @@
 - **Depends on:** 
 - **Acceptance:** CLI test green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -637,9 +641,9 @@
 - **Depends on:** 
 - **Acceptance:** FORGE-T01, LRNT-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -650,9 +654,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -663,9 +667,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -676,9 +680,9 @@
 - **Depends on:** 
 - **Acceptance:** FORGE-T02, FORGE-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -689,9 +693,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T01, SKL-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -702,9 +706,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T01, SEC-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -715,9 +719,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -728,9 +732,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -741,9 +745,9 @@
 - **Depends on:** 
 - **Acceptance:** CFG-T07, SEC-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -754,9 +758,9 @@
 - **Depends on:** 
 - **Acceptance:** LRNT-T03, FLT-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -767,9 +771,9 @@
 - **Depends on:** 
 - **Acceptance:** LRNT-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -780,9 +784,9 @@
 - **Depends on:** 
 - **Acceptance:** LRNT-T05, LIFE-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -793,9 +797,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -806,9 +810,9 @@
 - **Depends on:** 
 - **Acceptance:** TLS-T01, TLS-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -819,9 +823,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T05, TLS-T07, AUT-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -832,9 +836,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -845,9 +849,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -858,9 +862,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -871,9 +875,9 @@
 - **Depends on:** 
 - **Acceptance:** TLS-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -884,9 +888,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T06, TLS-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -897,9 +901,9 @@
 - **Depends on:** 
 - **Acceptance:** AUT-T01, AUT-T02 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -910,9 +914,9 @@
 - **Depends on:** 
 - **Acceptance:** AUT-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -923,9 +927,9 @@
 - **Depends on:** 
 - **Acceptance:** AUT-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -936,9 +940,9 @@
 - **Depends on:** 
 - **Acceptance:** AUT-T04, CTX-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -949,9 +953,9 @@
 - **Depends on:** 
 - **Acceptance:** AUT-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -962,9 +966,9 @@
 - **Depends on:** 
 - **Acceptance:** TASK-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -975,9 +979,9 @@
 - **Depends on:** 
 - **Acceptance:** TASK-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -988,9 +992,9 @@
 - **Depends on:** 
 - **Acceptance:** FLT-T01, TASK-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1001,9 +1005,9 @@
 - **Depends on:** 
 - **Acceptance:** FLT-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1014,9 +1018,9 @@
 - **Depends on:** 
 - **Acceptance:** RCV-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1027,9 +1031,9 @@
 - **Depends on:** 
 - **Acceptance:** RCV-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1040,9 +1044,9 @@
 - **Depends on:** 
 - **Acceptance:** RCV-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1053,9 +1057,9 @@
 - **Depends on:** 
 - **Acceptance:** DAT-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1066,9 +1070,9 @@
 - **Depends on:** 
 - **Acceptance:** DAT-T02, MIG-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1079,9 +1083,9 @@
 - **Depends on:** 
 - **Acceptance:** DAT-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1092,9 +1096,9 @@
 - **Depends on:** 
 - **Acceptance:** DAT-T06, DOC-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1105,9 +1109,9 @@
 - **Depends on:** 
 - **Acceptance:** MIG-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1118,9 +1122,9 @@
 - **Depends on:** 
 - **Acceptance:** MIG-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1131,9 +1135,9 @@
 - **Depends on:** 
 - **Acceptance:** MIG-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1144,9 +1148,9 @@
 - **Depends on:** 
 - **Acceptance:** SEC-T01 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1157,9 +1161,9 @@
 - **Depends on:** 
 - **Acceptance:** SEC-T04 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1170,9 +1174,9 @@
 - **Depends on:** 
 - **Acceptance:** SEC-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1183,9 +1187,9 @@
 - **Depends on:** 
 - **Acceptance:** PERF-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1196,9 +1200,9 @@
 - **Depends on:** 
 - **Acceptance:** PKG-T08 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1222,9 +1226,9 @@
 - **Depends on:** 
 - **Acceptance:** PKG-T01..T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1235,9 +1239,9 @@
 - **Depends on:** 
 - **Acceptance:** MIG-T01..T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1248,9 +1252,9 @@
 - **Depends on:** 
 - **Acceptance:** PKG-T02, PKG-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1261,9 +1265,9 @@
 - **Depends on:** 
 - **Acceptance:** sourcescan CORE-003 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1274,7 +1278,7 @@
 - **Depends on:** 
 - **Acceptance:** CI matrix green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** IN_PROGRESS
 - **Implemented in:** 
 - **Evidence:** 
 - **Notes:** 
@@ -1313,9 +1317,9 @@
 - **Depends on:** 
 - **Acceptance:** L0C-T05 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1326,9 +1330,9 @@
 - **Depends on:** 
 - **Acceptance:** SH-T03 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1339,9 +1343,9 @@
 - **Depends on:** 
 - **Acceptance:** SH-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1352,9 +1356,9 @@
 - **Depends on:** 
 - **Acceptance:** TLS-T08..T10 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1365,9 +1369,9 @@
 - **Depends on:** 
 - **Acceptance:** TLS-T11, PERF-T09, PERF-T10 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1378,9 +1382,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T08, CAP-T09 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1391,9 +1395,9 @@
 - **Depends on:** 
 - **Acceptance:** CAP-T10, AUT-T08 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1404,9 +1408,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1417,9 +1421,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T07, SEC-T09 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1430,9 +1434,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T08..T10, PKG-T09 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1443,9 +1447,9 @@
 - **Depends on:** 
 - **Acceptance:** SKL-T11, SKL-T12 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1456,9 +1460,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T06 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1469,9 +1473,9 @@
 - **Depends on:** 
 - **Acceptance:** SKSEC-T07..T09, LIFE-T08 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1482,9 +1486,9 @@
 - **Depends on:** 
 - **Acceptance:** MEM-T08, MEM-T09 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1495,9 +1499,9 @@
 - **Depends on:** 
 - **Acceptance:** SEC-T10, SEC-T11 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1508,9 +1512,9 @@
 - **Depends on:** 
 - **Acceptance:** CTX-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1521,9 +1525,9 @@
 - **Depends on:** 
 - **Acceptance:** FLT-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1534,9 +1538,9 @@
 - **Depends on:** 
 - **Acceptance:** FLT-T08..T11 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1547,9 +1551,9 @@
 - **Depends on:** 
 - **Acceptance:** EXT-T08..T11 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
 - **Notes:** 
 - **Reason:** 
 
@@ -1560,9 +1564,9 @@
 - **Depends on:** 
 - **Acceptance:** EVAL-T01, EVAL-T02
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-003
 - **Notes:** 
 - **Reason:** 
 
@@ -1573,8 +1577,60 @@
 - **Depends on:** 
 - **Acceptance:** UX-T07 green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
+- **Status:** VERIFIED_COMPLETE
 - **Implemented in:** 
-- **Evidence:** 
+- **Evidence:** V-002
+- **Notes:** 
+- **Reason:** 
+
+### REQ-113
+- **Source:** 50 §10
+- **Requirement:** REQ-EXT-001: optional extension contract implemented end to end
+- **Component:** 
+- **Depends on:** 
+- **Acceptance:** EXT-T01, EXT-T02, EXT-T03, EXT-T04, EXT-T05, EXT-T06, EXT-T07 green — discover, hash, trust, deny/review verdicts; fail-closed gate hooks are REQ-EXT-002 (EXT-T08..T11)
+- **Verify by:** `npm run verify (runtime/)`
+- **Status:** VERIFIED_COMPLETE
+- **Implemented in:** 
+- **Evidence:** V-002
+- **Notes:** 
+- **Reason:** 
+
+### REQ-114
+- **Source:** 50 §10
+- **Requirement:** REQ-ARC-009: optional accelerated index (built-in SQLite/FTS) when the runtime provides one
+- **Component:** 
+- **Depends on:** 
+- **Acceptance:** declared non-blocking — canonical file-backed search (SRCH-T01..T07) already meets the blocking archive requirements; no built-in SQLite/FTS exists in a dependency-free runtime
+- **Verify by:** `release-scope review (50 §10, doc 16 §3)`
+- **Status:** NOT_APPLICABLE
+- **Implemented in:** 
+- **Evidence:** V-002
+- **Notes:** 
+- **Reason:** 16 §3 offers the accelerated index only "when the runtime provides one"; the runtime is deliberately dependency-free (42 §1), so there is no built-in SQLite/FTS to accelerate. Canonical file-backed search already meets the blocking archive requirements (SRCH-T01..T07). Declared non-blocking (50 §10).
+
+### REQ-115
+- **Source:** 50 §10
+- **Requirement:** REQ-SKL-013: external skill directories interop
+- **Component:** 
+- **Depends on:** 
+- **Acceptance:** declared non-blocking — optional per 18 §9 ("Support is optional and must be explicit"); global and project skill sources are shipped and covered (SKL-T01..T12)
+- **Verify by:** `release-scope review (50 §10, doc 18 §9)`
+- **Status:** NOT_APPLICABLE
+- **Implemented in:** 
+- **Evidence:** V-002
+- **Notes:** 
+- **Reason:** 18 §9 declares external skill directory support optional ("Support is optional and must be explicit"). The runtime ships global and project skill sources (SKL-T01..T12) without additional external directories — a conscious omission, published in docs/KNOWN-LIMITATIONS.md at release (WP-089). Declared non-blocking (50 §10).
+
+### REQ-116
+- **Source:** 50 §10
+- **Requirement:** REQ-L2-001: full L2 host-native enforcement checks executed on a live host
+- **Component:** 
+- **Depends on:** 
+- **Acceptance:** L2M-T01, L2M-T02, L2M-T03, L2M-T04 executed per docs/L2-MANUAL-CHECKS.md on a live host, with the dated release-scope statement recorded
+- **Verify by:** `manual live-host session (docs/L2-MANUAL-CHECKS.md)`
+- **Status:** IMPLEMENTED_NOT_VERIFIED
+- **Implemented in:** 
+- **Evidence:** V-004
 - **Notes:** 
 - **Reason:** 

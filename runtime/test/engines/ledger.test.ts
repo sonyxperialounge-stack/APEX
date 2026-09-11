@@ -63,7 +63,7 @@ describe("LED-001 — init", () => {
     }
   })
 
-  test("NEVER overwrites an existing ledger", async () => {
+  test("BOOT-T03 — NEVER overwrites an existing ledger", async () => {
     await addReq()
     const second = new Ledger(dir)
     const result = await second.init({ projectRoot: dir })

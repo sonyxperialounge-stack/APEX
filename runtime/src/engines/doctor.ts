@@ -39,6 +39,7 @@ import { openGlobalHome } from "../stores/global-home.ts"
 import { findInterruptedMigrations } from "../stores/migration-registry.ts"
 import { CURRENT_SCHEMA } from "../core/schema.ts"
 import { readJson, readTextOrNull, writeJson } from "../core/json.ts"
+import { verifyCoreManifest } from "../core/core-manifest.ts"
 import { toIsoString } from "../core/ids.ts"
 import { Ledger } from "./ledger.ts"
 import { openMemoryStore } from "../stores/memory-store.ts"
@@ -736,6 +737,31 @@ export async function runDoctor(deps: DoctorDeps, opts: DoctorOptions = {}): Pro
       }
       checks.push(syncCheck)
     }
+
+    // BOOT-T04 (06 §7) — core-doctrine integrity, checkable in BOTH modes: the
+    // shipped core manifest must verify against the doctrine bytes on disk.
+    // A tampered doctrine file refuses mechanical trust (the plugin clamps
+    // autonomy at bootstrap); the doctor reports it and never repairs it.
+    const manifestVerdict = await verifyCoreManifest(path.join(RUNTIME_ROOT, "payload"))
+    checks.push({
+      id: "DOC-PKG-MANIFEST",
+      area: "PKG",
+      status: manifestVerdict.status === "OK" ? "OK" : "DEGRADED",
+      summary:
+        manifestVerdict.status === "OK"
+          ? "Core doctrine manifest verifies (payload/core)."
+          : manifestVerdict.status === "MISSING"
+            ? "Core manifest missing — doctrine integrity cannot be proven; mechanical trust is refused."
+            : `Core doctrine tampered: ${[...manifestVerdict.drifted, ...manifestVerdict.missing].join(", ")}.`,
+      evidence:
+        manifestVerdict.status === "TAMPERED"
+          ? [...manifestVerdict.drifted.map((f) => `drifted: ${f}`), ...manifestVerdict.missing.map((f) => `missing: ${f}`)]
+          : undefined,
+      remediation:
+        manifestVerdict.status === "OK"
+          ? undefined
+          : "Reinstall the package (the core doctrine is never repaired in place).",
+    })
   }
 
   return finish(checks, repaired)

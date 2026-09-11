@@ -44,7 +44,7 @@ test("the scan actually found source files", () => {
 describe("CORE-005 — every disk write goes through the chokepoint", () => {
   const SANCTIONED = ["src/core/json.ts", "src/core/log.ts"]
 
-  test("no direct file writes outside json.ts and log.ts", () => {
+  test("DAT-T04 — no direct file writes outside json.ts and log.ts", () => {
     const bad = offenders(/\b(?:fsp?|fs\/promises)?\.?\b(writeFile|writeFileSync|appendFile|appendFileSync|createWriteStream)\s*\(/, SANCTIONED)
     assert.deepEqual(bad, [], `direct writes found in: ${bad.join(", ")}`)
   })
@@ -281,7 +281,7 @@ describe("HC-T03 — every .ts source file carries the license header", () => {
 })
 
 describe("C-018 / WP-014 — no always-on scheduler in shipped source", () => {
-  test("no setInterval anywhere in src", () => {
+  test("LIFE-T01 — no setInterval anywhere in src", () => {
     const bad = offenders(/setInterval\s*\(/)
     assert.deepEqual(bad, [], `scheduler found in: ${bad.join(", ")} — maintenance is lazy (46 §1)`)
   })

@@ -1806,3 +1806,13 @@ Next: WP-080 (Phase 7B — security fixture suite).
 - Mutation: DOC-ARC-INDEX status hard-coded OK → DOC-T02 fails; reverted byte-identical (cmp clean).
 - Verify: 1432 pass / 0 fail (was 1426). Evals 7/7.
 - Evidence: EVD-087.md. Next: WP-088 (traceability generation).
+
+## 2026-09-11 — WP-088 DONE (traceability generation, 50)
+- scripts/traceability.mjs: parses the register (50 §1–§10 + 54 §22), the live ledger, the real suite (test/ + evals/), and every dated record; renders docs/TRACEABILITY.md (§11 table, release gate, Appendix A/B, dated-records list); exit 1 on any problem. scripts/reconcile-ledger.ts: seeds missing register rows via the Ledger API, runs verify+evals FRESH, records the observed output as V-records, walks the legal transition chain.
+- Register/ledger reconciled: 116 register rows = 116 ledger rows (4 seeded: REQ-113 EXT-001, REQ-114 ARC-009, REQ-115 SKL-013, REQ-116 L2-001). Ledger closure: 110 VERIFIED_COMPLETE · 2 NOT_APPLICABLE (ARC-009 no SQLite/FTS in a dependency-free runtime, 16 §3; SKL-013 optional per 18 §9) · 1 IMPLEMENTED_NOT_VERIFIED (L2-001 live host, V-004 NOT_RUN + reason) · 1 IN_PROGRESS (PROD-006 CI matrix) · 2 NOT_STARTED (PROD-007/008 — WP-089 deliverables). Evidence: V-002 suite (110 rows, observed tail), V-003 evals (REQ-PROD-009), V-004 NOT_RUN.
+- Generator bugs fixed: (1) `(?=…|\Z)` lookahead drops the last block — \Z is a literal "Z" in JS, not end-of-input (REQ-112/UX-004, REQ-L2-001, last V-record were invisible); split-based parsing now. (2) `REQ-[A-Z]+-\d+` cannot match REQ-L2-001 (digit in family code) — REQ-[A-Z0-9]+ everywhere.
+- Coverage holes closed while reconciling: BOOT-T04 core-manifest integrity engine (src/core/core-manifest.ts + bootstrap clamp AUTO/FULL_AUTO→GUARDED + DOC-PKG-MANIFEST doctor check + sync emits payload/core/manifest.json + 5 tests); 9 register ids that existed nowhere co-tagged onto the real tests that verify them (BOOT-T05, BOOT-T06, ID-T03, ID-T05, MEM-T04, AUT-T04, DAT-T02, DAT-T06, MIG-T06) + BASE-T02..T05 reviewed into the dated record EVD-088 §3.
+- Pack hygiene: PKG-T03 caught the packed artifact shipping scripts/traceability.mjs (names army-update-plan) — package.json files narrowed to scripts/sync-payload.mjs (the only script PKG-T01 requires); upgrade tooling stays out of the release.
+- Mutation: memory-cli scanner deny-refusal disabled → MEM-T04/ID-T03 fails; reverted byte-identical (cmp clean).
+- Verify: 1437 pass / 0 fail (fresh, observed; was 1432). Evals 7/7. Generator: rows=116, gate green (108 B closed + 3 declared exceptions), dangling=0, problems=0.
+- Evidence: EVD-088.md. Next: WP-089 (release) — the final packet.

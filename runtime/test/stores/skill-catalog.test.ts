@@ -92,7 +92,7 @@ async function writeSkill(category: string, name: string, description: string, o
 }
 
 describe("WP-041 progressive disclosure (18 §5)", () => {
-  test("SKL-T01: a 200-skill catalog boot loads metadata only and stays in budget", async () => {
+  test("SKL-T01/BOOT-T07: a 200-skill catalog boot loads metadata only and stays in budget", async () => {
     // One-sentence descriptions, the way 18 §3 requires them — long enough to be
     // real, short enough to be a summary. A body would be 30–100x this size.
     for (let i = 0; i < 200; i++) {

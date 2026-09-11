@@ -87,7 +87,7 @@ function runArchive(args: string[]): { code: number | null; out: string } {
 }
 
 describe("WP-037 archive CLI — discover / browse / read / scroll (16 §5)", () => {
-  test("Done-when: a prior session is found by real recorded content, with provenance", async () => {
+  test("ARC-T03 — a prior session is found by real recorded content, with provenance", async () => {
     const discover = runArchive(["discover", "torn write bug"])
     assert.equal(discover.code, 0, discover.out)
     assert.match(discover.out, /fix the torn write bug in json\.ts/, "found by real recorded content")

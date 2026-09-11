@@ -41,6 +41,7 @@ import { RealCommandRunner } from "../core/exec.ts"
 import { detectEvasions } from "../engines/warden.ts"
 import type { ApexConfig, Operation, VerificationRecord } from "../core/types.ts"
 import { log, event } from "../core/log.ts"
+import { verifyCoreManifest, defaultPayloadRoot, clampedAutonomyFor, type CoreManifestVerdict } from "../core/core-manifest.ts"
 import { redact } from "../core/redact.ts"
 import { BlockedError } from "../core/errors.ts"
 import { safeProjectRoot, apexHome, apexDir } from "../core/paths.ts"
@@ -124,12 +125,31 @@ export interface Engines {
   trust: TrustStore
   /** WP-056b — 23 §11 crash-loop quarantine for FAIL-OPEN hooks (never for guards). */
   hookQuarantine: ReturnType<typeof openHookQuarantine>
+  /**
+   * BOOT-T04 (06 §7) — core-manifest integrity. TAMPERED/MISSING means the
+   * doctrine the L1/L2 mechanics are calibrated against cannot be proven
+   * intact: mechanical trust is refused (autonomy clamped to GUARDED) while
+   * L0 — reading the doctrine — stays available.
+   */
+  coreManifest: CoreManifestVerdict
 }
 
-export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
+export async function bootstrapEngines(projectRoot: string, opts: { payloadRoot?: string } = {}): Promise<Engines> {
   const ledger = new Ledger(projectRoot)
   await ledger.init({ projectRoot })
-  const cfg = await ledger.loadConfig()
+  const loadedCfg = await ledger.loadConfig()
+
+  // BOOT-T04 — verify the core doctrine before any mechanical layer trusts it.
+  // Read-only: a tampered file is reported (and clamped), never replaced.
+  const coreManifest = await verifyCoreManifest(opts.payloadRoot ?? defaultPayloadRoot())
+  const cfg: ApexConfig = { ...loadedCfg, autonomy: clampedAutonomyFor(loadedCfg.autonomy, coreManifest) }
+  if (coreManifest.status !== "OK") {
+    event("core.manifest.untrusted", {
+      status: coreManifest.status,
+      drifted: coreManifest.drifted,
+      missing: coreManifest.missing,
+    })
+  }
   const recall = new Recall(projectRoot, ledger)
 
   // L2 archive capture (WP-036): host hook events, labelled with the host. Best-effort —
@@ -186,6 +206,7 @@ export async function bootstrapEngines(projectRoot: string): Promise<Engines> {
     disposeDiscovery,
     trust,
     hookQuarantine: openHookQuarantine(),
+    coreManifest,
   }
 }
 

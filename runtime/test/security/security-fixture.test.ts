@@ -81,7 +81,7 @@ afterEach(async () => {
 })
 
 describe("WP-080 — security fixtures (30 §15, 33 §13; fake secrets only)", () => {
-  test("SEC-T01 — memory content cannot change policy precedence", async () => {
+  test("SEC-T01/AUT-T04 — memory content cannot change policy precedence; learned records never override a current requirement", async () => {
     const injection = fixtureLines("injection-phrases.txt").find((l) => /full_auto/i.test(l))!
     const store = openMemoryStore(path.join(home, "memory"))
     const state = await store.read()

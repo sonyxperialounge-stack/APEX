@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "MIG-config-1-to-2-mtxk4gin",
+      "store": "config",
+      "from": 1,
+      "to": 2,
+      "startedAt": "2026-09-11T22:58:02.015Z",
+      "completedAt": "2026-09-11T22:58:02.015Z",
+      "status": "COMPLETED",
+      "backupRef": "D:\\APEX\\Army-V3\\.apex\\config.json.apex.bak"
+    }
+  ]
+}

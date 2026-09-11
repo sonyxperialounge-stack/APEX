@@ -89,7 +89,7 @@ describe("WP-015 apexHome — sources and precedence (43 §2)", () => {
     await fsp.rm(a, { recursive: true, force: true })
   })
 
-  test("ARMY_HOME is a reported deprecated alias, used only when APEX_HOME is unset", async () => {
+  test("NAM-T01 — ARMY_HOME is a reported deprecated alias, used only when APEX_HOME is unset", async () => {
     const a = await tmp("apex-home-army-")
     const b = await tmp("apex-home-apex-")
     process.env.ARMY_HOME = a
@@ -129,7 +129,7 @@ describe("WP-015 apexHome — modes and risks", () => {
     await fsp.rm(path.dirname(path.dirname(absent)), { recursive: true, force: true })
   })
 
-  test("read-only home is READ_ONLY with a warning (HOME degraded, not failed)", async () => {
+  test("read-only home is READ_ONLY with a warning — degraded, not failed (BOOT-T05)", async () => {
     const ro = await tmp("apex-home-ro-")
     if (process.platform === "win32") {
       // Windows ACLs from Node are not a reliable boundary (30 §6, 09 §11 Windows note) —

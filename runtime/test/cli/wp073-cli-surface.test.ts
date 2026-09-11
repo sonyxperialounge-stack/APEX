@@ -329,7 +329,7 @@ describe("WP-073 — the 53 §3 command surface", () => {
     assert.ok(Array.isArray(bundle.sessions), "session metadata is in the bundle")
   })
 
-  test("home migrate-from-army: nothing to migrate fails; a legacy home copies once, never overwrites, never deletes", async () => {
+  test("NAM-T04 — home migrate-from-army: nothing to migrate fails; a legacy home copies once, never overwrites, never deletes", async () => {
     // 1. No legacy home -> a real failure with a plain-language reason. ARMY_HOME
     //    points at a path that does NOT exist — never at the real user default,
     //    which this machine may genuinely have.

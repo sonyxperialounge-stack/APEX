@@ -11,6 +11,7 @@
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
+import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 
 const RUNTIME = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -106,6 +107,25 @@ function preserve(entries) {
     .filter((n) => PRESERVE_DIRS.includes(n))
 }
 
+/**
+ * BOOT-T04 (06 §7) — the core-manifest inventory: sha256 over every numbered
+ * core doctrine file, written as `payload/core/manifest.json`. Must run AFTER
+ * the rewrites (they can alter .md bytes). Deterministic: sorted names, stable
+ * JSON, so the `--check` byte-compare can treat it as a managed file.
+ */
+function writeCoreManifest(payloadRoot) {
+  const coreDir = path.join(payloadRoot, "core")
+  const files = {}
+  for (const name of fs
+    .readdirSync(coreDir)
+    .filter((n) => /^\d{2}-[A-Za-z0-9-]+\.md$/.test(n))
+    .sort()) {
+    files[name] = createHash("sha256").update(fs.readFileSync(path.join(coreDir, name))).digest("hex")
+  }
+  const manifest = JSON.stringify({ schemaVersion: 1, algorithm: "sha256", files }, null, 2) + "\n"
+  fs.writeFileSync(path.join(coreDir, "manifest.json"), manifest, "utf8")
+}
+
 function main() {
   // `payload/opencode/` and `payload/skills/` hold content authored here, not copied
   // from the project root — preserve them across a rebuild.
@@ -128,6 +148,7 @@ function main() {
   }
 
   rewriteAll(PAYLOAD)
+  writeCoreManifest(PAYLOAD)
 
   if (keep)
     console.log(`payload preserved (${keep.length} authored dirs: ${keep.map((p) => path.basename(p)).join(", ")})`)
@@ -152,6 +173,7 @@ function check() {
       if (fs.existsSync(from)) fs.copyFileSync(from, path.join(tmp, file))
     }
     rewriteAll(tmp)
+    writeCoreManifest(tmp)
 
     const expected = listFiles(tmp)
     const drift = []

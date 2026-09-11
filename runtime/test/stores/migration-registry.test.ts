@@ -98,7 +98,7 @@ describe("WP-018 migrateStore", () => {
     assert.equal(found[0]!.id, "MIG-memory-1-to-2-crashed")
   })
 
-  test("MIG-T02: a future schema is refused, never migrated, never downgraded", async () => {
+  test("MIG-T02/BOOT-T06: a future schema is refused, never migrated, never downgraded (read-only safe mode)", async () => {
     await fsp.writeFile(stateFile, JSON.stringify({ schemaVersion: 99 }), "utf8")
     await assert.rejects(
       migrateStore("memory", stateFile, steps),
@@ -125,7 +125,7 @@ describe("WP-018 migrateStore", () => {
     assert.equal(JSON.parse(bak as string).note, "hand-written legacy")
   })
 
-  test("MIG-T04: stable ids and content survive migration (id round-trip)", async () => {
+  test("MIG-T04/DAT-T02: stable ids and content survive migration (id round-trip; ids never recycled)", async () => {
     const id = "MEM-000000001-abc123"
     await fsp.writeFile(stateFile, JSON.stringify({ schemaVersion: 0, records: [{ id }] }), "utf8")
     await migrateStore("memory", stateFile, steps)
