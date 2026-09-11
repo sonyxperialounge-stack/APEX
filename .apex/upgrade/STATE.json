@@ -562,7 +562,7 @@
         "EVD-051"
       ],
       "notes": "capability registry: descriptors, alias index, conservative inference, availability, trust, mayExpose",
-      "commit": "PENDING"
+      "commit": "6eb9e84"
     },
     "WP-052": {
       "status": "PENDING"
