@@ -686,8 +686,18 @@
    "notes": "capability-first planning (24 S7): feasibility vs registry, replan-or-block, never fake call; AUT-T03; 1289 pass"
   },
   "WP-064": {
+   "status": "DONE",
+   "startedAt": "2026-09-11T12:20:00.000Z",
+   "finishedAt": "2026-09-11T12:40:00.000Z",
+   "commit": "5dace68",
+   "evidence": [
+    "EVD-064"
+   ],
+   "notes": "failure taxonomy + recovery ladder (27): fingerprint gate, canonical classes, bounded escalation, check-deletion refused; RCV-T01..T06; 1295 pass"
+  },
+  "WP-065": {
    "status": "IN_PROGRESS",
-   "startedAt": "2026-09-11T12:20:00.000Z"
+   "startedAt": "2026-09-11T12:40:00.000Z"
   },
   "WP-064": {
    "status": "PENDING"
