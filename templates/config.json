@@ -1,5 +1,7 @@
 {
-  "_comment": "APEX ledger config. Copy to <PROJECT_ROOT>/.apex/config.json and fill in. Keys are camelCase and must match ApexConfig exactly — a key APEX does not recognise is reported, never silently ignored.",
+  "_comment": "APEX ledger config. Copy to <PROJECT_ROOT>/.apex/config.json and fill in. Keys are camelCase and must match ApexConfig exactly — a key APEX does not recognise is reported, never silently ignored. schemaVersion marks the file's generation: migration adds it to an older file and adds nothing else. Personal defaults (memory policy, language, archive detail) live in the GLOBAL config at <APEX home>/config.json — this file is project truth only.",
+
+  "schemaVersion": 2,
 
   "projectRoot": "REPLACE/WITH/ABSOLUTE/PATH",
   "autonomy": "GUARDED",
@@ -28,9 +30,11 @@
     "handoffAtContextPct": 80
   },
 
-  "_contextNote": "The attached-context guard's budget. context.budgetTokens is the token ceiling for the whole working context; attached content over 50% is refused, over 25% warns (54 §11.1).",
+  "_contextNote": "Context budgets (44 §3). budgetTokens is the ceiling for the whole working context — attached content over 50% is refused, over 25% warns (54 §11.1). learnedContextTokens caps the memory+skills subtotal (32 §3). freezeHotSnapshot freezes global memory at session start; mid-session writes arrive through the corrections overlay (13 §3).",
   "context": {
-    "budgetTokens": 2000
+    "budgetTokens": 2000,
+    "learnedContextTokens": 3000,
+    "freezeHotSnapshot": true
   },
 
   "council": {
@@ -39,17 +43,25 @@
     "conveneOn": ["security", "irreversible", "architecture", "third_failure"]
   },
 
-  "_skillsNote": "Model-facing skill selection (54 §8/§7). maxBodiesPerTask caps how many skill bodies load for one task; seedSkills ships the bundled seed library.",
+  "_skillsNote": "Skills (44 §3, 54 §7/§8). maxBodiesPerTask caps skill bodies loaded per task; seedSkills ships the bundled seed library. projectSkills: repository-supplied SKILL.md files are DATA — 'off' (default) ignores them, 'readonly' lists them, 'trusted' needs your explicit hash-bound grant (never automatic). autoPromote:false means promotion always needs the evidence gate. maxIndexTokens caps the model-facing index.",
   "skills": {
     "maxBodiesPerTask": 3,
-    "seedSkills": true
+    "seedSkills": true,
+    "enabled": true,
+    "useGlobal": true,
+    "projectSkills": "off",
+    "autoPromote": false,
+    "maxIndexTokens": 1500
   },
 
-  "_capabilitiesNote": "Host-provided code intelligence (54 §14). APEX never installs language servers; hostDiagnostics lets a host that already exposes semantic diagnostics record them as evidence. diagnosticsMessage holds the latest host-reported message (evidence only). schemaBudgetTokens caps the compact capability index in tokens (44 §3/WP-053): schemas beyond it are deferred and reached via search/describe.",
+  "_capabilitiesNote": "Host-provided code intelligence (54 §14). APEX never installs language servers; hostDiagnostics lets a host that already exposes semantic diagnostics record them as evidence. diagnosticsMessage holds the latest host-reported message (evidence only). schemaBudgetTokens caps the compact capability index in tokens (44 §3/WP-053). discovery: 'auto' probes the host at start, 'manual' waits. lazySchemas: 'auto' defers heavy tool schemas (22 §2). aliasOverrides maps a host tool name to a canonical capability id — explicit only.",
   "capabilities": {
     "hostDiagnostics": true,
     "diagnosticsMessage": "",
-    "schemaBudgetTokens": 1000
+    "schemaBudgetTokens": 1000,
+    "discovery": "auto",
+    "lazySchemas": "auto",
+    "aliasOverrides": {}
   },
 
   "_delegationNote": "See core/13-FLEET.md. mode: OFF | AUTO | DIRECTED_ONLY | AGGRESSIVE",
@@ -68,5 +80,43 @@
     },
     "onClassExhausted": "ask_user",
     "announceAutonomous": true
+  },
+
+  "_memoryNote": "Durable memory (44 §3, 10). useGlobal:false stops global memory from being retrieved in THIS project (records are never deleted by it). globalCategories excludes one category (09 §7) — 'relationship' is off by default. writePolicy narrows what the autonomy mode allows ('stage' quarantine, 'off' nothing writes) — it can only restrict, never widen. mirror generates a block into an explicit target file (14 §5); includePersonal:false is a hard default — personal facts are never mirrored.",
+  "memory": {
+    "enabled": true,
+    "useGlobal": true,
+    "globalCategories": {
+      "preference": true,
+      "fact": true,
+      "environment": true,
+      "constraint": true,
+      "relationship": false,
+      "workflow_hint": true
+    },
+    "writePolicy": "auto",
+    "notifications": "normal",
+    "mirror": {
+      "enabled": false,
+      "target": null,
+      "includePersonal": false
+    }
+  },
+
+  "_archiveNote": "Session archive (44 §3, 15/16). detail: 'off' | 'capsule' | 'compact' | 'full'. events.maxAgeDays / toolOutput.maxAgeDays feed retention (apex-agent session prune); pruning is explicit and never touches the verification ledger (16 §7).",
+  "archive": {
+    "enabled": true,
+    "detail": "compact",
+    "resumeCapsules": { "maxCount": 100 },
+    "events": { "maxAgeDays": 180 },
+    "toolOutput": { "maxAgeDays": 30 },
+    "index": { "enabled": true, "rebuildOnCorruption": true }
+  },
+
+  "_learningNote": "Self-learning loop (44 §3, 17). extractOn names the lifecycle events that feed the extractor; candidateScope limits where new memory/skill candidates may be proposed ('project' default — the global store only via explicit user action).",
+  "learning": {
+    "enabled": true,
+    "extractOn": ["gate_pass", "session_end"],
+    "candidateScope": "project"
   }
 }

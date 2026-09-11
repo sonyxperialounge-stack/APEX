@@ -490,7 +490,7 @@ describe("WP-050b — diagnostics evidence slot", () => {
     const runner = new FakeCommandRunner({})
     const v = makeVerifier(runner, {
       verifyCommands: { types: "npx tsc --noEmit" },
-      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000 },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000, discovery: "auto", lazySchemas: "auto", aliasOverrides: {} },
     })
     const records = await v.cascade(["src/a.ts"], ["REQ-001"], { maxTier: "types" })
     const diag = records.find((r) => r.type === "diagnostics")!
@@ -506,7 +506,7 @@ describe("WP-050b — diagnostics evidence slot", () => {
     const runner = new FakeCommandRunner({})
     const v = makeVerifier(runner, {
       verifyCommands: { types: "npx tsc --noEmit" },
-      capabilities: { hostDiagnostics: true, diagnosticsMessage: "", schemaBudgetTokens: 1000 },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "", schemaBudgetTokens: 1000, discovery: "auto", lazySchemas: "auto", aliasOverrides: {} },
     })
     const records = await v.cascade([], ["REQ-002"], { maxTier: "types" })
     const diag = records.find((r) => r.type === "diagnostics")!
@@ -518,7 +518,7 @@ describe("WP-050b — diagnostics evidence slot", () => {
     const runner = new FakeCommandRunner({})
     const v = makeVerifier(runner, {
       verifyCommands: { types: "npx tsc --noEmit" },
-      capabilities: { hostDiagnostics: false, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000 },
+      capabilities: { hostDiagnostics: false, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000, discovery: "auto", lazySchemas: "auto", aliasOverrides: {} },
     })
     const records = await v.cascade([], ["REQ-003"], { maxTier: "types" })
     assert.equal(records.some((r) => r.type === "diagnostics"), false)
@@ -528,7 +528,7 @@ describe("WP-050b — diagnostics evidence slot", () => {
     const runner = new FakeCommandRunner({})
     const v = makeVerifier(runner, {
       verifyCommands: { suite: "pytest" },
-      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000 },
+      capabilities: { hostDiagnostics: true, diagnosticsMessage: "no semantic errors", schemaBudgetTokens: 1000, discovery: "auto", lazySchemas: "auto", aliasOverrides: {} },
     })
     const records = await v.cascade([], ["REQ-004"], { maxTier: "suite" })
     const suite = records.find((r) => r.type === "suite")

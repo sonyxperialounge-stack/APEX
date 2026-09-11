@@ -31,6 +31,7 @@ import path from "node:path"
 import fsp from "node:fs/promises"
 import {
   REQ_STATUSES,
+  AUTONOMY_MODES,
   type ApexConfig,
   type DecisionRecord,
   type ExecutionContext,
@@ -47,8 +48,8 @@ import {
   type VerifyType,
 } from "../core/types.ts"
 import { ApexError, IllegalTransitionError } from "../core/errors.ts"
-import { readTextOrNull, writeText, writeJson, readJson, existsSync } from "../core/json.ts"
-import { apexDir, isFilesystemRoot } from "../core/paths.ts"
+import { readTextOrNull, writeText, writeJson, readJson, existsSync, withCrossProcessLock, backup } from "../core/json.ts"
+import { apexDir, apexHome, isFilesystemRoot } from "../core/paths.ts"
 import { bound, redact } from "../core/redact.ts"
 import { event, log } from "../core/log.ts"
 
@@ -74,9 +75,24 @@ export const DEFAULT_CONFIG: ApexConfig = {
   verifyCommands: {},
   limits: { maxSameStrategyFailures: 3, maxSubagentRetries: 2, handoffAtContextPct: 80 },
   council: { enabled: false, reviewerModel: null, conveneOn: [] },
-  context: { budgetTokens: 2000 },
-  skills: { maxBodiesPerTask: 3, seedSkills: true },
-  capabilities: { hostDiagnostics: true, diagnosticsMessage: "", schemaBudgetTokens: 1000 },
+  context: { budgetTokens: 2000, learnedContextTokens: 3000, freezeHotSnapshot: true },
+  skills: {
+    maxBodiesPerTask: 3,
+    seedSkills: true,
+    enabled: true,
+    useGlobal: true,
+    projectSkills: "off",
+    autoPromote: false,
+    maxIndexTokens: 1500,
+  },
+  capabilities: {
+    hostDiagnostics: true,
+    diagnosticsMessage: "",
+    schemaBudgetTokens: 1000,
+    discovery: "auto",
+    lazySchemas: "auto",
+    aliasOverrides: {},
+  },
   delegation: {
     mode: "AUTO",
     maxConcurrentCalls: 6,
@@ -87,7 +103,52 @@ export const DEFAULT_CONFIG: ApexConfig = {
     onClassExhausted: "ask_user",
     announceAutonomous: true,
   },
+  schemaVersion: 2,
+  memory: {
+    enabled: true,
+    useGlobal: true,
+    globalCategories: {
+      preference: true,
+      fact: true,
+      environment: true,
+      constraint: true,
+      relationship: false,
+      workflow_hint: true,
+    },
+    writePolicy: "auto",
+    notifications: "normal",
+    mirror: { enabled: false, target: null, includePersonal: false },
+  },
+  archive: {
+    enabled: true,
+    detail: "compact",
+    resumeCapsules: { maxCount: 100 },
+    events: { maxAgeDays: 180 },
+    toolOutput: { maxAgeDays: 30 },
+    index: { enabled: true, rebuildOnCorruption: true },
+  },
+  learning: {
+    enabled: true,
+    extractOn: ["gate_pass", "session_end"],
+    candidateScope: "project",
+  },
 }
+
+/**
+ * WP-074 (44 §1) — the resolved view of the two config files, with per-key
+ * provenance. `layers[key]` names where the EFFECTIVE value came from: the
+ * project file, the global home file, both (a union/intersection), or the
+ * built-in defaults. Doctor and status render this provenance.
+ */
+export type ConfigLayer = "project" | "global" | "default" | "project+global"
+
+export interface ResolvedConfig {
+  config: ApexConfig
+  layers: Record<string, ConfigLayer>
+}
+
+/** Project config file generation the migration writes (44 §6, MIG-config-1-to-2). */
+export const CURRENT_CONFIG_SCHEMA = 2
 
 const EMPTY_RESUME: ResumePoint = { nextAction: "", doNotRedo: "", verifyFirst: "", watchOut: "" }
 
@@ -206,7 +267,37 @@ export class Ledger {
   /** Problems found in the last loadConfig. Surfaced by status and by doctor. */
   configIssues: string[] = []
 
-  private normalise(raw: Record<string, unknown>): Record<string, unknown> {
+  /**
+   * WP-074 (CFG-T05) — the nearest known key within a small edit distance, so the
+   * report names the LIKELY intended key instead of leaving the user to diff the
+   * template by eye. Returns null when nothing is plausibly close.
+   */
+  private static suggestKey(unknown: string, known: Iterable<string>): string | null {
+    const dist = (a: string, b: string): number => {
+      const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array<number>(b.length).fill(0)])
+      for (let j = 0; j <= b.length; j++) dp[0]![j] = j
+      for (let i = 1; i <= a.length; i++)
+        for (let j = 1; j <= b.length; j++)
+          dp[i]![j] = Math.min(
+            dp[i - 1]![j]! + 1,
+            dp[i]![j - 1]! + 1,
+            dp[i - 1]![j - 1]! + (a[i - 1]!.toLowerCase() === b[j - 1]!.toLowerCase() ? 0 : 1),
+          )
+      return dp[a.length]![b.length]!
+    }
+    let best: string | null = null
+    let bestDist = Infinity
+    for (const k of known) {
+      const d = dist(unknown, k)
+      if (d < bestDist) {
+        bestDist = d
+        best = k
+      }
+    }
+    return best !== null && bestDist <= 2 ? best : null
+  }
+
+  private normalise(raw: Record<string, unknown>, sourceFile: string): Record<string, unknown> {
     const out: Record<string, unknown> = {}
     const issues: string[] = []
     const known = new Set(Object.keys(DEFAULT_CONFIG))
@@ -216,38 +307,55 @@ export class Ledger {
       const migrated = Ledger.LEGACY_KEYS[key]
       if (migrated) {
         out[migrated] = value
-        issues.push(`"${key}" is not a config key — read as "${migrated}". Rename it.`)
+        issues.push(`${sourceFile}: "${key}" is not a config key — read as "${migrated}". Rename it.`)
       } else if (known.has(key)) {
         out[key] = value
       } else {
-        issues.push(`"${key}" is not a recognised config key and was IGNORED. Check the spelling.`)
+        const suggestion = Ledger.suggestKey(key, known)
+        issues.push(
+          `${sourceFile}: "${key}" is not a recognised config key and was IGNORED` +
+            (suggestion ? ` — did you mean "${suggestion}"?` : ". Check the spelling against templates/config.json."),
+        )
       }
     }
 
-    // Nested renames.
-    for (const [outer, inner] of [["limits", null], ["council", null], ["context", null], ["delegation", "models"]] as const) {
-      const section = out[outer]
-      if (!section || typeof section !== "object") continue
+    // Nested renames and unknown keys inside every object-valued known section,
+    // recursing where the default section has a nested object (delegation.models).
+    const defaults = DEFAULT_CONFIG as unknown as Record<string, unknown>
+    const fixSection = (section: Record<string, unknown>, sectionKeys: string[], prefix: string): Record<string, unknown> => {
       const fixed: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(section as Record<string, unknown>)) {
+      for (const [k, v] of Object.entries(section)) {
         const migrated = Ledger.LEGACY_KEYS[k]
+        const here = prefix ? `${prefix}.${k}` : k
         if (migrated) {
           fixed[migrated] = v
-          issues.push(`"${outer}.${k}" is not a config key — read as "${outer}.${migrated}". Rename it.`)
-        } else fixed[k] = v
-      }
-      if (inner && fixed[inner] && typeof fixed[inner] === "object") {
-        const nested: Record<string, unknown> = {}
-        for (const [k, v] of Object.entries(fixed[inner] as Record<string, unknown>)) {
-          const migrated = Ledger.LEGACY_KEYS[k]
-          if (migrated) {
-            nested[migrated] = v
-            issues.push(`"${outer}.${inner}.${k}" is not a config key — read as "${migrated}". Rename it.`)
-          } else nested[k] = v
+          issues.push(`${sourceFile}: "${here}" is not a config key — read as "${prefix ? `${prefix}.${migrated}` : migrated}". Rename it.`)
+        } else if (k.startsWith("_")) {
+          fixed[k] = v
+        } else if (sectionKeys.length > 0 && !sectionKeys.includes(k)) {
+          const suggestion = Ledger.suggestKey(k, sectionKeys)
+          issues.push(
+            `${sourceFile}: "${here}" is not a recognised config key and was IGNORED` +
+              (suggestion ? ` — did you mean "${prefix ? `${prefix}.${suggestion}` : suggestion}"?` : ". Check the spelling against templates/config.json."),
+          )
+        } else if (
+          typeof v === "object" && v !== null && !Array.isArray(v) &&
+          typeof defaults[k] === "object" && defaults[k] !== null && !Array.isArray(defaults[k])
+        ) {
+          // A nested object section (delegation.models): recurse with ITS keys.
+          fixed[k] = fixSection(v as Record<string, unknown>, Object.keys(defaults[k] as object), here)
+        } else {
+          fixed[k] = v
         }
-        fixed[inner] = nested
       }
-      out[outer] = fixed
+      return fixed
+    }
+
+    for (const [key, value] of Object.entries(out)) {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) continue
+      const sectionKeys = Object.keys((defaults[key] as object | undefined) ?? {})
+      if (key === "verifyCommands") continue // handled below — its values are tier names
+      out[key] = fixSection(value as Record<string, unknown>, sectionKeys, key)
     }
 
     // Verify-tier renames: "test" and "run" are not tiers.
@@ -259,7 +367,7 @@ export class Ledger {
         if (migrated) {
           if (v !== null && v !== undefined) {
             fixed[migrated] = v
-            issues.push(`verifyCommands."${k}" is not a tier — read as "${migrated}". Rename it.`)
+            issues.push(`${sourceFile}: verifyCommands."${k}" is not a tier — read as "${migrated}". Rename it.`)
           }
         } else fixed[k] = v
       }
@@ -272,29 +380,191 @@ export class Ledger {
   }
 
   async loadConfig(): Promise<ApexConfig> {
-    const stored = await readJson<Record<string, unknown>>(this.file("config.json"), {})
-    const raw = this.normalise(stored) as Partial<ApexConfig>
+    return (await this.loadResolved()).config
+  }
+
+  /**
+   * WP-074 (44 §1) — the ONE merge of the two config files.
+   *
+   * Precedence: project > global home > built-in defaults, with two narrowing
+   * exceptions — safety keys take the MORE RESTRICTIVE layer (autonomy; CFG-T03),
+   * list keys union (doNotRead/doNotTouch/ignore/sourcesOfTruth; CFG-T04) and
+   * `allowedPaths` intersects. A layer that is silent contributes nothing: an
+   * explicit project value replaces the default outright, exactly as before.
+   *
+   * Every key's originating layer is recorded (CFG-T09) for Doctor and status.
+   */
+  async loadResolved(): Promise<ResolvedConfig> {
+    const projectFile = this.file("config.json")
+    const stored = await readJson<Record<string, unknown>>(projectFile, {})
+    const migrationNote = await this.migrateConfigFile(stored)
+
+    const raw = this.normalise(stored, projectFile) as Partial<ApexConfig>
+    const projectIssues = [...this.configIssues]
+
+    // The global layer (44 §4): <global home>/config.json. Read-only here — this
+    // method never creates or repairs the home; Doctor owns that.
+    const home = apexHome()
+    const globalFile = path.join(home.path, "config.json")
+    const globalStored = await readJson<Record<string, unknown>>(globalFile, {})
+    const globalRaw = this.normalise(globalStored, globalFile) as Partial<ApexConfig>
+    this.configIssues = [...projectIssues, ...this.configIssues]
+    if (migrationNote) this.configIssues.push(migrationNote)
+
+    const layers: Record<string, ConfigLayer> = {}
+    const allKeys = new Set([...Object.keys(DEFAULT_CONFIG), ...Object.keys(raw), ...Object.keys(globalRaw)])
+    for (const key of allKeys) {
+      layers[key] = key in raw ? "project" : key in globalRaw ? "global" : "default"
+    }
+    const bothSet = (key: string): boolean => key in raw && key in globalRaw
+    const mark = (key: string): void => {
+      if (bothSet(key)) layers[key] = "project+global"
+    }
+
+    /** Section merge: default <- global <- project, per key. */
+    const sect = <K extends keyof ApexConfig & string>(key: K): ApexConfig[K] => {
+      const p = raw[key] as Record<string, unknown> | undefined
+      const g = globalRaw[key] as Record<string, unknown> | undefined
+      mark(key)
+      return {
+        ...(((DEFAULT_CONFIG[key] ?? {}) as Record<string, unknown>) || {}),
+        ...(g ?? {}),
+        ...(p ?? {}),
+      } as ApexConfig[K]
+    }
+
+    // CFG-T03 — the MORE RESTRICTIVE autonomy wins between the two files. Only
+    // layers that explicitly set the key participate; silence inherits the default.
+    type AutonomyModeLike = (typeof AUTONOMY_MODES)[number]
+    const restrict = (a: AutonomyModeLike, b: AutonomyModeLike): AutonomyModeLike =>
+      AUTONOMY_MODES.indexOf(a) <= AUTONOMY_MODES.indexOf(b) ? a : b
+    let autonomy: AutonomyModeLike = DEFAULT_CONFIG.autonomy
+    const globalAuto = globalRaw.autonomy
+    const projectAuto = raw.autonomy
+    if (globalAuto && projectAuto) {
+      autonomy = restrict(projectAuto, globalAuto)
+      layers.autonomy = "project+global"
+    } else if (projectAuto) {
+      autonomy = projectAuto
+    } else if (globalAuto) {
+      autonomy = globalAuto
+    }
+
+    // CFG-T04 — list keys union across EXPLICIT layers; allowedPaths intersects.
+    const unionList = (key: "doNotRead" | "doNotTouch" | "ignore" | "sourcesOfTruth"): string[] => {
+      const p = raw[key] as string[] | undefined
+      const g = globalRaw[key] as string[] | undefined
+      mark(key)
+      if (p && g) return [...new Set([...g, ...p])]
+      if (p) return p
+      if (g) return g
+      return [...(DEFAULT_CONFIG[key] as string[])]
+    }
+    const intersectList = (key: "allowedPaths"): string[] => {
+      const p = raw[key] as string[] | undefined
+      const g = globalRaw[key] as string[] | undefined
+      mark(key)
+      if (p && g) return p.filter((x) => g.includes(x))
+      if (p) return p
+      if (g) return g
+      return [...(DEFAULT_CONFIG[key] as string[])]
+    }
+
     // A stored projectRoot that does not EXIST here came from another machine or clone.
     // Honouring it silently turns Governor path protection into decoration — do_not_touch
     // patterns resolve against a ghost directory and guard nothing (audit 2026-08-18).
     // Fall back to the ledger's own root; the ledger's location IS the project's truth.
     const storedRoot = raw.projectRoot
     const projectRoot = storedRoot && existsSync(storedRoot) ? storedRoot : this.root
-    return {
+
+    const config: ApexConfig = {
       ...DEFAULT_CONFIG,
       ...raw,
       projectRoot,
-      limits: { ...DEFAULT_CONFIG.limits, ...(raw.limits ?? {}) },
-      council: { ...DEFAULT_CONFIG.council, ...(raw.council ?? {}) },
+      autonomy,
+      allowedPaths: intersectList("allowedPaths"),
+      doNotRead: unionList("doNotRead"),
+      doNotTouch: unionList("doNotTouch"),
+      ignore: unionList("ignore"),
+      sourcesOfTruth: unionList("sourcesOfTruth"),
+      verifyCommands: { ...(globalRaw.verifyCommands ?? {}), ...(raw.verifyCommands ?? {}) },
+      limits: sect("limits"),
+      council: sect("council"),
+      context: sect("context"),
+      skills: sect("skills"),
+      capabilities: sect("capabilities"),
       delegation: {
         ...DEFAULT_CONFIG.delegation,
+        ...(globalRaw.delegation ?? {}),
         ...(raw.delegation ?? {}),
-        models: { ...DEFAULT_CONFIG.delegation.models, ...(raw.delegation?.models ?? {}) },
+        models: {
+          ...DEFAULT_CONFIG.delegation.models,
+          ...(globalRaw.delegation?.models ?? {}),
+          ...(raw.delegation?.models ?? {}),
+        },
       },
-      context: { ...DEFAULT_CONFIG.context, ...(raw.context ?? {}) },
-      skills: { ...DEFAULT_CONFIG.skills, ...(raw.skills ?? {}) },
-      capabilities: { ...DEFAULT_CONFIG.capabilities, ...(raw.capabilities ?? {}) },
+      memory: sect("memory"),
+      archive: sect("archive"),
+      learning: sect("learning"),
     }
+    return { config, layers }
+  }
+
+  /**
+   * WP-074 (44 §6) — MIG-config-1-to-2, run when a project config carries no
+   * schemaVersion. Adds exactly `schemaVersion: 2` — no other key, no reordering,
+   * no comment stripped — after backing the file up (json.ts backup()), under the
+   * config lock, with a MIG record in the project's migrations journal (29 §5).
+   * Idempotent: a file that already names its generation is never rewritten, and a
+   * FUTURE generation is read-only (29 §7) — reported, never downgraded.
+   */
+  private async migrateConfigFile(stored: Record<string, unknown>): Promise<string | null> {
+    const file = this.file("config.json")
+    const found = typeof stored.schemaVersion === "number" ? stored.schemaVersion : null
+    if (found !== null) {
+      if (found > CURRENT_CONFIG_SCHEMA) {
+        return (
+          `${file}: config schema v${found} > supported v${CURRENT_CONFIG_SCHEMA} — read-only ` +
+          `for this runtime (29 §7). Upgrade the runtime before editing it.`
+        )
+      }
+      return null
+    }
+    if (Object.keys(stored).length === 0) return null // no file, or nothing written yet
+
+    const lockDir = path.join(this.dir, "locks")
+    await fsp.mkdir(lockDir, { recursive: true })
+    await withCrossProcessLock(path.join(lockDir, "config-migrate.lock"), "config-migrate", async () => {
+      // Re-read under the lock: another process may have migrated while we probed.
+      const current = await readJson<Record<string, unknown>>(file, {})
+      if (typeof current.schemaVersion === "number") return
+      const backupRef = await backup(file)
+      // schemaVersion first, every existing key (comments included) in its order.
+      const migrated: Record<string, unknown> = { schemaVersion: CURRENT_CONFIG_SCHEMA, ...current }
+      await writeJson(file, migrated)
+
+      const journalDir = path.join(this.dir, "migrations")
+      await fsp.mkdir(journalDir, { recursive: true })
+      const journalFile = path.join(journalDir, "journal.json")
+      const journal = await readJson<{ schemaVersion?: number; entries: Array<Record<string, unknown>> }>(journalFile, {
+        schemaVersion: 1,
+        entries: [],
+      })
+      journal.entries.push({
+        id: `MIG-config-1-to-${CURRENT_CONFIG_SCHEMA}-${Date.now().toString(36)}`,
+        store: "config",
+        from: 1,
+        to: CURRENT_CONFIG_SCHEMA,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        status: "COMPLETED",
+        backupRef: backupRef ?? undefined,
+      })
+      await writeJson(journalFile, { schemaVersion: 1, entries: journal.entries })
+      event("migration.completed", { store: "config", from: 1, to: CURRENT_CONFIG_SCHEMA })
+      log.info(`config: migrated to schema v${CURRENT_CONFIG_SCHEMA}${backupRef ? ` (backup: ${backupRef})` : ""}`)
+    })
+    return null
   }
 
   async saveConfig(config: ApexConfig): Promise<void> {

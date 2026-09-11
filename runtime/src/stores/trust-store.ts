@@ -40,9 +40,9 @@ import path from "node:path"
 import { createHash } from "node:crypto"
 import { ApexError } from "../core/errors.ts"
 import { readJson, writeJson, withCrossProcessLock } from "../core/json.ts"
-import { scan } from "../core/redact.ts"
-import type { ScanResult, ScanContext } from "../core/redact.ts"
+import type { ScanResult } from "../core/redact.ts"
 import { toIsoString } from "../core/ids.ts"
+import { openScanCache, SCAN_POLICY_VERSION, type ScanCacheFile } from "./scan-cache.ts"
 import { openExtensionTrust } from "./extension-trust.ts"
 import type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
 import { openHookConsent } from "./hook-consent.ts"
@@ -50,22 +50,10 @@ import type { HookConsentGrant, HookConsentStore } from "./hook-consent.ts"
 
 export type { ExtensionTier, ExtensionTrustGrant, TrustStatus } from "./extension-trust.ts"
 export type { HookConsentGrant, HookConsentStore } from "./hook-consent.ts"
+export { SCAN_POLICY_VERSION, type ScanCacheFile } from "./scan-cache.ts"
 
 /** Source tiers (54 §9.1). PROJECT grants are data-tier: never self-trusting. */
 export type SkillTier = "BUILTIN" | "USER" | "LEARNED" | "PROJECT" | "EXTERNAL"
-
-/**
- * Scanner policy version — part of the scan-cache key (54 §9.2). When the
- * scanner's own rules change, bump this and every cached verdict invalidates.
- */
-export const SCAN_POLICY_VERSION = 1
-
-export interface ScanCacheFile {
-  schemaVersion: 1
-  policyVersion: number
-  /** content-hash (16-hex) -> cached verdict. Rule names + severities only — never excerpts. */
-  entries: Record<string, { verdict: ScanResult["verdict"]; rules: Array<{ rule: string; severity: ScanResult["findings"][number]["severity"] }>; scannedAt: string }>
-}
 
 export interface TrustGrant {
   skillId: string
@@ -175,50 +163,10 @@ export async function hashSkillContent(file: string): Promise<string> {
 export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): TrustStore {
   const now = opts.now ?? Date.now
   const file = path.join(homeDir, "trust", "skills.json")
-  const cacheFile = path.join(homeDir, "trust", "scan-cache.json")
   const lockFile = path.join(homeDir, "locks", "trust.lock")
-
-  /** Hash TEXT (not a file) into the 16-hex cache key — pure over content. */
-  function hashText(text: string): string {
-    return createHash("sha256").update(text).digest("hex").slice(0, 16)
-  }
-
-  async function readCache(): Promise<ScanCacheFile> {
-    const stored = await readJson<ScanCacheFile | null>(cacheFile, null)
-    if (stored && stored.schemaVersion === 1 && stored.policyVersion === SCAN_POLICY_VERSION && stored.entries) {
-      return stored
-    }
-    // Missing, malformed, or a policy bump: start clean — the old file is left in
-    // place (nothing is deleted), and a FRESH object avoids caching across boots.
-    return { schemaVersion: 1, policyVersion: SCAN_POLICY_VERSION, entries: {} }
-  }
-
-  async function writeCache(cache: ScanCacheFile): Promise<void> {
-    await writeJson(cacheFile, cache)
-  }
-
-  /** Cached scan (54 §9.2, SKSEC-T07): hash key, policy-version key, re-scan only on miss. */
-  async function scanCached(text: string, ctx: ScanContext, prefix = ""): Promise<ScanResult> {
-    const hash = prefix + hashText(text)
-    const cache = await readCache()
-    const hit = cache.entries[hash]
-    if (hit) {
-      // Verdicts cache rule names + severities, never excerpts: an old excerpt
-      // would be a stale evidence leak.
-      return {
-        verdict: hit.verdict,
-        findings: hit.rules.map((r) => ({ rule: r.rule, severity: r.severity, excerpt: "" })),
-      }
-    }
-    const fresh = opts.scanner ? opts.scanner(text) : scan(text, ctx)
-    cache.entries[hash] = {
-      verdict: fresh.verdict,
-      rules: fresh.findings.map((f) => ({ rule: f.rule, severity: f.severity })),
-      scannedAt: toIsoString(now()),
-    }
-    await writeCache(cache)
-    return fresh
-  }
+  // One shared scan cache for skills, extensions and hooks (54 §15); the injected
+  // test scanner flows through so a fake scanner still caches consistently.
+  const cache = openScanCache(homeDir, { now, scanner: opts.scanner })
 
   async function read(): Promise<TrustFile> {
     const stored = await readJson<TrustFile | null>(file, null)
@@ -228,14 +176,14 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
 
   // Extension, hook and skill trust share this store's clock, scan-cache and
   // cross-process lock (54 §15) — each verdict cached under its own namespace.
-  const extStore = openExtensionTrust(homeDir, { now, scanCached, lockFile })
-  const hookStore = openHookConsent(homeDir, { now, scanCached, lockFile })
+  const extStore = openExtensionTrust(homeDir, { now, scanCached: cache.scan, lockFile })
+  const hookStore = openHookConsent(homeDir, { now, scanCached: cache.scan, lockFile })
 
   return {
     file,
 
     async scanSkill(text: string): Promise<ScanResult> {
-      return scanCached(text, "skill")
+      return cache.scan(text, "skill")
     },
 
     scanExtension: (text: string) => extStore.scan(text),
@@ -252,7 +200,7 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
       }
 
       if (skillText !== undefined) {
-        const verdict = await scanCached(skillText, "skill")
+        const verdict = await cache.scan(skillText, "skill")
         if (verdict.verdict === "deny") {
           throw new ApexError(
             `Trust refused: the skill scanner returned deny (${verdict.findings.map((f) => f.rule).join(", ")}). ` +
@@ -260,7 +208,18 @@ export function openTrustStore(homeDir: string, opts: TrustStoreOptions = {}): T
             "SKILL_SCANNER_DENY",
           )
         }
-        if (verdict.verdict === "review" && input.override === true) {
+        if (verdict.verdict === "review") {
+          // REQ-SKL-018 / 44 §5 — a review verdict ALWAYS needs the human's explicit
+          // decision on record. There is no unattended path to trust in any autonomy
+          // mode, FULL_AUTO included (CFG-T08).
+          if (input.override !== true) {
+            throw new ApexError(
+              "The scanner returned review for this skill, so it stays untrusted: pass " +
+                "--override with --justification \"why\" to record your explicit decision. " +
+                "A trust grant requires an explicit human decision in every autonomy mode (44 §5).",
+              "TRUST_EXPLICIT_DECISION_REQUIRED",
+            )
+          }
           if (!input.justification?.trim()) {
             throw new ApexError(
               "Overriding a review finding requires a recorded justification — who decided, and why.",

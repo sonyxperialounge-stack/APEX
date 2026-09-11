@@ -1690,3 +1690,31 @@ Next: WP-073b (memory journey / skills journey, 54 §17, UX-T07).
 - Tests: 1365 pass / 0 fail (was 1362). Evidence: `.apex/upgrade/EVIDENCE/EVD-073b.md`.
 
 Next: WP-074 (templates and config migration, 44 §6, CFG-T01..T09).
+
+## WP-074 — Templates and config migration (44 §§1–6) — DONE
+
+- V4 config groups (`memory`/`archive`/`learning` optional on ApexConfig; new keys in
+  `context`/`skills`/`capabilities`) typed per 44 §3 with consts; defaults live in the
+  resolver, never the parser — an untouched V3 config keeps working (CFG-T01).
+- The ONE merge in `loadResolved()`: project > `<APEX home>/config.json` > defaults, with
+  the two narrowing exceptions — restrictive-wins autonomy (CFG-T03), union lists and
+  intersected `allowedPaths` (CFG-T04). `ResolvedConfig.layers` records every key's
+  originating layer (CFG-T09); `loadConfig()` delegates.
+- MIG-config-1-to-2 exactly per 44 §6: backup via `json.ts backup()`, add ONLY
+  `schemaVersion: 2`, preserve key order + `_` comments, config lock, migrations-journal
+  record, idempotent, future schema read-only (CFG-T02).
+- Unknown keys now report the SOURCE FILE and a nearest-key suggestion, top-level and in
+  every section (CFG-T05). The old walker silently ignored unknown keys inside sections
+  and never recursed beyond a fixed list — the new one is generic.
+- Trust gate (CFG-T08/REQ-SKL-018): a `review` verdict now ALWAYS demands explicit
+  override + recorded justification (`TRUST_EXPLICIT_DECISION_REQUIRED`); deny stays
+  absolute. No unattended path to trust in any mode.
+- MOD-T05: `trust-store.ts` hit 359 > 350 adding the gate — split the shared scan cache
+  into `src/stores/scan-cache.ts` (54 §9.2/§15); trust-store.ts → 306.
+- Template carries `schemaVersion: 2` + the full V4 surface with `_note` docs; payload
+  synced. Templates/*.md needed no change.
+- Tests: 1374 pass / 0 fail (was 1365). New: CFG-T01..T09 in
+  `test/engines/config-schema.test.ts`.
+- Evidence: `.apex/upgrade/EVIDENCE/EVD-074.md`.
+
+Next: WP-075 (documentation refresh, doc 53).

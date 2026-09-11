@@ -18,7 +18,7 @@
     }
   },
   "currentPhase": "7A",
-  "currentPacket": "WP-074",
+  "currentPacket": "WP-075",
   "phase0": "PASSED",
   "packets": {
     "WP-001": {
@@ -783,7 +783,9 @@
       "committed": "WP-073b: memory journey / skills journey (54 §17, UX-T07) — chronological learned-record with evidence ids and --forget"
     },
     "WP-074": {
-      "status": "PENDING"
+      "status": "DONE",
+      "evidence": ".apex/upgrade/EVIDENCE/EVD-074.md",
+      "committed": "WP-074: templates + config migration (44 ss1-6) — global/project merge with provenance, MIG-config-1-to-2, CFG-T01..T09"
     },
     "WP-075": {
       "status": "PENDING"

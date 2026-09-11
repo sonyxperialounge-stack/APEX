@@ -156,18 +156,40 @@ export interface CouncilConfig {
 export interface ApexContextConfig {
   /** Approximate token ceiling for the whole working context. Default 2000. */
   budgetTokens: number
+  /**
+   * WP-074 (44 §3) — the learned-context subtotal ceiling (32 §3): memory and
+   * skill bodies together may not exceed this share of the prompt. Default 3000.
+   */
+  learnedContextTokens: number
+  /**
+   * WP-074 (44 §3) — freeze the hot memory snapshot at session start (13 §3).
+   * Default true; mid-session writes surface through the corrections overlay.
+   */
+  freezeHotSnapshot: boolean
 }
 
 /**
  * WP-049c — the model-facing skill selection surface (54 §8, amending 18).
  * `maxBodiesPerTask` caps how many skill bodies load for one task (default 3);
  * `seedSkills` switches the bundled seed library on/off (54 §7, WP-049b).
+ * The remaining keys are the 44 §3 group: project-sourced skills are OFF by
+ * default (20 §3) and promotion is never automatic.
  */
 export interface ApexSkillsConfig {
   /** 54 §8: at most three bodies per task; the choice is explainable (SKL-T11). */
   maxBodiesPerTask: number
   /** 54 §7: ship and seed the bundled library on install. Default true. */
   seedSkills: boolean
+  /** Master switch for the skills subsystem. Default true. */
+  enabled: boolean
+  /** May the global skill library be used in this project? Default true. */
+  useGlobal: boolean
+  /** 20 §3 — repository-supplied skills: "off" (default) | "readonly" | "trusted". */
+  projectSkills: ProjectSkillMode
+  /** false => promotion always needs the evidence gate plus policy. Default false. */
+  autoPromote: boolean
+  /** Token budget for the model-facing skill index (18 §5). Default 1500. */
+  maxIndexTokens: number
 }
 
 /**
@@ -189,6 +211,72 @@ export interface ApexCapabilitiesConfig {
    * 1000 tokens, the spec's starting point.
    */
   schemaBudgetTokens: number
+  /** 44 §3 — host discovery: "auto" (default) probes the host; "manual" waits. */
+  discovery: "auto" | "manual"
+  /** 22 §2 — lazy schemas: "auto" (default) | "always" | "never". */
+  lazySchemas: "auto" | "always" | "never"
+  /** 44 §3 — hostToolName -> canonical capability id. Explicit only. */
+  aliasOverrides: Record<string, string>
+}
+
+// ── V4 config groups (44 §§3–4; WP-074) ─────────────────────────────────────
+// All groups are optional on ApexConfig: a V3 file typechecks untouched, and
+// the resolver — never the parser — supplies defaults.
+
+export const MEMORY_WRITE_POLICIES = ["auto", "stage", "off"] as const
+export type MemoryWritePolicy = (typeof MEMORY_WRITE_POLICIES)[number]
+
+export const MEMORY_NOTIFICATIONS = ["quiet", "normal", "verbose"] as const
+export type MemoryNotificationLevel = (typeof MEMORY_NOTIFICATIONS)[number]
+
+export const ARCHIVE_DETAIL = ["off", "capsule", "compact", "full"] as const
+export type ArchiveDetail = (typeof ARCHIVE_DETAIL)[number]
+
+export const PROJECT_SKILL_MODES = ["off", "readonly", "trusted"] as const
+export type ProjectSkillMode = (typeof PROJECT_SKILL_MODES)[number]
+
+export const LEARNING_SCOPES = ["project", "global", "both"] as const
+export type LearningScope = (typeof LEARNING_SCOPES)[number]
+
+/** The durable-memory policy group (44 §3). Memory belongs to the person. */
+export interface ApexMemoryConfig {
+  enabled: boolean
+  /** May global memory be retrieved in this project (09 §7, CFG-T06)? */
+  useGlobal: boolean
+  /** Per-category opt-out (09 §7): true = retrieved, false = excluded. */
+  globalCategories: {
+    preference: boolean
+    fact: boolean
+    environment: boolean
+    constraint: boolean
+    relationship: boolean
+    workflow_hint: boolean
+  }
+  /** "auto" | "stage" | "off" — narrows the autonomy default, never widens it. */
+  writePolicy: MemoryWritePolicy
+  /** 10 §11 — how loudly memory writes announce themselves. */
+  notifications: MemoryNotificationLevel
+  /** 14 §5 — the generated AGENTS.md/CLAUDE.md mirror. Off and never auto-aimed. */
+  mirror: { enabled: boolean; target: string | null; includePersonal: boolean }
+}
+
+/** The session-archive policy group (44 §3). */
+export interface ApexArchiveConfig {
+  enabled: boolean
+  detail: ArchiveDetail
+  resumeCapsules: { maxCount: number }
+  events: { maxAgeDays: number }
+  toolOutput: { maxAgeDays: number }
+  index: { enabled: boolean; rebuildOnCorruption: boolean }
+}
+
+/** The self-learning loop policy group (44 §3; 17). */
+export interface ApexLearningConfig {
+  enabled: boolean
+  /** Which lifecycle events feed the extractor. */
+  extractOn: string[]
+  /** Where new candidates may be proposed. */
+  candidateScope: LearningScope
 }
 
 export interface ApexConfig {
@@ -206,6 +294,11 @@ export interface ApexConfig {
   skills: ApexSkillsConfig
   capabilities: ApexCapabilitiesConfig
   delegation: DelegationConfig
+  /** 44 §3 — file generation marker: absent = V3 (1); the resolver migrates to 2. */
+  schemaVersion?: number
+  memory?: ApexMemoryConfig
+  archive?: ApexArchiveConfig
+  learning?: ApexLearningConfig
 }
 
 // ── Governor ────────────────────────────────────────────────────────────────
