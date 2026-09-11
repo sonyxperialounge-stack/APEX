@@ -549,7 +549,7 @@
         "EVD-050"
       ],
       "notes": "effects taxonomy + Governor adapter",
-      "commit": "PENDING"
+      "commit": "ccae2df"
     },
     "WP-050b": {
       "status": "PENDING"
