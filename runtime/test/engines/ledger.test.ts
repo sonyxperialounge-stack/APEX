@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Ledger, LEGAL_TRANSITIONS, nextId } from "../../src/engines/ledger.ts"
+import { Ledger, LEGAL_TRANSITIONS, nextId, evaluateTaskCompletion, TASK_COMPLETION_STATUSES } from "../../src/engines/ledger.ts"
 import { REQ_STATUSES, type ReqStatus } from "../../src/core/types.ts"
 import { IllegalTransitionError, ApexError } from "../../src/core/errors.ts"
 import { readTextOrNull } from "../../src/core/json.ts"
@@ -697,5 +697,49 @@ describe("the ledger refuses a filesystem root", () => {
     const result = await new Ledger(fresh).init({ projectRoot: fresh })
     assert.equal(result.created, true)
     await fsp.rm(fresh, { recursive: true, force: true })
+  })
+})
+
+// ── WP-067 — completion states + Gate integration (24 §11, 45 §3.3) ─────────
+
+describe("WP-067 task completion states (24 §11)", () => {
+  test("exactly the five completion states exist, no synonyms", () => {
+    assert.deepEqual([...TASK_COMPLETION_STATUSES], [
+      "VERIFIED_COMPLETE",
+      "COMPLETE_WITH_LIMITATION",
+      "BLOCKED",
+      "NEEDS_USER_DECISION",
+      "IN_PROGRESS",
+    ])
+  })
+
+  test("verified requirements complete objectively", () => {
+    const done = evaluateTaskCompletion({ requirementIds: ["REQ-001"], verifiedRequirementIds: ["REQ-001"] })
+    assert.equal(done.status, "VERIFIED_COMPLETE")
+    assert.deepEqual(done.remaining, [])
+  })
+
+  test("a subjective deliverable without proof is never VERIFIED_COMPLETE", () => {
+    const open = evaluateTaskCompletion({ requirementIds: ["REQ-002"], verifiedRequirementIds: [] })
+    assert.notEqual(open.status, "VERIFIED_COMPLETE")
+    assert.equal(open.status, "IN_PROGRESS")
+    const limited = evaluateTaskCompletion({
+      requirementIds: ["REQ-002"],
+      verifiedRequirementIds: [],
+      limitation: "review-based acceptance only; no objective oracle exists",
+    })
+    assert.equal(limited.status, "COMPLETE_WITH_LIMITATION")
+    assert.deepEqual(limited.remaining, ["REQ-002"])
+  })
+
+  test("blockers and user decisions own their states", () => {
+    assert.equal(
+      evaluateTaskCompletion({ requirementIds: ["REQ-003"], verifiedRequirementIds: [], blocker: "tool gone" }).status,
+      "BLOCKED",
+    )
+    assert.equal(
+      evaluateTaskCompletion({ requirementIds: ["REQ-003"], verifiedRequirementIds: [], needsDecision: "pick the vendor" }).status,
+      "NEEDS_USER_DECISION",
+    )
   })
 })

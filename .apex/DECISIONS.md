@@ -53,3 +53,14 @@ in that packet's Files list): EPERM/EACCES now retry with the existing bounded j
 backoff. Protects 12 §4's "never hangs, never fails spuriously" intent — a transient OS
 refusal is not a lock verdict. The stale policy, timeout and never-steal properties are
 unchanged (a retry is just another attempt). Race suite verified stable 3x consecutive.
+
+## D-007 — WP-067 tests live in ledger.test.ts (2026-09-11, WP-067)
+
+WP-067's Files list is ledger.ts + mcp/tools.ts, with no test file — but its
+Done-when ("a subjective deliverable cannot be reported as objectively
+verified") is behaviour that must be proven, not inspected. The four
+completion-state tests went into the existing test/engines/ledger.test.ts
+(the engine's paired suite) rather than a new file, keeping MOD-T04's
+one-suite-per-module shape. Protects 04 C-005 (completion truth stays
+mechanical): the Gate rule is asserted on every run, not read off a diff.
+Recorded here per the blast-radius rule.

@@ -1576,3 +1576,20 @@ Verify: `npm run verify` -> 1309 pass, 0 fail, 0 cancelled, exit 0 (~49s)
 Evidence: EVD-066 (FLT-T04).
 Surprises: none.
 Next: WP-067 (completion states + Gate integration).
+
+## WP-067 — Completion states + Gate integration · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/ledger.ts (+pure evaluation, authority untouched),
+  ~runtime/src/mcp/tools.ts (apex_gate contract teaches the five states),
+  ~runtime/test/engines/ledger.test.ts (+4; D-007),
+  +.apex/upgrade/EVIDENCE/EVD-067.md
+Decision: five states, no synonyms (24 §11, 45 §3.3). VERIFIED_COMPLETE needs
+  every blocking requirement verified; the remainder with a declared
+  limitation is COMPLETE_WITH_LIMITATION; without one it stays IN_PROGRESS
+  with the remedy stated. Subjective work can never read as objective proof.
+  Test-file touch recorded in D-007 per the blast-radius rule.
+Verify: `npm run verify` -> 1313 pass, 0 fail, 0 cancelled, exit 0 (~42s)
+  (was 1309; +4 new).
+Evidence: EVD-067.
+Surprises: none.
+Next: WP-068 (durable-state doctrine) — the Phase-6 gate packet.

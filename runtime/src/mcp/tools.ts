@@ -199,7 +199,12 @@ export const TOOLS: ToolDefinition[] = [
     description:
       "Run the completion gate. Returns whether the work may be called complete, and every " +
       "check that is not satisfied. Call this BEFORE using the words complete, done, or " +
-      "finished. If it fails, report the true state instead of softening the language.",
+      "finished. If it fails, report the true state instead of softening the language. " +
+      "Task outcomes use exactly five states (24 §11): VERIFIED_COMPLETE (every blocking " +
+      "requirement has passing verification), COMPLETE_WITH_LIMITATION (delivered, with a " +
+      "declared limitation naming what is unverified), BLOCKED, NEEDS_USER_DECISION, " +
+      "IN_PROGRESS. A subjective deliverable without objective proof is never " +
+      "VERIFIED_COMPLETE — declare its limitation instead.",
     inputSchema: { type: "object", properties: {} },
   },
   {

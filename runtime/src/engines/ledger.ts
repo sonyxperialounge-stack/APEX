@@ -1115,3 +1115,84 @@ export function nextId(prefix: string, existing: string[]): string {
   }
   return `${prefix}-${String(max + 1).padStart(3, "0")}`
 }
+
+// ── task completion states (24 §11, 45 §3.3; WP-067) ─────────────────────────
+//
+// The Gate's vocabulary for task-level completion. Exactly these five, no
+// synonyms. VERIFIED_COMPLETE needs objective proof for every blocking
+// requirement; a subjective deliverable takes COMPLETE_WITH_LIMITATION with
+// a declared limitation, or stays IN_PROGRESS. The Ledger still owns
+// requirement truth; this only names the task outcome.
+
+export const TASK_COMPLETION_STATUSES = [
+  "VERIFIED_COMPLETE",
+  "COMPLETE_WITH_LIMITATION",
+  "BLOCKED",
+  "NEEDS_USER_DECISION",
+  "IN_PROGRESS",
+] as const
+export type TaskCompletionStatus = (typeof TASK_COMPLETION_STATUSES)[number]
+
+export interface TaskCompletionInput {
+  requirementIds: string[]
+  verifiedRequirementIds: string[]
+  limitation?: string
+  blocker?: string
+  needsDecision?: string
+}
+
+export interface TaskCompletionEvaluation {
+  status: TaskCompletionStatus
+  remaining: string[]
+  reasons: string[]
+}
+
+/**
+ * Name the task outcome from the requirement evidence. Pure: the caller
+ * supplies the verified set (from passing verification records), and the
+ * Gate enforces the result. A subjective deliverable with no objective
+ * proof can never come back VERIFIED_COMPLETE here.
+ */
+export function evaluateTaskCompletion(input: TaskCompletionInput): TaskCompletionEvaluation {
+  const blocker = (input.blocker ?? "").trim()
+  if (blocker) {
+    return { status: "BLOCKED", remaining: [...input.requirementIds], reasons: [`blocked: ${blocker}`] }
+  }
+  const needsDecision = (input.needsDecision ?? "").trim()
+  if (needsDecision) {
+    return {
+      status: "NEEDS_USER_DECISION",
+      remaining: [...input.requirementIds],
+      reasons: [`a material choice needs the user: ${needsDecision}`],
+    }
+  }
+  const verified = new Set(input.verifiedRequirementIds)
+  const remaining = input.requirementIds.filter((id) => !verified.has(id))
+  if (remaining.length === 0) {
+    return {
+      status: "VERIFIED_COMPLETE",
+      remaining: [],
+      reasons: [
+        input.requirementIds.length > 0
+          ? `all ${input.requirementIds.length} blocking requirements verified`
+          : "no blocking requirements remain",
+      ],
+    }
+  }
+  const limitation = (input.limitation ?? "").trim()
+  if (limitation) {
+    return {
+      status: "COMPLETE_WITH_LIMITATION",
+      remaining,
+      reasons: [`delivered with a declared limitation: ${limitation}`, `unverified: ${remaining.join(", ")}`],
+    }
+  }
+  return {
+    status: "IN_PROGRESS",
+    remaining,
+    reasons: [
+      `${remaining.length} open requirements remain: ${remaining.join(", ")}. ` +
+        "Name a limitation for COMPLETE_WITH_LIMITATION, or verify them for VERIFIED_COMPLETE.",
+    ],
+  }
+}
