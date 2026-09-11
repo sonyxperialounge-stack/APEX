@@ -1427,3 +1427,167 @@ export function buildChildContext(input: {
   lines.push("", "SCOPE DISCIPLINE", "Stay inside your delegation contract. Report outside-scope findings; do not fix them.")
   return lines.join("\n")
 }
+
+// ── child limits: depth, budget, stall, cleanup (54 §12; WP-065b) ────────────
+//
+// A child has no user channel, no nested fleet by default, a hard iteration
+// budget, stall detection, and a cleanup contract. Config surfacing for these
+// limits belongs to WP-074 (44); the engine takes them as parameters with the
+// 54 §20 defaults, so policy stays injectable and tests stay deterministic.
+
+/** Capabilities a child may never use (54 §12.2). Delegation itself is conditional (see below). */
+export const CHILD_ALWAYS_BLOCKED = [
+  "user.ask",
+  "user.clarify",
+  "memory.write.global",
+  "skill.promote",
+  "message",
+  "deploy",
+  "payment",
+  "schedule",
+  "cron",
+] as const
+
+/** Bounds for child execution (54 §12.3, defaults from 54 §20). */
+export interface ChildLimits {
+  maxSpawnDepth: number
+  maxChildIterations: number
+  childStallSeconds: number
+}
+
+export const DEFAULT_CHILD_LIMITS: ChildLimits = {
+  maxSpawnDepth: 1,
+  maxChildIterations: 100,
+  childStallSeconds: 600,
+}
+
+export interface ChildIdentity {
+  taskId: string
+  role?: string
+  depth?: number
+}
+
+/**
+ * Whether a capability id is blocked for a child (54 §12.1–§12.2, FLT-T07).
+ * A child has no user-interaction capability: needing a decision returns
+ * NEEDS_USER_DECISION in its result and stops. Delegation nests only for an
+ * ORCHESTRATOR below the depth limit.
+ */
+export function isCapabilityBlockedForChild(
+  capabilityId: string,
+  child: ChildIdentity,
+  limits: ChildLimits = DEFAULT_CHILD_LIMITS,
+): { blocked: boolean; reason: string } {
+  const id = (capabilityId ?? "").trim()
+  if ((CHILD_ALWAYS_BLOCKED as readonly string[]).includes(id)) {
+    return {
+      blocked: true,
+      reason:
+        `${id} is always blocked for a child. ` +
+        "A child that needs it returns NEEDS_USER_DECISION in its result and stops (FLT-T07).",
+    }
+  }
+  if (id === "agent.delegate") {
+    const depth = child.depth ?? 1
+    if ((child.role ?? "") !== "ORCHESTRATOR") {
+      return {
+        blocked: true,
+        reason: "Nested delegation needs an explicit ORCHESTRATOR role on the child; this child has none.",
+      }
+    }
+    if (depth >= limits.maxSpawnDepth) {
+      return {
+        blocked: true,
+        reason:
+          `Nested delegation refused at depth ${depth} (limit ${limits.maxSpawnDepth}). ` +
+          "The parent does the work instead (FLT-T08).",
+      }
+    }
+    return { blocked: false, reason: "orchestrator below the spawn-depth limit" }
+  }
+  return { blocked: false, reason: "not on the child blocked list" }
+}
+
+/**
+ * Nested-delegation gate (FLT-T08). Depth counts parent→child hops; the
+ * default limit of 1 means a parent spawns leaves only.
+ */
+export function canDelegateFurther(
+  child: ChildIdentity,
+  limits: ChildLimits = DEFAULT_CHILD_LIMITS,
+): { allowed: boolean; reason: string } {
+  return isCapabilityBlockedForChild("agent.delegate", child, limits).blocked
+    ? {
+      allowed: false,
+      reason: isCapabilityBlockedForChild("agent.delegate", child, limits).reason,
+    }
+    : { allowed: true, reason: "orchestrator below the spawn-depth limit may nest once" }
+}
+
+/**
+ * Iteration budget (FLT-T09, 54 §12.3). A child that hits its turn budget
+ * returns BLOCKED with what it completed — it never silently stops.
+ */
+export function checkChildBudget(
+  input: { iterations: number; completedSoFar?: string[]; maxIterations?: number },
+  limits: ChildLimits = DEFAULT_CHILD_LIMITS,
+): { exhausted: boolean; outcome: string; reason: string } {
+  const max = input.maxIterations ?? limits.maxChildIterations
+  if (input.iterations < max) {
+    return { exhausted: false, outcome: "RUNNING", reason: `turn ${input.iterations} of ${max}` }
+  }
+  const done = (input.completedSoFar ?? []).filter((s) => s.trim().length > 0)
+  return {
+    exhausted: true,
+    outcome: "BLOCKED",
+    reason:
+      `Child iteration budget spent (${input.iterations}/${max}). ` +
+      `Returning BLOCKED with partial results: ${done.length > 0 ? done.join("; ") : "(no completed step recorded)"}.`,
+  }
+}
+
+/**
+ * Stall detection (FLT-T10). No observable progress inside the window means
+ * interruption, a report, and resource cleanup — never an eternal wait.
+ */
+export function checkChildStall(
+  secondsSinceProgress: number,
+  limits: ChildLimits = DEFAULT_CHILD_LIMITS,
+): { stalled: boolean; action: string } {
+  if (secondsSinceProgress < limits.childStallSeconds) {
+    return { stalled: false, action: "continue supervising" }
+  }
+  return {
+    stalled: true,
+    action:
+      `No observable progress for ${secondsSinceProgress}s (window ${limits.childStallSeconds}s). ` +
+      "Interrupt the child, report what it completed, and clean up its resources (FLT-T10).",
+  }
+}
+
+/**
+ * Cleanup contract (54 §12.4, FLT-T11). A child owns a working context:
+ * background processes, temp directories and open handles it created end
+ * with it, unless explicitly handed to the parent in the result. The host
+ * performs the termination; this checklist is the auditable statement of
+ * what must not survive the child.
+ */
+export function childCleanupChecklist(input: {
+  backgroundProcesses?: string[]
+  tempDirs?: string[]
+  openHandles?: string[]
+  handedToParent?: string[]
+}): string[] {
+  const handed = new Set((input.handedToParent ?? []).map((s) => s.trim()).filter(Boolean))
+  const out: string[] = []
+  for (const proc of input.backgroundProcesses ?? []) {
+    if (proc.trim() && !handed.has(proc.trim())) out.push(`terminate process: ${proc.trim()}`)
+  }
+  for (const temp of input.tempDirs ?? []) {
+    if (temp.trim() && !handed.has(temp.trim())) out.push(`remove temp dir: ${temp.trim()}`)
+  }
+  for (const handle of input.openHandles ?? []) {
+    if (handle.trim() && !handed.has(handle.trim())) out.push(`release handle: ${handle.trim()}`)
+  }
+  return out
+}

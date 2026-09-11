@@ -1545,3 +1545,19 @@ Verify: `npm run verify` -> 1300 pass, 0 fail, 0 cancelled, exit 0 (~40s)
 Evidence: EVD-065 (FLT-T01/T03/T05/T06).
 Surprises: none.
 Next: WP-065b (child limits).
+
+## WP-065b — Child limits: depth, budget, stall, cleanup · DONE · 2026-09-11
+
+Files: ~runtime/src/engines/warden.ts (+limits, contracts untouched),
+  ~runtime/test/engines/warden.test.ts (+5),
+  +.apex/upgrade/EVIDENCE/EVD-065b.md
+Decision: 54 §12 hardening as pure gates with 54 §20 defaults (1/100/600s):
+  always-blocked list with NEEDS_USER_DECISION, orchestrator-only nesting
+  below depth, spent budget → BLOCKED with partials, spent window →
+  interrupt + report + cleanup checklist (host performs, list audits).
+  Config surfacing stays in WP-074; the engine takes limits as parameters.
+Verify: `npm run verify` -> 1305 pass, 0 fail, 0 cancelled, exit 0 (~40s)
+  (was 1300; +5 new).
+Evidence: EVD-065b (FLT-T07..T11).
+Surprises: none.
+Next: WP-066 (council triggers).

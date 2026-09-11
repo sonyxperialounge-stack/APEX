@@ -7,6 +7,8 @@ import {
   Warden, renderPacket, detectEvasions, FAILURE_RESPONSE, validateChildResult,
   validateDelegationContract, canDelegateClose, canParentCloseChild, canRunConcurrently,
   reconcileChildEvidence, buildChildContext,
+  isCapabilityBlockedForChild, canDelegateFurther, checkChildBudget, checkChildStall,
+  childCleanupChecklist, DEFAULT_CHILD_LIMITS,
   type SubagentPacket, type FleetContext, type DelegationContract,
 } from "../../src/engines/warden.ts"
 const wardenModule = { validateChildResult }
@@ -922,5 +924,53 @@ describe("WP-065 fleet delegation contracts (26 §§3–6)", () => {
     assert.ok(ctx.includes("fs.read"))
     assert.ok(!ctx.includes("biryani"), "unrelated personal memory has no path into the child")
     assert.ok(!unrelated.split(" ")[3] || !ctx.includes(unrelated), "the full memory string is absent")
+  })
+})
+
+// ── WP-065b — child limits: depth, budget, stall, cleanup (54 §12) ──────────
+
+describe("WP-065b child limits (54 §12; FLT-T07..T11)", () => {
+  test("FLT-T07: a child cannot use the user channel, global writes, or external effects", () => {
+    const child = { taskId: "TASK-child-1", role: "implementer", depth: 1 }
+    for (const id of ["user.ask", "user.clarify", "memory.write.global", "skill.promote", "message", "deploy", "payment", "schedule", "cron"]) {
+      assert.equal(isCapabilityBlockedForChild(id, child).blocked, true, `${id} must be blocked`)
+    }
+    assert.match(isCapabilityBlockedForChild("user.ask", child).reason, /NEEDS_USER_DECISION/)
+    assert.equal(isCapabilityBlockedForChild("fs.read", child).blocked, false)
+    assert.equal(isCapabilityBlockedForChild("agent.delegate", child).blocked, true)
+  })
+
+  test("FLT-T08: nested delegation is refused at the default depth", () => {
+    assert.equal(canDelegateFurther({ taskId: "TASK-c", role: "ORCHESTRATOR", depth: 1 }).allowed, false)
+    assert.equal(canDelegateFurther({ taskId: "TASK-c", role: "ORCHESTRATOR", depth: 0 }).allowed, true)
+    assert.equal(canDelegateFurther({ taskId: "TASK-c", role: "implementer", depth: 0 }).allowed, false)
+    assert.equal(DEFAULT_CHILD_LIMITS.maxSpawnDepth, 1)
+  })
+
+  test("FLT-T09: a child over budget returns BLOCKED with partial results", () => {
+    const spent = checkChildBudget({ iterations: 100, completedSoFar: ["probed sessions", "listed events"] })
+    assert.equal(spent.exhausted, true)
+    assert.equal(spent.outcome, "BLOCKED")
+    assert.match(spent.reason, /probed sessions/)
+    assert.equal(checkChildBudget({ iterations: 99 }).exhausted, false)
+  })
+
+  test("FLT-T10: a stalled child is interrupted and reported", () => {
+    const stalled = checkChildStall(600)
+    assert.equal(stalled.stalled, true)
+    assert.match(stalled.action, /Interrupt the child/)
+    assert.equal(checkChildStall(599).stalled, false)
+  })
+
+  test("FLT-T11: no child-started process survives the child", () => {
+    const list = childCleanupChecklist({
+      backgroundProcesses: ["worker-1"],
+      tempDirs: ["/tmp/apex-child-1"],
+      openHandles: ["handle-9"],
+      handedToParent: ["/tmp/apex-child-1"],
+    })
+    assert.ok(list.some((s) => s.includes("worker-1")), "the process is terminated")
+    assert.ok(list.some((s) => s.includes("handle-9")), "the handle is released")
+    assert.ok(!list.some((s) => s.includes("/tmp/apex-child-1") && s.startsWith("remove")), "handed-over dirs survive")
   })
 })
