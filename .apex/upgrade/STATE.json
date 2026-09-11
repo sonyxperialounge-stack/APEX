@@ -586,7 +586,8 @@
       "evidence": "EVD-053",
       "startedAt": "2026-09-11T04:45:00.000Z",
       "finishedAt": "2026-09-11T05:40:00.000Z",
-      "notes": "capability search + compact index: deterministic scorer, schemaBudgetTokens default 1000, honest deferred, TLS-T01 1,000 tools, TLS-T07"
+      "notes": "capability search + compact index: deterministic scorer, schemaBudgetTokens default 1000, honest deferred, TLS-T01 1,000 tools, TLS-T07",
+      "sha": "ac29aa1"
     },
     "WP-054": {
       "status": "PENDING"
