@@ -126,11 +126,12 @@ jobs:
           cd "$RUNNER_TEMP/consumer"
           npx apex-agent --version
           npx apex-agent init
-          # The full doctor path must run without crashing. On a bare consumer project
-          # an uncreated global home legitimately makes the worst status UNAVAILABLE and
-          # doctor exits non-zero — assert the OUTPUT, never the exit code here (the
-          # `npx` pipeline alone would die on pipefail despite a perfect report).
-          doctor_out=$(npx apex-agent doctor || true)
+          # The full doctor path must run without crashing. Two non-obvious facts this
+          # smoke learned the hard way: the CLI writes its human report on STDERR (by
+          # design — stdout stays clean), and on a bare consumer project an uncreated
+          # global home legitimately makes the worst status UNAVAILABLE and doctor exits
+          # non-zero. So merge streams, assert the OUTPUT, never the exit code.
+          doctor_out=$(npx apex-agent doctor 2>&1 || true)
           echo "$doctor_out" | grep -q "APEX Doctor"
           echo "$doctor_out" | grep -q "Running packaged"
           npx apex-agent gate || true   # an empty ledger must FAIL the gate
