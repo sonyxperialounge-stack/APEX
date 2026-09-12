@@ -29,13 +29,24 @@
 
 import readline from "node:readline"
 import path from "node:path"
+import { readFileSync } from "node:fs"
 import { TOOLS, callTool } from "./tools.ts"
 import { Ledger } from "../engines/ledger.ts"
 import type { CapabilityRegistry } from "../engines/capability-registry.ts"
 import { readTextOrNull } from "../core/json.ts"
 import { log, event } from "../core/log.ts"
 
-export const VERSION = "1.0.0"
+// The package.json version is the single source of truth for every banner,
+// SERVER_INFO and config surface, so a release bump can never drift (PKG).
+function packageVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version?: string }
+    return pkg.version ?? "0.0.0"
+  } catch {
+    return "0.0.0"
+  }
+}
+export const VERSION = packageVersion()
 const SERVER_INFO = { name: "apex", version: VERSION }
 
 /** Advertise only what is implemented and tested (MCP-002). */

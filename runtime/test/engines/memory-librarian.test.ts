@@ -194,7 +194,7 @@ function cand(over: Partial<MemoryCandidate> = {}): MemoryCandidate {
 }
 
 describe("WP-024 resolveCandidate", () => {
-  test("MEM-T03 — npm -> pnpm correction supersedes cleanly with an auditable chain (11 §7)", async () => {
+  test("MEM-T03/CTX-T04 — npm -> pnpm correction supersedes cleanly with an auditable chain; a fresh session reads the corrected memory (11 §7)", async () => {
     const npm = rec({ id: "MEM-000000001-aaaaaa", text: "Use npm for installs." })
     const out = await resolveCandidate([npm], cand({
       text: "Use pnpm for installs.",

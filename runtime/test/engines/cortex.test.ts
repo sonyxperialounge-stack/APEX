@@ -168,7 +168,7 @@ describe("COR-002/003 — budget degradation from the bottom", () => {
     }
   })
 
-  test("even an impossible budget keeps the highest-priority section", async () => {
+  test("CTX-T05 — even an impossible budget keeps the highest-priority section (the requirement list survives token pressure)", async () => {
     const { sections, text } = await cortex.assemble({ budget: 1 })
     assert.equal(sections.length, 1)
     assert.equal(sections[0], "protected")
@@ -193,7 +193,7 @@ describe("COR-002/003 — budget degradation from the bottom", () => {
 // ── COR-004, COR-005 ────────────────────────────────────────────────────────
 
 describe("COR-004 — recomputed per request", () => {
-  test("a ledger change appears in the very next assembly", async () => {
+  test("CTX-T03 — a ledger change appears in the very next assembly (a live correction wins immediately)", async () => {
     const before = await cortex.assemble()
     assert.match(before.text, /NO ACTIVE REQUIREMENT/)
 

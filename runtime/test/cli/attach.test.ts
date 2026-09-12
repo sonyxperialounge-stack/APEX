@@ -5,6 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import { attach, detach, doctor, readInstallRecord, installRecordPath } from "../../src/cli/attach.ts"
 import { parseArgs } from "../../src/cli/index.ts"
+import { VERSION } from "../../src/mcp/server.ts"
 import { detectProjectRoot } from "../../src/cli/detect.ts"
 import { readTextOrNull, readJson, existsSync } from "../../src/core/json.ts"
 import { setLogDir } from "../../src/core/log.ts"
@@ -97,7 +98,7 @@ describe("INS-003 — attach is non-destructive", () => {
     assert.deepEqual(after.weird, existing.weird)
     assert.deepEqual(after.mcp.theirs, existing.mcp.theirs, "their MCP server survives")
     assert.ok(after.mcp.apex, "APEX was added alongside it")
-    assert.ok(after.plugin.includes("apex-agent@1.0.0"))
+    assert.ok(after.plugin.includes(`apex-agent@${VERSION}`))
   })
 
   test("a deliberate user setting is not overridden", async () => {

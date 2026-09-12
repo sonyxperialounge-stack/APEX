@@ -40,13 +40,9 @@ const WP_ID = /\bWP-\d{3}[a-z]?\b/g
  */
 const GATE_EXCEPTIONS = {
   // Written reasons (50 §11: "silence is not an option"). WP-089 removes an entry
-  // the moment the row closes on fresh release evidence.
-  "REQ-PROD-006":
-    "CI matrix: the GitHub Actions workflow ships (WP-081) and the Windows × Node 24 leg runs green locally on every verify; the macOS/Linux legs are a documented classified exclusion (43 §6) — this build environment has no remote CI. Recorded in docs/RELEASE-VERIFICATION.md at release (WP-089).",
-  "REQ-PROD-007":
-    "The dated non-developer install/verify record is produced by the release packet itself (WP-089: pack, install from the pack, docs/RELEASE-VERIFICATION.md) and cannot exist before the package is cut.",
-  "REQ-PROD-008":
-    "docs/KNOWN-LIMITATIONS.md is a WP-089 deliverable; the 'published, not hidden' review happens at release against the final document.",
+  // the moment the row closes on fresh release evidence. At the 2.0.0 release
+  // this table is empty: REQ-PROD-006/007/008 closed on the dated release
+  // evidence in docs/RELEASE-VERIFICATION.md (V-005..V-007).
 }
 
 // ── register parsing ────────────────────────────────────────────────────────────

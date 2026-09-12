@@ -54,6 +54,8 @@ const REWRITES = [
   // WP-075 — the changelog and the repo's docs/ folder stay in the repository; the
   // shipped copy points at the repository instead of at files that do not travel.
   [/\[`CHANGELOG\.md`\]\(CHANGELOG\.md\)/g, "the changelog in the project repository"],
+  // WP-089 — LICENSE ships one level up from payload/ in the pack (package root).
+  [/\[`LICENSE`\]\(LICENSE\)/g, "[`LICENSE`](../LICENSE)"],
   [
     /troubleshooting table in \[`install\/ATTACH\.md`\]\(install\/ATTACH\.md\)/g,
     "troubleshooting table in the project repository",

@@ -145,6 +145,29 @@ describe("WP-051 — availability, selection, no tool execution (CAP-T03, CAP-T0
     assert.equal(r.candidates("web.search")[0]!.reason, "provider disconnected")
   })
 
+  test("CAP-T06 — a provider disconnect invalidates that provider's stale AVAILABLE truth (22 §9)", () => {
+    const r = new CapabilityRegistry({ now: FIXED })
+    r.register(cap({ id: "web.search", source: { kind: "mcp", providerId: "brave" } }))
+    r.register(cap({ id: "web.fetch", source: { kind: "mcp", providerId: "brave" } }))
+    r.register(cap({ id: "fs.read", source: { kind: "host", providerId: "host" } }))
+
+    const changed = r.invalidateProviderAvailability("brave", "provider disconnected")
+    assert.equal(changed, 2, "both descriptors from the vanished provider flip")
+    assert.equal(r.isAvailable("web.search"), false)
+    assert.equal(r.select("web.search"), null)
+    const stale = r.candidates("web.search")[0]!
+    assert.equal(stale.availability, "UNAVAILABLE")
+    assert.equal(stale.reason, "provider disconnected")
+    assert.equal(r.isAvailable("fs.read"), true, "other providers are untouched")
+
+    // event-driven, no daemon: nothing polls, and an already-gone record is not re-counted
+    assert.equal(r.invalidateProviderAvailability("brave", "still gone"), 0)
+
+    // recovery is re-registration-only — a vanished tool is never silently "fine"
+    r.register(cap({ id: "web.search", source: { kind: "mcp", providerId: "brave" } }))
+    assert.equal(r.isAvailable("web.search"), true)
+  })
+
   test("most-trusted available candidate wins; ties resolve to first-registered", () => {
     const r = new CapabilityRegistry({ now: FIXED })
     r.register(cap({ id: "fs.write", source: { kind: "host", providerId: "h1" }, trust: "UNTRUSTED" }))

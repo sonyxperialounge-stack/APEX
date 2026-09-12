@@ -1,8 +1,9 @@
 /**
  * The eval runner (54 §16, WP-085b).
  *
- * Runs every `evals/<name>/eval.ts` scenario in its own process, prints the result
- * matrix, and records a run to `evals/results/last-run.json`. Evals are NOT a
+ * EVAL-T01 — this suite runs every `evals/<name>/eval.ts` scenario in its own
+ * process, prints the result matrix, and records a run to
+ * `evals/results/last-run.json`. Evals are NOT a
  * release gate on their own and are NOT part of `npm test`; they run separately
  * via `npm run evals`. Honesty rule (33 §6): a result proves the deterministic
  * engine behaviour of THIS run — never universal model compliance.

@@ -288,7 +288,7 @@ Army-V2 remains as reference; APEX is a clean rebuild and does not depend on any
 ## License
 
 This project is **not open source**. It is distributed under the **APEX Personal Use
-License 1.0** (see [`LICENSE`](LICENSE)):
+License 1.0** (see [`LICENSE`](../LICENSE)):
 
 - ✅ Use it and share **unmodified copies, free, for personal non-commercial use**
 - ❌ You may **not sell it** or use it commercially

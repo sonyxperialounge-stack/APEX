@@ -41,6 +41,7 @@ import { RealCommandRunner } from "../core/exec.ts"
 import { detectEvasions } from "../engines/warden.ts"
 import type { ApexConfig, Operation, VerificationRecord } from "../core/types.ts"
 import { log, event } from "../core/log.ts"
+import { readJson } from "../core/json.ts"
 import { verifyCoreManifest, defaultPayloadRoot, clampedAutonomyFor, type CoreManifestVerdict } from "../core/core-manifest.ts"
 import { redact } from "../core/redact.ts"
 import { BlockedError } from "../core/errors.ts"
@@ -624,8 +625,13 @@ export async function ApexPlugin(ctx: PluginContext = {}): Promise<Record<string
   }
   const engines = await bootstrapEngines(projectRoot)
 
-  // PLG-015 — the marker other levels detect.
-  await engines.ledger.writeRuntimeMarker(2, "1.0.0")
+  // PLG-015 — the marker other levels detect. The version is the runtime
+  // package's own, read rather than hardcoded so a release bump cannot drift.
+  const runtimePkg = await readJson<{ version?: string } | null>(
+    path.resolve(defaultPayloadRoot(), "..", "package.json"),
+    null,
+  )
+  await engines.ledger.writeRuntimeMarker(2, runtimePkg?.version ?? "unknown")
   const evasionCheck = detectEvasions // referenced so the shared detector stays wired in
   void evasionCheck
 

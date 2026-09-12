@@ -1,7 +1,7 @@
 # Requirements
 
-**Totals:** 116 total · 110 verified · 1 implemented-unverified · 1 in-progress · 2 not-started · 0 blocked · 2 n/a
-**Last updated:** 2026-09-11T23:02:25.897Z
+**Totals:** 116 total · 113 verified · 1 implemented-unverified · 0 in-progress · 0 not-started · 0 blocked · 2 n/a
+**Last updated:** 2026-09-12T02:05:05.864Z
 
 > Invariants: no row is ever deleted · no ID is ever reused · every row has exactly one
 > status · the totals line is regenerated from the detail blocks below, so it cannot disagree.
@@ -96,9 +96,9 @@
 | REQ-086 | REQ-PROD-003: every persistent store has tested migration + future-schema behaviour | VERIFIED_COMPLETE | V-002 |
 | REQ-087 | REQ-PROD-004: release package free of scratch paths and nested archives | VERIFIED_COMPLETE | V-002 |
 | REQ-088 | REQ-PROD-005: zero production dependencies remain | VERIFIED_COMPLETE | V-002 |
-| REQ-089 | REQ-PROD-006: OS x Node matrix green or documented classified exclusion | IN_PROGRESS | — |
-| REQ-090 | REQ-PROD-007: non-developer can install, verify, use from documentation alone | NOT_STARTED | — |
-| REQ-091 | REQ-PROD-008: known limitations published, not hidden | NOT_STARTED | — |
+| REQ-089 | REQ-PROD-006: OS x Node matrix green or documented classified exclusion | VERIFIED_COMPLETE | V-005, V-008 |
+| REQ-090 | REQ-PROD-007: non-developer can install, verify, use from documentation alone | VERIFIED_COMPLETE | V-006 |
+| REQ-091 | REQ-PROD-008: known limitations published, not hidden | VERIFIED_COMPLETE | V-007 |
 | REQ-092 | REQ-UX-001: normal start requires exactly one instruction | VERIFIED_COMPLETE | V-002 |
 | REQ-093 | REQ-UX-002: readiness output follows the five-line contract | VERIFIED_COMPLETE | V-002 |
 | REQ-094 | REQ-UX-003: staged write never described as saved | VERIFIED_COMPLETE | V-002 |
@@ -1278,9 +1278,9 @@
 - **Depends on:** 
 - **Acceptance:** CI matrix green
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** IN_PROGRESS
-- **Implemented in:** 
-- **Evidence:** 
+- **Status:** VERIFIED_COMPLETE
+- **Implemented in:** docs/RELEASE-VERIFICATION.md, docs/KNOWN-LIMITATIONS.md
+- **Evidence:** V-005, V-008
 - **Notes:** 
 - **Reason:** 
 
@@ -1291,9 +1291,9 @@
 - **Depends on:** 
 - **Acceptance:** manual, dated record
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
-- **Implemented in:** 
-- **Evidence:** 
+- **Status:** VERIFIED_COMPLETE
+- **Implemented in:** docs/RELEASE-VERIFICATION.md, docs/KNOWN-LIMITATIONS.md
+- **Evidence:** V-006
 - **Notes:** 
 - **Reason:** 
 
@@ -1304,9 +1304,9 @@
 - **Depends on:** 
 - **Acceptance:** docs/KNOWN-LIMITATIONS.md review
 - **Verify by:** `npm run verify (runtime/) + packet-specific verify command`
-- **Status:** NOT_STARTED
-- **Implemented in:** 
-- **Evidence:** 
+- **Status:** VERIFIED_COMPLETE
+- **Implemented in:** docs/RELEASE-VERIFICATION.md, docs/KNOWN-LIMITATIONS.md
+- **Evidence:** V-007
 - **Notes:** 
 - **Reason:** 
 

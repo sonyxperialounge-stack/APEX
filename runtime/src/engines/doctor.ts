@@ -697,7 +697,11 @@ export async function runDoctor(deps: DoctorDeps, opts: DoctorOptions = {}): Pro
     })
 
     // DOC-PKG-01 — source mode only: a shipped package has no source to sync from.
-    const sourceMode = await exists(path.join(RUNTIME_ROOT, "scripts", "sync-payload.mjs"))
+    // The sync script ships inside the pack, so source mode requires the actual
+    // sync sources (the project-root payload trees) to exist next to the runtime.
+    const sourceMode =
+      (await exists(path.join(RUNTIME_ROOT, "scripts", "sync-payload.mjs"))) &&
+      (await exists(path.resolve(RUNTIME_ROOT, "..", "core")))
     if (!sourceMode) {
       checks.push({
         id: "DOC-PKG-SYNC",
