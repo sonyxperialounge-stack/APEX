@@ -136,7 +136,7 @@ LICENSE            The license — personal use only. NOT open source.
 LEGAL-NOTICE.md    Legal warning (India + international sections) and
                    the notice to AI agents
 
-core/              The doctrine. Thirteen files, loaded on demand.
+core/              The doctrine. Sixteen files, loaded on demand.
   01-LAWS          the twelve laws that override default habits
   02-COGNITION     how to think before acting
   03-EVIDENCE      what counts as proof — the centre of the system
@@ -150,6 +150,9 @@ core/              The doctrine. Thirteen files, loaded on demand.
   11-COUNCIL       using multiple models, and when not to
   12-MEMORY        how a project gets easier every session
   13-FLEET         delegation at scale — your orders, or its own judgment
+  14-DURABLE-STATE the stores, their schemas, and how they migrate
+  15-SKILLS        learned procedures, their promotion and retirement
+  16-CAPABILITIES  what the host can actually do, disclosed honestly
 
 adapters/          Host-specific binding: opencode · claude-code ·
                    cursor-windsurf · cli-generic · generic
@@ -166,7 +169,9 @@ install guides live in the project repository, not in this package.)
 
 **All 11 phases are built and verified** in the runtime package — `npm run verify` is
 green (typecheck, full suite, build), the packaged tarball installs, and both the CLI and
-the L2 plugin load and run from it. Its own construction is recorded in the runtime package's own ledger, built under APEX itself, gate
+the L2 plugin load and run from it. The full OS × Node matrix is proven in CI
+(Windows, Linux and macOS × Node 22.6/22/24 — see the badge at the top). Its own
+construction is recorded in the runtime package's own ledger, built under APEX itself, gate
 PASSED. Requires **Node 22.6+** to run the CLI/tests — the supported range is declared in
 the package manifest (`runtime/package.json` in the project repository).
 
@@ -215,8 +220,10 @@ Hand the build plan in the project repository to any capable coding
 agent to rebuild, extend, or audit it. It builds under APEX itself — if an agent cannot follow
 this discipline while building the thing that teaches it, that is worth finding out immediately.
 
-**Not yet done:** the live manual checklist in the test plan in the project repository, run
-against a real OpenCode installation. Mock-green is not shipped-green.
+**Not yet done:** the one-item live manual checklist
+(`docs/L2-MANUAL-CHECKS.md` in the project repository), completed by your first real
+session against a live host. Everything machine-checkable is checked; mock-green is not
+shipped-green.
 
 ---
 

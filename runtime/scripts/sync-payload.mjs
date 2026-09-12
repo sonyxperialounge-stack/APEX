@@ -77,7 +77,17 @@ const REWRITES = [
   // changelog, docs/, build/ and install/ stay in the repository; a tree that lists
   // them inside the package is a small lie the PKG-T01 test is built to catch.
   [/CHANGELOG\.md[ ]+what changed in each release, in plain language[^\r\n]*\r?\n/, ""],
-  [/docs\/[ ]+Schema changelog and release notes[^\r\n]*\r?\n[ ]+SCHEMA-CHANGELOG\.md[^\r\n]*\r?\n\r?\n/, ""],
+  [
+    // The docs/ tree block: five release-record files that stay in the repository.
+    /docs\/[ ]+Release records and schema history[^\r\n]*\r?\n(?:[ ]+[^\r\n]*\r?\n){5}\r?\n/,
+    "",
+  ],
+  // The one-item live checklist lives in the repository's docs/ folder — keep the
+  // pointer, scope it to the repository so the shipped copy does not dead-end.
+  [
+    /\(\[`docs\/L2-MANUAL-CHECKS\.md`\]\(docs\/L2-MANUAL-CHECKS\.md\)\)/g,
+    "(`docs/L2-MANUAL-CHECKS.md` in the project repository)",
+  ],
   [
     /build\/[ ]+The full plan for the L1\/L2 runtime[^\r\n]*\r?\n[ ]+for any capable AI to build it[^\r\n]*\r?\n[ ]+BUILD-MASTER-PROMPT\.md[^\r\n]*\r?\n\r?\ninstall\/[ ]+How to attach at each level[^\r\n]*\r?\n/,
     "(The full build plan, the per-store schema changelog and the per-host\n" +
