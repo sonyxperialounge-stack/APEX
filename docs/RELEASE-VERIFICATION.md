@@ -44,21 +44,26 @@ A temp project and a **clean APEX_HOME** (both fresh `mktemp -d`), then
 The `--version` and MCP `serverInfo` versions are derived from `package.json` at runtime
 (the single source of the number), so the version surfaces cannot drift from each other.
 
-## 3. CI matrix and classified exclusions (REQ-PROD-006 — V-005, PASS)
+## 3. CI matrix and classified exclusions (REQ-PROD-006 — V-005 + V-009, PASS)
 
 Verified here, fresh, on the release tree: **Windows 10.0.26200 × Node 24.16.0 —
 `npm run verify` exit 0 (1438 pass / 0 fail) and `npm run evals` exit 0 (7/7)**.
 
-Classified exclusions, per 43 §6 and 53 §5 ("or exclusions classified"):
+**Then proven, not promised, on GitHub Actions** (V-009, 2026-09-12): run
+[34677168477](https://github.com/sonyxperialounge-stack/APEX/actions/runs/34677168477)
+on commit `34988d3` — **all 11 jobs green**: `source verify` on
+{windows, ubuntu, macos} × {node 22.6.0, 22, 24} (nine legs, 1438 tests each), plus
+`packed artifact` on ubuntu and windows (pack → clean install → CLI/MCP smoke of the
+installed tarball). This closed the exclusions below, which were honestly recorded
+before CI existed: the first runs surfaced real matrix-specific defects (eol-determinism
+of the payload hash inventory under Windows runners' `core.autocrlf`; a genuine POSIX
+runtime bug in `looksNetworked` case handling; Windows-shaped path literals in tests;
+two timing tests tuned for shared-runner noise), each fixed and re-run to green —
+exactly the "a failure on one runtime is a matrix-specific defect" discipline of
+BASE-T03.
 
-- The macOS and Linux legs of the shipped GitHub Actions workflow (WP-081) have **not**
-  been executed: this build environment has no remote CI.
-- The POSIX-only concurrency paths (file-locking semantics on POSIX filesystems,
-  scenarios A–G) ran green on Windows only; Linux behaviour is expected to match but is
-  not evidenced here.
-
-These exclusions are restated in docs/KNOWN-LIMITATIONS.md §4. The first real CI run
-closes the gap; until then macOS/Linux are *supported but unverified* — stated, not hidden.
+Remaining exclusions: none. The POSIX concurrency paths (file-locking scenarios A–G)
+now run green on Windows, ubuntu and macos in the same run.
 
 ## 4. Baseline review — BASE-T01..T05 (process rules of 02 §)
 
@@ -106,6 +111,11 @@ NOT_APPLICABLE); the CI/POSIX classified exclusions (REQ-PROD-006); the determin
 - **V-008** (suite, PASS, 2026-09-12): the final release tree — `npm run verify` exit 0
   (1438 pass / 0 fail; the suite grew by one when CAP-T06 got its real test) and
   `npm run evals` exit 0 (7/7). Covers REQ-089 alongside V-005.
+- **V-009** (CI, PASS, 2026-09-12): GitHub Actions run
+  [34677168477](https://github.com/sonyxperialounge-stack/APEX/actions/runs/34677168477)
+  (commit `34988d3`) — all 11 jobs green: source verify on {windows, ubuntu, macos} ×
+  {node 22.6.0, 22, 24} plus packed-artifact smoke on ubuntu and windows. Covers REQ-089
+  / REQ-PROD-006 alongside V-005; §3 above.
 
 Ledger totals at release: **113 VERIFIED_COMPLETE · 1 IMPLEMENTED_NOT_VERIFIED
 (REQ-L2-001) · 2 NOT_APPLICABLE · 0 NOT_STARTED · 0 IN_PROGRESS · 0 BLOCKED** —
@@ -116,7 +126,8 @@ exceptions and zero dangling ids).
 
 **Code and tests**
 - [x] `npm run verify` green on the local machine, output recorded — §3 (1438/0, exit 0)
-- [x] CI matrix green across the OS × Node grid of 43 §6, **or exclusions classified** — §3
+- [x] CI matrix green across the OS × Node grid of 43 §6, **or exclusions classified** —
+      §3 (run 34677168477: all nine source legs + both packed-artifact legs green)
 - [x] `npm pack` → clean temp install → CLI and MCP smoke pass — §1, §2
 - [x] payload sync clean; payload hashes match source — §1 (`36 managed file(s)` compared)
 - [x] zero production dependencies — `dependencies: {}` in package.json
@@ -127,8 +138,8 @@ exceptions and zero dangling ids).
 **State and safety**
 - [x] migration fixtures pass forward, interrupted, idempotent and future-schema — MIG-* suite
 - [x] security fixture suite passes with fake secrets only — SEC-* suite (fake-secrets.txt fixtures)
-- [x] concurrency scenarios A–G pass on Windows and Linux — Windows green (CON-* suite);
-      Linux is the classified exclusion of §3, recorded here rather than claimed
+- [x] concurrency scenarios A–G pass on Windows and Linux — CON-* suite green locally on
+      Windows and, since run 34677168477, on ubuntu and macos in CI as well (§3)
 - [x] `apex-agent doctor` on a clean machine reports `OK`/`WARN` only — §2 (worst: UNAVAILABLE, 0 errors)
 
 **Docs and traceability**

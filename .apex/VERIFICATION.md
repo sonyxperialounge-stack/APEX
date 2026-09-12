@@ -10,6 +10,7 @@
 | V-006 | REQ-090 | manual | `npm pack -> npm install apex-agent-2.0.0.tgz in a clean temp project with a clean APEX_HOME` | install, --version, doctor, MCP stdio handshake, init/status/memory/gate, doctor --repair all succeed following the shipped docs only | apex-agent 2.0.0 installed from the pack; --version printed 2.0.0; doctor exit 0 (worst UNAVAILABLE, packaged mode OK); MCP initialize returned serverInfo apex/ | PASS |
 | V-007 | REQ-091 | manual | `review of docs/KNOWN-LIMITATIONS.md against the register's open and NOT_APPLICABLE rows` | every non-delivered or deferred requirement is published with its reason | docs/KNOWN-LIMITATIONS.md (2026-09-12) publishes REQ-L2-001 (live-host session deferred), REQ-ARC-009 (no SQLite/FTS), REQ-SKL-013 (no external skill dirs), the | PASS |
 | V-008 | REQ-089 | suite | `npm run verify && npm run evals (final release tree)` | exit 0 on both | verify exit 0 — 1438 pass / 0 fail; evals exit 0 — 7/7 pass, 0 fail (2026-09-12) | PASS |
+| V-009 | REQ-089 | runtime | `GitHub Actions workflow verify (ref upgrade/army-v4, commit 34988d3): source verify on {windows, ubuntu, macos} x {node 22.6.0, 22, 24} + packed artifact smoke ` | all matrix jobs green: 1438 tests per source leg, zero failures; packed tarball installs and smokes clean | run 34677168477 — 11/11 jobs success (9 source verify legs + 2 packed artifact legs); all 1438 tests green on every OS x Node leg; POSIX concurrency scenarios A | PASS |
 
 > A log with no FAIL and no NOT_RUN rows over a long project is not excellence — it is
 > evidence that verification was not really happening.
@@ -142,4 +143,20 @@ docs/KNOWN-LIMITATIONS.md (2026-09-12) publishes REQ-L2-001 (live-host session d
 
 ```text
 verify exit 0 — 1438 pass / 0 fail; evals exit 0 — 7/7 pass, 0 fail (2026-09-12)
+```
+
+### V-009
+- **Requirements:** REQ-089
+- **Type:** runtime
+- **Command:** `GitHub Actions workflow verify (ref upgrade/army-v4, commit 34988d3): source verify on {windows, ubuntu, macos} x {node 22.6.0, 22, 24} + packed artifact smoke on {ubuntu, windows}`
+- **Expected:** all matrix jobs green: 1438 tests per source leg, zero failures; packed tarball installs and smokes clean
+- **Result:** PASS
+- **Exit code:** 0
+- **Duration:** 0
+- **Context:** remote
+- **Timestamp:** 2026-09-12T06:09:38.797Z
+- **Reason:** 
+
+```text
+run 34677168477 — 11/11 jobs success (9 source verify legs + 2 packed artifact legs); all 1438 tests green on every OS x Node leg; POSIX concurrency scenarios A-G exercised on ubuntu and macos; dated record: docs/RELEASE-VERIFICATION.md §3; run URL: https://github.com/sonyxperialounge-stack/APEX/actions/runs/34677168477
 ```

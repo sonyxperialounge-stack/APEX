@@ -48,19 +48,24 @@ is not discovered.
 - Consequence: keep skills in the two supported locations. Promotion, trust
   and retirement flows (SKL-T01..T12) are verified for those locations.
 
-## 4. CI matrix: Windows × Node 24 green; macOS/Linux legs are a classified exclusion (REQ-PROD-006, 43 §6)
+## 4. CI matrix: fully green as of 2026-09-12 (REQ-PROD-006, 43 §6)
 
 The GitHub Actions workflow ships in the package (WP-081) and declares a
-Windows/macOS/Linux matrix. This build environment has no remote CI, so:
+Windows/macOS/Linux matrix. The full matrix has now **executed and passed**:
+GitHub Actions run [34677168477](https://github.com/sonyxperialounge-stack/APEX/actions/runs/34677168477)
+(2026-09-12, commit `34988d3`) — all 11 jobs green: `source verify` on
+{windows, ubuntu, macos} × {node 22.6.0, 22, 24} (1438 tests each), plus
+`packed artifact` smoke (pack → clean install → CLI/MCP) on ubuntu and windows.
 
-- Verified here, on every `npm run verify`: Windows 10.0.26200 × Node 24.16.0 —
-  the full suite (1437 tests) and all 7 evals run green from a clean state.
-- Classified exclusion: the macOS and Linux legs, and the POSIX-only
-  concurrency paths (file-locking semantics on POSIX filesystems), have **not**
-  been executed in this environment. The lock code carries cross-process
-  lock tests that pass on Windows; POSIX behaviour is expected to match but is
-  not evidenced here. The first CI run on GitHub will close this gap; until
-  then treat macOS/Linux as unverified-but-supported.
+- The POSIX-only concurrency paths (file-locking scenarios A–G) ran green on
+  ubuntu and macos in the same run — the earlier "Windows-only evidence"
+  exclusion is closed, not merely reclassified.
+- The path to green was honest: the first runs surfaced real matrix-specific
+  defects (eol-determinism of the payload hash inventory under Windows
+  runners' autocrlf; a genuine POSIX bug in `looksNetworked` case handling;
+  Windows-shaped path literals in tests; two timing tests tuned for
+  shared-runner noise), each fixed and re-run — docs/RELEASE-VERIFICATION.md
+  §3 records the trail.
 
 ## 5. Evals are deterministic engine simulations, not live model calls
 
@@ -72,9 +77,11 @@ host model's behaviour.
 
 ## 6. Verified platform floor
 
-The declared floor is Node >= 22.6 (DOC-RUN-NODE). The release was verified
-on Node 24.16.0 / Windows only. Other Node versions and operating systems are
-supported by the same code paths but were not executed in this environment.
+The declared floor is Node >= 22.6 (DOC-RUN-NODE). Verified on Node 24.16.0 /
+Windows locally, and across the full OS × Node grid in CI (run 34677168477:
+windows/ubuntu/macos × node 22.6.0, 22, 24 — all green). Versions older than
+22.6 cannot run the code at all (type stripping does not exist there); they
+are outside the declared floor, not a limitation of this build.
 
 ## 7. Legal identity is "APEX — ARMY V3" (deliberate)
 
