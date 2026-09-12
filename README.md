@@ -4,8 +4,27 @@
 
 **An operating doctrine that makes any AI coding agent work like a disciplined senior engineer.**
 
+> **Which version is this?** The package is **`apex-agent` 2.0.0**, released as
+> **"the V4 release"** (full list in [`CHANGELOG.md`](CHANGELOG.md)). "**ARMY V3**" is the
+> product's **legal name** — the exact term the LICENSE defines and protects — so it stays
+> on the title and in every file header. Name = ARMY V3 · Release = V4 · Package version =
+> 2.0.0. Three labels, one product, zero contradiction.
+
 Give any AI model the link to [`START-HERE.md`](START-HERE.md) — or to this folder — and it
 configures itself. No install, no setup, no dependency on which model or which tool you use.
+
+---
+
+## What is APEX, in one paragraph
+
+APEX is a set of plain-text doctrine files plus an optional runtime that you attach to any
+AI coding agent (OpenCode, Claude Code, Cursor, Windsurf, Zed, Goose, or a bare CLI). The
+doctrine replaces the agent's worst habits — claiming "done" without checking, dropping
+requirements, looping on a failing fix — with a discipline: **every claim needs evidence,
+every requirement is tracked in a durable ledger on disk, and nothing is called complete
+while anything is unverified.** The runtime (this package, `apex-agent`) makes that
+discipline mechanical: real state, enforced status transitions, recorded command output,
+and a completion gate that refuses to lie.
 
 ---
 
@@ -57,28 +76,95 @@ Same brain, three depths of binding. Each works alone; each lower one enforces t
 | **L1 — MCP** | An APEX MCP server is connected | *assisted* — real state, enforced transitions, recorded evidence | Claude Code, Cursor, Windsurf, OpenCode, Zed, Goose | ✅ **built** |
 | **L2 — Native** | The APEX plugin runs inside the host | *mechanical* — the host blocks violations | OpenCode | ✅ **built** |
 
-**L0 works right now**, with nothing installed. **L1 is built** — see [`runtime/`](runtime/):
+What each level actually gives you:
+
+- **L0** — the agent reads `core/` (sixteen doctrine files, loaded on demand) and follows
+  the seven-step loop: read the ledger → plan → execute with evidence → record → verify →
+  update state → report honestly. Nothing is installed; the files are the whole mechanism.
+  It is only as strong as the model's willingness to comply — which is exactly what the
+  higher levels fix.
+- **L1** — the agent gets MCP tools backed by real stores on disk: a requirements ledger
+  whose status transitions are enforced by code (you cannot mark a requirement
+  VERIFIED_COMPLETE without a PASS verification record), grounded verification that stores
+  the *literal* command output, and a memory store that survives the session.
+- **L2** — the host itself enforces the doctrine: protected paths cannot be written even
+  by accident, hooks run on every tool call, and the plugin blocks — not asks,
+  *blocks* — when a rule is violated. OpenCode is the first host with this depth.
+
+All three levels are built. `attach` installs the deepest binding your host supports:
 
 ```bash
 npx apex-agent attach
 ```
 
-All three levels are built. `attach` installs the deepest binding your host supports.
+---
+
+## What is new in this release (2.0.0 — the V4 release)
+
+The discipline is unchanged. What is new — full list in [`CHANGELOG.md`](CHANGELOG.md):
+
+### It remembers now (personal memory)
+
+Preferences and hard-won facts survive across sessions, projects and models. Everything it
+keeps is visible in one place (`memory journey`), and you have the final word: correct any
+record (`memory correct`), retract it with a recorded reason (`memory retract --reason`),
+approve or reject anything it wants to save (`memory pending` → `memory approve` /
+`memory reject`), or switch the whole store off (`memory off`). Sensitive content is
+redacted before it ever lands on disk.
+
+### It learns procedures (the skill library)
+
+A solution that survived verification can be saved as a skill and reused. The path is
+deliberately gated: `skills stage` → the linter and trust scans check it → `skills pending`
+shows what is waiting → `skills promote` activates it only after the checks pass, and
+bypassing that needs your explicit, recorded override. Skills you no longer trust are
+retired (`skills retire --reason`) and can be relearned. A skill you pinned stays active;
+a skill whose bytes drift from its trusted hash stops until re-granted.
+
+### It knows what it can actually do (capability disclosure)
+
+At session start it looks at the tools your host *really* provides and builds a capability
+registry. If something is unavailable it says UNAVAILABLE with the reason instead of
+pretending — and a provider going away degrades exactly the capabilities that depended on
+it, never silently.
+
+### It picks up where it left off (session archive)
+
+Sessions are archived as structured events. A different model tomorrow reads the same
+files — `session list`, `session search`, `archive browse`, `archive read` — and continues
+without losing the thread.
+
+### It diagnoses itself (doctor)
+
+`apex-agent doctor` is read-only and safe to run any time, on any machine, even before any
+setup: it checks the host binding, the global home, every store's schema, lock health,
+ledger integrity, and prints a `fix:` hint next to every warning. `apex-agent doctor
+--repair` performs only the idempotent reconstructions (home structure, hot views, search
+index) — never a content change.
+
+### The gate still refuses to lie
+
+`apex-agent gate` runs the completion gate: every requirement VERIFIED_COMPLETE with a PASS
+verification record, nothing regressed, no unmet criteria waved through. An empty or
+half-done ledger **fails** the gate — on your machine today exactly as it did in the release
+tests.
 
 ---
 
-## New in this release
+## Requirements
 
-The discipline is unchanged. What is new — see [`CHANGELOG.md`](CHANGELOG.md) for the full list:
+- **Node.js ≥ 22.6** — the floor the package declares; the code uses native TypeScript
+  stripping that exists from 22.6 on. No build step is required of you.
+- **Zero dependencies.** `dependencies: {}` — nothing to audit, nothing to break, works
+  fully offline after install.
+- **No credentials, ever.** APEX has no code path that reads, stores, or forwards a
+  provider key. The host owns authentication.
+- **No telemetry, no account, no network calls.** Your code and your data never leave
+  your machine.
 
-- **It remembers now.** Preferences and hard-won facts survive across sessions, projects and
-  models. `memory journey` shows everything it keeps, and you can correct or retract any of it.
-- **It learns procedures.** A verified solution can be saved as a skill and reused. A skill
-  only becomes active after it is checked; overriding that needs your explicit, recorded call.
-- **It knows what it can actually do.** It looks at the tools your host really provides and
-  says UNAVAILABLE instead of pretending.
-- **It picks up where it left off.** Sessions are archived; a different model tomorrow reads
-  the same files and continues.
+Verified environments: the full OS × Node matrix in CI — Windows, Linux and macOS ×
+Node 22.6 / 22 / 24, all green (badge at the top). Details in
+([`docs/RELEASE-VERIFICATION.md`](docs/RELEASE-VERIFICATION.md)).
 
 ---
 
@@ -106,6 +192,16 @@ Project state lives in .apex/ — read HANDOFF.md and REQUIREMENTS.md first.
 ```
 
 Now every session in that project starts disciplined, automatically.
+
+### Install the runtime (L1/L2)
+
+```bash
+npx apex-agent attach        # installs the deepest binding your host supports
+npx apex-agent doctor        # confirm what was installed and what it found
+```
+
+`attach` never asks for credentials, never touches your host's own settings beyond adding
+the APEX binding, and `detach` removes it cleanly — deleting nothing personal.
 
 ---
 
@@ -221,6 +317,17 @@ apex-agent --version
 Destructive commands demand `--reason` or an explicit flag; anything that changes durable
 state prints exactly what changed.
 
+### Where your data lives
+
+| What | Where | Removed by |
+|---|---|---|
+| Project state (requirements, evidence, decisions) | `.apex/` inside the project | deleting that folder — it belongs to the project |
+| Personal memory, skills, session archive | the APEX home (`apex-agent home show`) | deleting that folder deletes exactly those |
+| A redacted copy of everything personal | `apex-agent home export` | you, whenever you want |
+| Host bindings (config lines the host reads) | inside the host's own config | `apex-agent detach` |
+
+---
+
 ## The build plan
 
 Everything is specified in [`build/`](build/): architecture, a full requirement inventory with
@@ -274,24 +381,25 @@ project. Nothing is uploaded anywhere. There is no account and no telemetry.
 
 ---
 
-## Lineage
+## Lineage — and why the name says V3 when the release says V4
 
-APEX is a rebuild, not an increment. It replaces Army-V2, which had the right ambition and four
-structural defects:
+The naming is one product, three labels:
 
-1. It sat **outside** the host — it could see nothing the main agent actually did, and used one
-   of roughly twenty available plugin hooks.
-2. Its "verification" was another LLM reading text. No grounding; consensus mistaken for proof.
-3. Its "intelligence" was keyword matching — the word *security* in your task selected the
-   effort level.
-4. It fanned every task to many models and had them vote — expensive, and voting settles
-   nothing that evidence could settle.
+- **Army-V2** — the predecessor project. Right ambition, four structural defects: it sat
+  *outside* the host (it could not see what the main agent actually did), its "verification"
+  was another LLM reading text (consensus mistaken for proof), its "intelligence" was keyword
+  matching, and it fanned tasks to many models for a vote. Its shipped config also contained
+  unescaped Windows backslashes — invalid JSON, so the integration silently never loaded.
+  Army-V2 remains as reference; APEX does not depend on any of it.
+- **ARMY V3** — the clean rebuild that replaced it, and the product's **legal name**: the
+  LICENSE defines "The Software" as *APEX — ARMY V3*, and that exact term is protected, so it
+  stays in the title, the headers and the license text. Renaming it would be renaming the
+  licensed work.
+- **The V4 release** — this release generation of that product: package **2.0.0**, the one
+  that added memory, skills, sessions, capabilities and the global home on top of the V3
+  discipline. The CHANGELOG calls it "2.0.0 — the V4 release".
 
-And one operational failure worth naming: its shipped config contained unescaped Windows
-backslashes, making it invalid JSON, so the integration silently never loaded at all. There is
-a named regression test for that in the build plan.
-
-Army-V2 remains as reference; APEX is a clean rebuild and does not depend on any of it.
+So: V3 is *who it is*, V4 is *which release you are holding*, 2.0.0 is *the package version*.
 
 ---
 

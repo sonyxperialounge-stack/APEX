@@ -82,12 +82,10 @@ const REWRITES = [
     /docs\/[ ]+Release records and schema history[^\r\n]*\r?\n(?:[ ]+[^\r\n]*\r?\n){5}\r?\n/,
     "",
   ],
-  // The one-item live checklist lives in the repository's docs/ folder — keep the
-  // pointer, scope it to the repository so the shipped copy does not dead-end.
-  [
-    /\(\[`docs\/L2-MANUAL-CHECKS\.md`\]\(docs\/L2-MANUAL-CHECKS\.md\)\)/g,
-    "(`docs/L2-MANUAL-CHECKS.md` in the project repository)",
-  ],
+  // Any backticked link to a repository-only docs/ file becomes scoped prose — the
+  // phrase "project repository" must stay on the line: the payload link tests allow a
+  // docs/ path reference only when its line scopes it to the repository.
+  [/\[`docs\/([\w.-]+\.md)`\]\(docs\/[\w.-]+\.md\)/g, "`docs/$1` in the project repository"],
   [
     /build\/[ ]+The full plan for the L1\/L2 runtime[^\r\n]*\r?\n[ ]+for any capable AI to build it[^\r\n]*\r?\n[ ]+BUILD-MASTER-PROMPT\.md[^\r\n]*\r?\n\r?\ninstall\/[ ]+How to attach at each level[^\r\n]*\r?\n/,
     "(The full build plan, the per-store schema changelog and the per-host\n" +
