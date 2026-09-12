@@ -47,6 +47,9 @@ jobs:
       # --ignore-cr-at-eol cannot excuse). Pin LF so every matrix leg byte-sees the
       # committed tree.
       - name: pin LF checkout
+        # Job-level defaults.run.working-directory (runtime/) does not exist before
+        # checkout — without this override the shell itself fails to start.
+        working-directory: ${{ github.workspace }}
         run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
 
@@ -86,6 +89,9 @@ jobs:
       # --ignore-cr-at-eol cannot excuse). Pin LF so every matrix leg byte-sees the
       # committed tree.
       - name: pin LF checkout
+        # Same pre-checkout override as the verify job — the runtime/ working
+        # directory does not exist yet.
+        working-directory: ${{ github.workspace }}
         run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
 
