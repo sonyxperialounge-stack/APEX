@@ -75,6 +75,7 @@ import path from "node:path"
 import { ApexError } from "../core/errors.ts"
 import {
   readJson, readJsonlSafe, rewriteJsonl, appendJsonl, writeJson, withCrossProcessLock,
+  type LockOptions,
 } from "../core/json.ts"
 import { toIsoString, newId } from "../core/ids.ts"
 import { openPendingStore } from "./memory-pending.ts"
@@ -101,6 +102,13 @@ export interface MemoryStoreOptions {
   hotViewDir?: string
   /** Scan context for revalidation of staged memory mutations. Default "memory". */
   scanContext?: ScanContext
+  /**
+   * Contention budget for the cross-process lock on read/commit. Default 5000ms — the
+   * bound is the design (12 §4: fail loudly, never hang); the budget is a choice for
+   * contexts that legitimately hold 20+ contenders on slow hardware (the concurrency
+   * suite on the Node-floor CI leg).
+   */
+  lockTimeoutMs?: number
 }
 
 /**
@@ -129,6 +137,7 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
   const stateFile = path.join(memoryDir, "state.json")
   const pendingFile = path.join(memoryDir, "pending", "mutations.jsonl")
   const lockFile = path.join(memoryDir, "..", "locks", "global-memory.lock")
+  const lockOpts: LockOptions = opts.lockTimeoutMs === undefined ? {} : { timeoutMs: opts.lockTimeoutMs }
   const viewDir = opts.hotViewDir ?? memoryDir
 
   const writeRecords = async (records: MemoryRecordV1[], revision: number): Promise<void> => {
@@ -166,7 +175,7 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
     dir: memoryDir,
 
     async read(): Promise<MemoryStoreState> {
-      return withCrossProcessLock(lockFile, "memory-read", async () => readRaw())
+      return withCrossProcessLock(lockFile, "memory-read", async () => readRaw(), lockOpts)
     },
 
     async stage(mutation: PendingMutation): Promise<string> {
@@ -218,7 +227,7 @@ export function openMemoryStore(memoryDir: string, opts: MemoryStoreOptions = {}
           event("memory.commit", { revision, records: next.length })
           return revision
         },
-        { timeoutMs: 15_000 },
+        { timeoutMs: opts.lockTimeoutMs ?? 15_000 },
       )
     },
 

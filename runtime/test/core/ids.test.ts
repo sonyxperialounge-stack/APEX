@@ -21,6 +21,7 @@
 import { test, describe } from "node:test"
 import assert from "node:assert/strict"
 import fsp from "node:fs/promises"
+import { existsSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { newId, isValidId, projectKey, ID_PREFIXES } from "../../src/core/ids.ts"
@@ -106,15 +107,25 @@ describe("WP-010 projectKey", () => {
     // Same directory expressed with mixed case and the other separator shape.
     const cased = path.join(base, name.toUpperCase())
     const flipped = path.join(base, name).split(path.sep).join(path.sep === "/" ? "\\" : "/")
-    if (process.platform === "win32") {
-      // Windows is case-insensitive: the cased path is the same directory.
-      assert.equal(projectKey(cased), key)
-      // Mixed separators resolve to the same real path.
-      assert.equal(projectKey(flipped.replace(/\\/g, "/")), key)
-    } else {
-      // POSIX: case matters, so only separator differences must agree.
-      assert.equal(projectKey(path.join(base, name.split("/").join("/"))), key)
-      assert.notEqual(projectKey(cased), key)
+    // Separator stability is universal — mixed separators must never split one
+    // directory into two projects, on any platform.
+    assert.equal(projectKey(flipped.replace(/\\/g, "/")), key)
+    // Case stability belongs to the FILESYSTEM, not the platform: macOS default APFS
+    // is case-insensitive even though it is POSIX, so a platform gate is simply the
+    // Windows assumption moved. Probe the real directory instead.
+    const probe = path.join(dir, ".apex-case-probe")
+    writeFileSync(probe, "x")
+    try {
+      if (existsSync(probe.toUpperCase())) {
+        // Case-insensitive FS: both casings are the same directory, so one key —
+        // projectKey realpath-collapses them (43 §7 "one project = one key").
+        assert.equal(projectKey(cased), key)
+      } else {
+        // Case-sensitive FS: uppercased name is a DIFFERENT (nonexistent) directory.
+        assert.notEqual(projectKey(cased), key)
+      }
+    } finally {
+      rmSync(probe, { force: true })
     }
   })
 

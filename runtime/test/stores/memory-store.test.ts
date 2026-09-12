@@ -243,7 +243,7 @@ describe("WP-021 MEM-CON-T01 — 20 concurrent processes, one unique record each
       `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
       `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
       `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "w"))})`,
-      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)}, { lockTimeoutMs: 30000 })`,
       `const myId = "MEM-000000001-" + process.env.WORKER`,
       `for (let attempt = 0; attempt < 80; attempt++) {`,
       `  const state = await store.read()`,
@@ -312,7 +312,7 @@ describe("WP-021 MEM-CON-T04 — killed writer before rename leaves old canonica
       `const { openMemoryStore } = await import(${JSON.stringify(storeUrl)})`,
       `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
       `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "killer"))})`,
-      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)}, { lockTimeoutMs: 30000 })`,
       `const state = await store.read()`,
       `process.kill(process.pid, "SIGKILL")`,
       `await store.commit(state.revision, [])`,
@@ -349,7 +349,7 @@ describe("WP-021 MEM-CON-T02 — same candidate from 20 processes merges to one 
       `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
       `const { resolveCandidate } = await import(${JSON.stringify(libUrl)})`,
       `setLogDir(${JSON.stringify(pathModule.join(dir, "logs", "w"))})`,
-      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)}, { lockTimeoutMs: 30000 })`,
       `const prov = { sourceType: "verified_event", sourceId: "worker-" + process.env.WORKER, observedAt: "2026-09-10T00:00:00.000Z" }`,
       `for (let attempt = 0; attempt < 80; attempt++) {`,
       `  const state = await store.read()`,
@@ -422,7 +422,7 @@ describe("WP-021 MEM-CON-T03 — correction racing an old reinforcement ends det
       `const { setLogDir } = await import(${JSON.stringify(logUrl)})`,
       `const { resolveCandidate } = await import(${JSON.stringify(libUrl)})`,
       `setLogDir(${JSON.stringify(pathModule.join(dir, "logs"))})`,
-      `const store = openMemoryStore(${JSON.stringify(memoryDir)})`,
+      `const store = openMemoryStore(${JSON.stringify(memoryDir)}, { lockTimeoutMs: 30000 })`,
     ]
     // The reinforcer keeps pushing the OLD value (exact text -> provenance merge);
     // the corrector supersedes the original with the new value. Only CAS order decides
