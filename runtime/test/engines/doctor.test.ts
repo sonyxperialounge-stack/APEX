@@ -146,7 +146,10 @@ describe("WP-019 runDoctor", () => {
   })
 
   test("an unsafe home path is BLOCKED with a fix, and the run still completes", async () => {
-    const report = await runDoctor({ projectRoot: dir, homePath: process.platform === "win32" ? "C:\Windows" : "/etc" })
+    // "/" is refused on every platform (POSIX root / drive root); "C:\Windows" adds the
+    // Windows system-wide refusal.
+    const unsafe = process.platform === "win32" ? "C:\Windows" : "/"
+    const report = await runDoctor({ projectRoot: dir, homePath: unsafe })
     const resolve = report.checks.find((c) => c.id === "DOC-HOME-RESOLVE")
     assert.ok(resolve, "check produced")
     assert.equal(resolve.status, "BLOCKED")

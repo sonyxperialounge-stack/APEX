@@ -141,8 +141,12 @@ describe("WP-080 — security fixtures (30 §15, 33 §13; fake secrets only)", (
     for (const candidate of ["/", driveRoot]) {
       assert.throws(() => apexHome(candidate), /HOME_UNSAFE_PATH|Refusing filesystem root/, `root "${candidate}" refused`)
     }
-    const drive = driveRoot.slice(0, 2) // "D:" on this machine
-    assert.throws(() => apexHome(drive), /drive-relative/, "drive-relative home refused before resolve amplifies it")
+    // Drive-relative homes ("D:") are a Windows path shape — on POSIX "/" is already
+    // the refused root above.
+    if (IS_WINDOWS) {
+      const drive = driveRoot.slice(0, 2) // "D:" on this machine
+      assert.throws(() => apexHome(drive), /drive-relative/, "drive-relative home refused before resolve amplifies it")
+    }
     assert.throws(() => apexHome(""), /empty path/, "explicit empty is a misconfiguration, not an omission")
     if (IS_WINDOWS) {
       assert.throws(() => apexHome("C:\\Windows"), /system-wide/, "system-wide directory is never a personal home")

@@ -256,7 +256,11 @@ const SYNCED_MARKERS = [
 function looksNetworked(resolved: string): boolean {
   const norm = resolved.replace(/\\/g, "/")
   if (norm.startsWith("//") && !norm.startsWith("//?/")) return true // UNC share
-  return SYNCED_MARKERS.some((m) => canonicalCase(norm).includes(m))
+  // Brand markers are matched case-insensitively on every OS: the Linux Dropbox
+  // client creates `~/Dropbox` (capital D), and that folder is exactly as synced —
+  // the filesystem's case sensitivity says nothing about the sync engine.
+  const fold = norm.toLowerCase()
+  return SYNCED_MARKERS.some((m) => fold.includes(m))
 }
 
 /**

@@ -1,0 +1,12 @@
+# The payload hash inventory (runtime/payload/core/manifest.json) must be
+# platform-independent: its sha256 values cover the files below, so every
+# checkout — Windows or POSIX, autocrlf on or off — must byte-see the same
+# content. Force LF for the sync sources and their shipped copies.
+core/** text eol=lf
+adapters/** text eol=lf
+templates/** text eol=lf
+START-HERE.md text eol=lf
+EXAMPLES.md text eol=lf
+LEGAL-NOTICE.md text eol=lf
+README.md text eol=lf
+runtime/payload/** text eol=lf

@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-09-12T02:04:49.740Z",
+  "recordedAt": "2026-09-12T05:27:04.721Z",
   "node": "v24.16.0",
   "platform": "win32-x64",
   "model": "none — deterministic engine simulation (54 §16); no live-model claim is made",
@@ -9,43 +9,43 @@
     {
       "scenario": "budget-pressure",
       "status": "PASS",
-      "durationMs": 216,
+      "durationMs": 213,
       "detail": "EVAL budget-pressure PASS — roomy 1310 tokens all in; tight 264 of 600, dropped [skills,globalMemory]; head intact"
     },
     {
       "scenario": "capability-degradation",
       "status": "PASS",
-      "durationMs": 176,
+      "durationMs": 189,
       "detail": "EVAL capability-degradation PASS — failure recorded, select refuses, re-plan script present"
     },
     {
       "scenario": "delegation-scope",
       "status": "PASS",
-      "durationMs": 183,
+      "durationMs": 184,
       "detail": "EVAL delegation-scope PASS — always-blocked list, misscoped refusal, scoped pass, depth bound"
     },
     {
       "scenario": "l0-conformance",
       "status": "PASS",
-      "durationMs": 110,
+      "durationMs": 123,
       "detail": "EVAL l0-conformance PASS — bootstrap ordered, 23 referenced files all ship, no wizard"
     },
     {
       "scenario": "memory-lifecycle",
       "status": "PASS",
-      "durationMs": 241,
+      "durationMs": 235,
       "detail": "EVAL memory-lifecycle PASS — learn → correct → supersede chain → corrected retrieval"
     },
     {
       "scenario": "resume-across-models",
       "status": "PASS",
-      "durationMs": 181,
+      "durationMs": 195,
       "detail": "EVAL resume-across-models PASS — requirement, proof command and handoff survive; no identity to fill"
     },
     {
       "scenario": "skill-promotion",
       "status": "PASS",
-      "durationMs": 189,
+      "durationMs": 236,
       "detail": "EVAL skill-promotion PASS — unevidenced refused, lint refused, verified promoted ACTIVE"
     }
   ]

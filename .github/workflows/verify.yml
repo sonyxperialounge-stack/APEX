@@ -41,6 +41,13 @@ jobs:
         node: ["22.6.0", "22", "24"]
     runs-on: ${{ matrix.os }}
     steps:
+      # Windows runners ship core.autocrlf=true, which smudges every text file to CRLF
+      # on checkout — the payload hash inventory would then differ per platform and the
+      # drift guard would fail on real content (different sha256 VALUES, which
+      # --ignore-cr-at-eol cannot excuse). Pin LF so every matrix leg byte-sees the
+      # committed tree.
+      - name: pin LF checkout
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -73,6 +80,13 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      # Windows runners ship core.autocrlf=true, which smudges every text file to CRLF
+      # on checkout — the payload hash inventory would then differ per platform and the
+      # drift guard would fail on real content (different sha256 VALUES, which
+      # --ignore-cr-at-eol cannot excuse). Pin LF so every matrix leg byte-sees the
+      # committed tree.
+      - name: pin LF checkout
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4

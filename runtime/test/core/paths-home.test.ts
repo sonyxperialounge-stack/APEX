@@ -48,7 +48,18 @@ function tmp(name: string): Promise<string> {
 
 describe("WP-015 apexHome — hard refusals (HOME-T01)", () => {
   test("filesystem roots are refused with HOME_UNSAFE_PATH, never fallen back", () => {
-    for (const root of ["/", "\\", "C:\\", "D:\\", "C:/", "\\\\server\\share", ""]) {
+    // "/" is the POSIX root and resolves to a drive root on Windows — refused everywhere.
+    for (const root of ["/", ""]) {
+      assert.throws(
+        () => apexHome(root),
+        (e: unknown) => e instanceof ApexError && e.code === "HOME_UNSAFE_PATH",
+        `root "${root}" must be refused`,
+      )
+    }
+    // Windows-only root shapes: on POSIX a backslash is an ordinary filename character
+    // and "C:\" an ordinary relative directory, so the refusal is platform semantics.
+    if (process.platform !== "win32") return
+    for (const root of ["\\", "C:\\", "D:\\", "C:/", "\\\\server\\share"]) {
       assert.throws(
         () => apexHome(root),
         (e: unknown) => e instanceof ApexError && e.code === "HOME_UNSAFE_PATH",
@@ -170,6 +181,9 @@ describe("WP-015 apexHome — modes and risks", () => {
   })
 
   test("UNC share is flagged SYNCED_OR_NETWORKED even when absent", () => {
+    // A UNC literal is a Windows path shape; on POSIX the resolver reads backslashes
+    // as ordinary filename characters, so the flag test is Windows semantics.
+    if (process.platform !== "win32") return
     const res = apexHome("\\\\fileserver\\users\\lalit\\apex")
     assert.ok(res.risks.includes("SYNCED_OR_NETWORKED"), "UNC must be flagged")
   })
@@ -241,6 +255,7 @@ describe("WP-015 — worst realistic paths (spaces, Devanagari, drive roots)", (
   })
 
   test("Windows drive roots and bare-UNC roots are refused (HOME-T01)", () => {
+    if (process.platform !== "win32") return
     for (const p of ["C:\\", "c:/", "D:/", "\\\\server\\share", "\\\\server\\share\\"]) {
       assert.throws(
         () => apexHome(p),
